@@ -305,6 +305,14 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
         fetchAllVerifiedMills();
         fetchPaymentsData();
 
+        const handleStorageChange = (e) => {
+            if (e.key === 'kisan_loads' || e.key === 'kisan_enquiries' || e.key === 'kisan_last_payment_event') {
+                fetchPaymentsData();
+                fetchEnquiriesData();
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+
         const unsub = kisanService.subscribe((event, payload) => {
             fetchCrops();
             fetchEnquiriesData();
@@ -322,7 +330,10 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
             }
         });
 
-        return () => unsub();
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            unsub();
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -1527,6 +1538,13 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                         const trStatus = (tr?.status || '').toUpperCase();
                                         const trTransportStatus = (tr?.transport_status || '').toUpperCase();
 
+                                        const matchingLoad = loadsAndPayments.find(l => l.enquiry_id === enq.id || (enq.enquiry_code && l.enquiry_code === enq.enquiry_code));
+                                        const isPaid = (enq.payment_status || '').toUpperCase() === 'COMPLETED' || (matchingLoad?.payment_status || '').toUpperCase() === 'COMPLETED';
+                                        const paidAmount = Number(matchingLoad?.total_amount || enq.paid_amount || matchingLoad?.price || (enq.quantity || 10) * 10 * (enq.offered_price || 2450));
+                                        const paidDate = matchingLoad?.paid_at || enq.paid_at;
+                                        const utrRef = matchingLoad?.transaction_reference || enq.transaction_reference || 'UTR Settled';
+                                        const paymentMethod = matchingLoad?.payment_method || enq.payment_method || 'Bank Transfer';
+
                                         // 1. Mill acceptance checks
                                         const isMillAccepted = millStatusUpper === 'ACCEPTED' || 
                                                                ['WAITING_TRANSPORT', 'ACCEPTED', 'CONFIRMED', 'LOAD_RECEIVED', 'QR_SCANNED'].includes(statusUpper) ||
@@ -1594,6 +1612,12 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                 sub: isReceived ? 'Weighed & received' : 'Final weighment & receipt', 
                                                 done: isReceived, 
                                                 time: enq.received_at || tr?.delivered_at 
+                                            },
+                                            {
+                                                label: 'Payment Settled',
+                                                sub: isPaid ? `₹${paidAmount?.toLocaleString('en-IN')} credited` : isReceived ? 'Mill settlement pending' : 'Awaiting produce intake',
+                                                done: isPaid,
+                                                time: paidDate
                                             }
                                         ] : [
                                             { 
@@ -1626,16 +1650,22 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                 sub: isReceived ? 'Weighed & received' : 'Final weighment & receipt', 
                                                 done: isReceived, 
                                                 time: enq.received_at 
+                                            },
+                                            {
+                                                label: 'Payment Settled',
+                                                sub: isPaid ? `₹${paidAmount?.toLocaleString('en-IN')} credited` : isReceived ? 'Mill settlement pending' : 'Awaiting produce intake',
+                                                done: isPaid,
+                                                time: paidDate
                                             }
                                         ];
 
                                         return (
-                                            <div key={enq.id} className="bento-card" style={{ border: `1px solid ${isReceived ? 'var(--primary)' : isFullyConfirmed ? 'rgba(16, 185, 129, 0.4)' : isMillAccepted ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255,255,255,0.1)'}` }}>
+                                            <div key={enq.id} className="bento-card" style={{ border: `1px solid ${isPaid ? 'rgba(16, 185, 129, 0.6)' : isReceived ? 'var(--primary)' : isFullyConfirmed ? 'rgba(16, 185, 129, 0.4)' : isMillAccepted ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255,255,255,0.1)'}` }}>
                                                 {/* Header Row */}
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                                                     <div>
                                                         <span style={{ fontFamily: 'monospace', color: 'var(--accent-gold)', fontWeight: 800, fontSize: '1.1rem' }}>
-                                                            {enq.enquiry_code}
+                                                             {enq.enquiry_code}
                                                         </span>
                                                         <h3 style={{ margin: '0.2rem 0 0 0', fontSize: '1.1rem' }}>
                                                             {enq.crop_name} • {enq.quantity || (enq.acres * 2)} Tons
@@ -1646,7 +1676,12 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                     </div>
 
                                                     <div>
-                                                        {isReceived ? (
+                                                        {isPaid ? (
+                                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.9rem', borderRadius: '2rem', background: 'rgba(16, 185, 129, 0.25)', color: 'var(--primary)', fontWeight: 800, fontSize: '0.82rem', border: '1px solid rgba(16, 185, 129, 0.5)' }}>
+                                                                <i className="fa-solid fa-circle-check"></i>
+                                                                PAYMENT COMPLETED (₹{paidAmount?.toLocaleString('en-IN')})
+                                                            </div>
+                                                        ) : isReceived ? (
                                                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.9rem', borderRadius: '2rem', background: 'rgba(16, 185, 129, 0.2)', color: 'var(--primary)', fontWeight: 800, fontSize: '0.82rem', border: '1px solid rgba(16, 185, 129, 0.4)' }}>
                                                                 <i className="fa-solid fa-circle-check"></i>
                                                                 LOAD RECEIVED AT MILL
@@ -1740,6 +1775,49 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                         ))}
                                                     </div>
                                                 </div>
+
+                                                {/* Celebratory Payment Credited Banner */}
+                                                {isPaid && (
+                                                    <div style={{ 
+                                                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%)', 
+                                                        border: '1px solid rgba(16, 185, 129, 0.4)', 
+                                                        borderRadius: '0.75rem', 
+                                                        padding: '0.9rem 1.1rem', 
+                                                        marginBottom: '0.5rem', 
+                                                        display: 'flex', 
+                                                        justifyContent: 'space-between', 
+                                                        alignItems: 'center', 
+                                                        flexWrap: 'wrap', 
+                                                        gap: '0.75rem' 
+                                                    }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.25)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                                                                <i className="fa-solid fa-wallet"></i>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.95rem' }}>
+                                                                    Payment Credited: ₹{paidAmount?.toLocaleString('en-IN')}
+                                                                </div>
+                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                                    Transferred by <strong>{matchingLoad?.mill_name || enq.mill_name}</strong> via {paymentMethod} • Ref: <span style={{ fontFamily: 'monospace', color: 'var(--accent-gold)', fontWeight: 700 }}>{utrRef}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            className="primary-btn"
+                                                            onClick={() => {
+                                                                if (matchingLoad) {
+                                                                    setSelectedPaymentForReceipt(matchingLoad);
+                                                                } else {
+                                                                    setActiveTab('payments');
+                                                                }
+                                                            }}
+                                                            style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', fontWeight: 800 }}
+                                                        >
+                                                            <i className="fa-solid fa-receipt"></i> View Payment Bill
+                                                        </button>
+                                                    </div>
+                                                )}
 
                                                 {/* Transporter Details Strip */}
                                                 {hasTransport ? (

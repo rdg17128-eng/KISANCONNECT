@@ -1258,15 +1258,16 @@ class KisanService {
 
     async completePayment(loadIdOrCode, { paymentMethod = 'Bank Transfer (NEFT/RTGS)', referenceNumber = '', remarks = '' } = {}, millUser = {}) {
         const paidAt = new Date().toISOString();
+        const refNo = referenceNumber || ('UTR-' + Math.floor(10000000 + Math.random() * 90000000));
         const loads = getLocal(STORAGE_KEYS.LOADS, []);
         let updatedLoad = null;
 
         const updatedLoads = loads.map(ld => {
-            if (ld.id === loadIdOrCode || ld.enquiry_code === loadIdOrCode) {
+            if (ld.id === loadIdOrCode || ld.enquiry_code === loadIdOrCode || String(ld.enquiry_id) === String(loadIdOrCode)) {
                 ld.payment_status = 'COMPLETED';
                 ld.paid_at = paidAt;
                 ld.payment_method = paymentMethod;
-                ld.transaction_reference = referenceNumber || ('UTR-' + Math.floor(10000000 + Math.random() * 90000000));
+                ld.transaction_reference = refNo;
                 ld.payment_remarks = remarks;
                 ld.paid_by = millUser.name || millUser.millName || millUser.phone || 'Mill Finance';
                 updatedLoad = { ...ld };
@@ -1274,22 +1275,68 @@ class KisanService {
             return ld;
         });
 
+        // If load was not found in local storage, check enquiries to create the load record
+        if (!updatedLoad) {
+            const enquiries = getLocal(STORAGE_KEYS.ENQUIRIES, []);
+            const eq = enquiries.find(e => e.id === loadIdOrCode || e.enquiry_code === loadIdOrCode);
+            if (eq) {
+                const tonnes = Number(eq.actual_received_tonnes || eq.quantity || 10);
+                const quintals = Number(eq.actual_received_quintals || Math.round(tonnes * 10 * 10) / 10);
+                const rate = Number(eq.offered_price || eq.expected_price || 2450);
+                const total = Math.round(quintals * rate);
+                updatedLoad = {
+                    id: 'LOAD-' + Date.now(),
+                    enquiry_id: eq.id,
+                    enquiry_code: eq.enquiry_code || loadIdOrCode,
+                    farmer_id: eq.farmer_phone,
+                    farmer_name: eq.farmer_name,
+                    farmer_phone: eq.farmer_phone,
+                    mill_id: String(eq.mill_id || millUser.id || ''),
+                    mill_name: eq.mill_name || millUser.millName || 'Processing Mill',
+                    buyer_phone: eq.buyer_phone || millUser.phone || '',
+                    crop_id: eq.crop_id,
+                    crop_name: eq.crop_name,
+                    quantity: tonnes,
+                    quantity_tonnes: tonnes,
+                    quantity_quintals: quintals,
+                    price_per_quintal: rate,
+                    price: total,
+                    total_amount: total,
+                    acres: eq.acres || 5,
+                    transport_method: eq.transport_required ? 'KisanConnect Logistics' : 'Self Arranged',
+                    status: 'RECEIVED',
+                    payment_status: 'COMPLETED',
+                    received_at: eq.received_at || paidAt,
+                    paid_at: paidAt,
+                    payment_method: paymentMethod,
+                    transaction_reference: refNo,
+                    payment_remarks: remarks,
+                    paid_by: millUser.name || millUser.millName || millUser.phone || 'Mill Finance',
+                    farmer_bank_details: this.getFarmerBankDetails(eq.farmer_phone)
+                };
+                updatedLoads.unshift(updatedLoad);
+            }
+        }
+
         setLocal(STORAGE_KEYS.LOADS, updatedLoads);
 
-        if (updatedLoad) {
-            // Also sync enquiry payment status
-            const enquiries = getLocal(STORAGE_KEYS.ENQUIRIES, []);
-            const updatedEnqs = enquiries.map(eq => {
-                if (eq.id === updatedLoad.enquiry_id || eq.enquiry_code === updatedLoad.enquiry_code) {
-                    eq.payment_status = 'COMPLETED';
-                    eq.paid_at = paidAt;
-                    eq.paid_amount = updatedLoad.total_amount;
-                }
-                return eq;
-            });
-            setLocal(STORAGE_KEYS.ENQUIRIES, updatedEnqs);
+        // Also update the enquiry record in localStorage
+        const enquiries = getLocal(STORAGE_KEYS.ENQUIRIES, []);
+        const updatedEnqs = enquiries.map(eq => {
+            if (eq.id === loadIdOrCode || eq.enquiry_code === loadIdOrCode || (updatedLoad && (eq.id === updatedLoad.enquiry_id || eq.enquiry_code === updatedLoad.enquiry_code))) {
+                eq.payment_status = 'COMPLETED';
+                eq.paid_at = paidAt;
+                eq.payment_method = paymentMethod;
+                eq.transaction_reference = refNo;
+                eq.payment_remarks = remarks;
+                eq.paid_amount = updatedLoad?.total_amount || eq.total_price;
+            }
+            return eq;
+        });
+        setLocal(STORAGE_KEYS.ENQUIRIES, updatedEnqs);
 
-            // Notify farmer
+        // Notify farmer
+        if (updatedLoad) {
             const farmerTargetPhone = updatedLoad.farmer_phone || updatedLoad.farmer_id;
             if (farmerTargetPhone) {
                 this.addNotification(
@@ -1305,6 +1352,19 @@ class KisanService {
             this.notify('payment_completed', updatedLoad);
             this.notify('payments_changed', updatedLoad);
             this.notify('load_updated', updatedLoad);
+            this.notify('loads_changed', updatedLoads);
+            this.notify('enquiries_changed', updatedEnqs);
+
+            // Cross-tab broadcast via storage event
+            try {
+                localStorage.setItem('kisan_last_payment_event', JSON.stringify({
+                    timestamp: Date.now(),
+                    enquiryCode: updatedLoad.enquiry_code,
+                    farmerPhone: updatedLoad.farmer_phone || updatedLoad.farmer_id,
+                    amount: updatedLoad.total_amount,
+                    ref: refNo
+                }));
+            } catch {}
         }
 
         return updatedLoad;
@@ -1312,6 +1372,9 @@ class KisanService {
 
     async getLoadsReceived({ millId, farmerPhone, buyerPhone } = {}) {
         let loads = [];
+        const cleanPhone = p => String(p || '').replace(/\D/g, '').slice(-10);
+        const targetFarmer = cleanPhone(farmerPhone);
+
         try {
             let query = supabase.from('loads').select('*').order('received_at', { ascending: false });
             if (millId) query = query.eq('mill_id', String(millId));
@@ -1325,7 +1388,11 @@ class KisanService {
 
         const localLoads = getLocal(STORAGE_KEYS.LOADS, []);
         const filteredLocal = localLoads.filter(ld => {
-            if (farmerPhone && ld.farmer_id !== farmerPhone && ld.farmer_phone !== farmerPhone) return false;
+            if (targetFarmer) {
+                const ldFarmerId = cleanPhone(ld.farmer_id);
+                const ldFarmerPhone = cleanPhone(ld.farmer_phone);
+                if (ldFarmerId !== targetFarmer && ldFarmerPhone !== targetFarmer) return false;
+            }
             if (millId && String(ld.mill_id) !== String(millId) && ld.buyer_phone !== buyerPhone) return false;
             return true;
         });
@@ -1336,6 +1403,67 @@ class KisanService {
             const key = l.enquiry_code || l.id;
             if (!map.has(key)) map.set(key, l);
             else map.set(key, { ...map.get(key), ...l });
+        });
+
+        // Also check if any enquiries for this farmer or mill have reached LOAD_RECEIVED or COMPLETED
+        const localEnquiries = getLocal(STORAGE_KEYS.ENQUIRIES, []);
+        localEnquiries.forEach(eq => {
+            const eqStatus = (eq.status || '').toUpperCase();
+            const eqLoadStatus = (eq.load_status || '').toUpperCase();
+            const eqPaymentStatus = (eq.payment_status || '').toUpperCase();
+
+            if (eqStatus === 'LOAD_RECEIVED' || eqLoadStatus === 'LOAD_RECEIVED' || eqPaymentStatus === 'COMPLETED') {
+                const key = eq.enquiry_code || eq.id;
+                if (targetFarmer) {
+                    const eqFarmer = cleanPhone(eq.farmer_phone);
+                    if (eqFarmer !== targetFarmer) return;
+                }
+                if (millId && String(eq.mill_id) !== String(millId) && eq.buyer_phone !== buyerPhone) return;
+
+                const tonnes = Number(eq.actual_received_tonnes || eq.quantity || (eq.acres ? eq.acres * 2 : 10));
+                const quintals = Number(eq.actual_received_quintals || Math.round(tonnes * 10 * 10) / 10);
+                const rate = Number(eq.offered_price || eq.expected_price || 2450);
+                const total = Number(eq.paid_amount || Math.round(quintals * rate));
+
+                if (!map.has(key)) {
+                    map.set(key, {
+                        id: 'LOAD-' + (eq.id || key),
+                        enquiry_id: eq.id,
+                        enquiry_code: eq.enquiry_code || key,
+                        farmer_id: eq.farmer_phone,
+                        farmer_name: eq.farmer_name || 'Farmer',
+                        farmer_phone: eq.farmer_phone,
+                        mill_id: String(eq.mill_id || ''),
+                        mill_name: eq.mill_name || 'Processing Mill',
+                        buyer_phone: eq.buyer_phone || '',
+                        crop_id: eq.crop_id,
+                        crop_name: eq.crop_name || 'Paddy (Rice)',
+                        quantity: tonnes,
+                        quantity_tonnes: tonnes,
+                        quantity_quintals: quintals,
+                        price_per_quintal: rate,
+                        price: total,
+                        total_amount: total,
+                        acres: eq.acres || 5,
+                        transport_method: eq.transport_required ? 'KisanConnect Logistics' : 'Self Arranged',
+                        status: 'RECEIVED',
+                        payment_status: eqPaymentStatus === 'COMPLETED' ? 'COMPLETED' : 'PENDING',
+                        received_at: eq.received_at || eq.created_at || new Date().toISOString(),
+                        paid_at: eq.paid_at || (eqPaymentStatus === 'COMPLETED' ? new Date().toISOString() : null),
+                        payment_method: eq.payment_method || 'Bank Transfer (NEFT/RTGS)',
+                        transaction_reference: eq.transaction_reference || (eqPaymentStatus === 'COMPLETED' ? 'UTR-' + Math.floor(10000000 + Math.random() * 90000000) : null),
+                        received_by: eq.received_by || 'Mill Gate'
+                    });
+                } else if (eqPaymentStatus === 'COMPLETED') {
+                    // Guarantee payment status is reflected on existing load record if completed
+                    const existingLoad = map.get(key);
+                    existingLoad.payment_status = 'COMPLETED';
+                    existingLoad.paid_at = eq.paid_at || existingLoad.paid_at || new Date().toISOString();
+                    existingLoad.payment_method = eq.payment_method || existingLoad.payment_method || 'Bank Transfer (NEFT/RTGS)';
+                    existingLoad.transaction_reference = eq.transaction_reference || existingLoad.transaction_reference;
+                    map.set(key, existingLoad);
+                }
+            }
         });
 
         return Array.from(map.values()).map(l => {
@@ -1352,7 +1480,7 @@ class KisanService {
                 total_amount: total,
                 payment_status: (l.payment_status || 'PENDING').toUpperCase()
             };
-        }).sort((a, b) => new Date(b.received_at || 0) - new Date(a.received_at || 0));
+        }).sort((a, b) => new Date(b.paid_at || b.received_at || 0) - new Date(a.paid_at || a.received_at || 0));
     }
 
     async getLoadsAndPayments({ millId, buyerPhone, farmerPhone, status } = {}) {
