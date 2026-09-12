@@ -50,6 +50,7 @@ export const TRANSLATIONS = {
         myCrops: 'My Crops',
         mills: 'Nearby Mills',
         nearbyMills: 'Nearby Mills',
+        cropsAndMills: 'My Crops & Mills',
         enquiries: 'My Enquiries',
         myEnquiries: 'My Enquiries',
         qrcodes: 'My QR Codes',
@@ -237,6 +238,7 @@ export const TRANSLATIONS = {
         myCrops: 'నా పంటలు',
         mills: 'సమీప మిల్లులు',
         nearbyMills: 'సమీప మిల్లులు',
+        cropsAndMills: 'పంటలు & సమీప మిల్లులు',
         enquiries: 'నా విచారణలు',
         myEnquiries: 'నా విచారణలు',
         qrcodes: 'నా క్యూఆర్ కోడ్‌లు',
@@ -424,6 +426,7 @@ export const TRANSLATIONS = {
         myCrops: 'मेरी फसलें',
         mills: 'नजदीकी मिलें',
         nearbyMills: 'नजदीकी मिलें',
+        cropsAndMills: 'मेरी फसलें और मिलें',
         enquiries: 'मेरी पूछताछ',
         myEnquiries: 'मेरी पूछताछ',
         qrcodes: 'मेरे क्यूआर कोड',
@@ -876,6 +879,8 @@ export function LanguageProvider({ children }) {
 
     // Safe Bidirectional DOM Text & Placeholder Translator
     useEffect(() => {
+        if (language === 'en') return;
+
         const translateDom = () => {
             try {
                 // 1. Text nodes

@@ -2493,6 +2493,65 @@ body {
     display: none !important;
 }
 
+/* Crops & Mills Master-Detail Layout */
+.crops-mills-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 380px) 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
 
+@media (max-width: 1040px) {
+    .crops-mills-layout {
+        grid-template-columns: 1fr;
+    }
+}
 
-
+.farmland-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.85rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.farmland-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+}
+
+.farmland-card.active {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1.5px solid var(--primary);
+    box-shadow: 0 4px 20px -4px rgba(16, 185, 129, 0.25);
+}
+
+.crop-filter-chip {
+    padding: 0.35rem 0.85rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.crop-filter-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+}
+
+.crop-filter-chip.active {
+    background: var(--primary);
+    color: #000;
+    border-color: var(--primary);
+    font-weight: 700;
+}
