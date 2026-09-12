@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
@@ -10,6 +10,36 @@ import QrCodeModal from './QrCodeModal';
 import KisanLogo from './KisanLogo';
 import { useLanguage } from '../context/LanguageContext';
 import LanguageSelector from './LanguageSelector';
+
+// Memoized Header Clock to avoid continuous re-rendering of the entire BuyerPortal
+const HeaderClock = React.memo(function HeaderClock() {
+    const [time, setTime] = useState(() => new Date());
+    useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+    return (
+        <div className="header-datetime">
+            <div style={{ fontWeight: 600, color: 'var(--text)' }}>
+                {time.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}
+            </div>
+            <div>{time.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</div>
+        </div>
+    );
+});
+
+// Accurate Enquiry Category Classifier from the Mill Operator's viewpoint
+export const getEnquiryCategory = (enq) => {
+    if (!enq) return 'PENDING';
+    const s = (enq.status || '').toUpperCase();
+    const ms = (enq.mill_status || '').toUpperCase();
+    const ls = (enq.load_status || '').toUpperCase();
+
+    if (s === 'LOAD_RECEIVED' || ls === 'LOAD_RECEIVED') return 'LOAD_RECEIVED';
+    if (ms === 'REJECTED' || s === 'REJECTED') return 'REJECTED';
+    if (ms === 'ACCEPTED' || s === 'ACCEPTED' || s === 'WAITING_TRANSPORT') return 'ACCEPTED';
+    return 'PENDING';
+};
 
 export default function BuyerPortal({ user: propUser, onLogout }) {
     const navigate = useNavigate();
@@ -59,7 +89,6 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
     };
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [currentTime, setCurrentTime] = useState(new Date());
 
     // Profile States
     const [profileName, setProfileName] = useState(user.name || '');
@@ -114,20 +143,26 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
     const [copySuccessToast, setCopySuccessToast] = useState('');
 
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        
         const init = async () => {
             const loadedMills = await fetchMills();
             await refreshAllData(loadedMills);
         };
         init();
 
+        let refreshTimer = null;
+        const debouncedRefresh = () => {
+            if (refreshTimer) clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(() => {
+                refreshAllData();
+            }, 300);
+        };
+
         const unsub = kisanService.subscribe(() => {
-            refreshAllData();
+            debouncedRefresh();
         });
 
         return () => {
-            clearInterval(timer);
+            if (refreshTimer) clearTimeout(refreshTimer);
             unsub();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -225,27 +260,27 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
 
     const handleAcceptEnquiry = async (enquiry) => {
         const targetId = enquiry.id || enquiry.enquiry_code;
+        const targetCode = enquiry.enquiry_code || targetId;
         const hasTransport = Boolean(enquiry.transport_required || enquiry.with_transport);
 
-        try {
-            // Optimistically update local state immediately so user sees the change with 0 delay!
-            setEnquiries(prev => prev.map(e => (e.id === targetId || e.enquiry_code === targetId) ? { 
-                ...e, 
-                mill_status: 'ACCEPTED',
-                status: hasTransport ? 'WAITING_TRANSPORT' : 'ACCEPTED',
-                overall_status: hasTransport ? 'WAITING_TRANSPORT' : 'CONFIRMED'
-            } : e));
+        // 1. INSTANT OPTIMISTIC UPDATE (0ms delay! Immediately moves to ACCEPTED)
+        setEnquiries(prev => prev.map(e => (e.id === targetId || e.enquiry_code === targetCode) ? { 
+            ...e, 
+            mill_status: 'ACCEPTED',
+            status: hasTransport ? 'WAITING_TRANSPORT' : 'ACCEPTED',
+            overall_status: hasTransport ? 'WAITING_TRANSPORT' : 'CONFIRMED'
+        } : e));
 
-            const accepted = await kisanService.acceptEnquiry(targetId, {
+        setCopySuccessToast(hasTransport ? 'Enquiry Accepted • Transport Dispatched!' : 'Enquiry Accepted • Verification QR Ready!');
+        setTimeout(() => setCopySuccessToast(''), 3500);
+
+        try {
+            await kisanService.acceptEnquiry(targetCode, {
                 name: profileName || user.phone,
                 phone: user.phone,
                 id: mills[0]?.id || user.phone,
                 millName: mills[0]?.millName || 'KisanConnect Mill'
             }, enquiry);
-
-            if (accepted) {
-                await refreshAllData();
-            }
         } catch (error) {
             console.error("Error accepting enquiry:", error);
             alert("Failed to accept enquiry. Please try again.");
@@ -255,16 +290,24 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
 
     const handleRejectEnquiry = async (enquiry) => {
         const targetId = enquiry.id || enquiry.enquiry_code;
+        const targetCode = enquiry.enquiry_code || targetId;
         const reason = window.prompt("Please provide a reason for rejecting this enquiry (optional):", "Price negotiation / Capacity limit");
         if (reason === null) return;
 
-        try {
-            // Optimistically update local state immediately
-            setEnquiries(prev => prev.map(e => (e.id === targetId || e.enquiry_code === targetId) ? { ...e, status: 'REJECTED', reject_reason: reason } : e));
-            setEnquiryFilter('REJECTED');
+        // 1. INSTANT OPTIMISTIC UPDATE
+        setEnquiries(prev => prev.map(e => (e.id === targetId || e.enquiry_code === targetCode) ? { 
+            ...e, 
+            mill_status: 'REJECTED',
+            status: 'REJECTED', 
+            overall_status: 'REJECTED',
+            reject_reason: reason 
+        } : e));
 
-            await kisanService.rejectEnquiry(targetId, reason);
-            await refreshAllData();
+        setCopySuccessToast('Enquiry Rejected');
+        setTimeout(() => setCopySuccessToast(''), 3000);
+
+        try {
+            await kisanService.rejectEnquiry(targetCode, reason, enquiry);
         } catch (error) {
             console.error("Error rejecting enquiry:", error);
             await refreshAllData();
@@ -388,10 +431,12 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
         }
     };
 
-    const filteredEnquiries = enquiries.filter(eq => {
-        if (enquiryFilter === 'ALL') return true;
-        return (eq.status || '').toUpperCase() === enquiryFilter.toUpperCase();
-    });
+    const filteredEnquiries = useMemo(() => {
+        return enquiries.filter(eq => {
+            if (enquiryFilter === 'ALL') return true;
+            return getEnquiryCategory(eq) === enquiryFilter;
+        });
+    }, [enquiries, enquiryFilter]);
 
     const activeMill = mills[0] || {
         id: user.phone,
@@ -417,9 +462,9 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                     <a className={`nav-item ${activeTab === 'enquiries' ? 'active' : ''}`} onClick={() => { setActiveTab('enquiries'); setIsSidebarOpen(false); }}>
                         <i className="fa-solid fa-inbox"></i>
                         <span>Farmer Enquiries</span>
-                        {enquiries.filter(e => (e.status || '').toUpperCase() === 'PENDING').length > 0 && (
+                        {enquiries.filter(e => getEnquiryCategory(e) === 'PENDING').length > 0 && (
                             <span className="nav-badge" style={{ marginLeft: 'auto', background: 'var(--primary)', color: '#000', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 800 }}>
-                                {enquiries.filter(e => (e.status || '').toUpperCase() === 'PENDING').length}
+                                {enquiries.filter(e => getEnquiryCategory(e) === 'PENDING').length}
                             </span>
                         )}
                     </a>
@@ -502,12 +547,7 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                             <span>Scan Farmer QR</span>
                         </button>
 
-                        <div className="header-datetime">
-                            <div style={{ fontWeight: 600, color: 'var(--text)' }}>
-                                {currentTime.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                            </div>
-                            <div>{currentTime.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                        </div>
+                        <HeaderClock />
 
                         <div className="user-profile">
                             <div className="profile-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)', color: 'var(--primary)', fontSize: '1.4rem', width: '42px', height: '42px', borderRadius: '50%' }}>
@@ -676,7 +716,7 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                     ].map(item => {
                                         const count = item.key === 'ALL' 
                                             ? enquiries.length 
-                                            : enquiries.filter(e => (e.status || '').toUpperCase() === item.key).length;
+                                            : enquiries.filter(e => getEnquiryCategory(e) === item.key).length;
                                         const isActive = enquiryFilter === item.key;
                                         return (
                                             <button 
@@ -723,16 +763,21 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                             ) : (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.25rem' }}>
                                     {filteredEnquiries.map(enq => {
-                                        const millAccepted = (enq.mill_status || enq.status || '').toUpperCase() === 'ACCEPTED' || (enq.status || '').toUpperCase() === 'LOAD_RECEIVED';
-                                        const millPending = !millAccepted && (enq.mill_status || enq.status || '').toUpperCase() !== 'REJECTED';
-                                        const millRejected = (enq.mill_status || enq.status || '').toUpperCase() === 'REJECTED';
+                                        const millAccepted = (enq.mill_status || '').toUpperCase() === 'ACCEPTED' || 
+                                                             (enq.status || '').toUpperCase() === 'ACCEPTED' || 
+                                                             (enq.status || '').toUpperCase() === 'WAITING_TRANSPORT' || 
+                                                             (enq.status || '').toUpperCase() === 'LOAD_RECEIVED';
+                                        const millRejected = (enq.mill_status || '').toUpperCase() === 'REJECTED' || (enq.status || '').toUpperCase() === 'REJECTED';
+                                        const millPending = !millAccepted && !millRejected;
 
                                         const hasTransport = Boolean(enq.transport_required || enq.with_transport);
                                         const transportAccepted = (enq.transport_status || '').toUpperCase() === 'ACCEPTED';
-                                        const transportPending = hasTransport && !transportAccepted && (enq.transport_status || '').toUpperCase() !== 'REJECTED';
                                         const transportRejected = (enq.transport_status || '').toUpperCase() === 'REJECTED';
+                                        const transportPending = hasTransport && !transportAccepted && !transportRejected;
 
-                                        const isOverallConfirmed = enq.overall_status === 'CONFIRMED' || (!hasTransport && millAccepted) || (hasTransport && millAccepted && transportAccepted);
+                                        const isOverallConfirmed = (enq.overall_status || '').toUpperCase() === 'CONFIRMED' || 
+                                                                   (!hasTransport && millAccepted) || 
+                                                                   (hasTransport && millAccepted && transportAccepted);
 
                                         return (
                                             <div key={enq.id} className="bento-card" style={{ border: isOverallConfirmed ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column' }}>
@@ -1827,6 +1872,32 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Instant Floating Action Toast */}
+            {copySuccessToast && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: '24px',
+                    right: '24px',
+                    backgroundColor: copySuccessToast.includes('Reject') ? 'rgba(239, 68, 68, 0.95)' : 'rgba(16, 185, 129, 0.95)',
+                    color: '#fff',
+                    padding: '12px 22px',
+                    borderRadius: '10px',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(10px)',
+                    zIndex: 99999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    fontSize: '0.92rem',
+                    fontWeight: '700',
+                    border: '1px solid rgba(255,255,255,0.25)',
+                    animation: 'fadeInUp 0.3s ease-out'
+                }}>
+                    <i className={copySuccessToast.includes('Reject') ? 'fa-solid fa-circle-xmark' : 'fa-solid fa-circle-check'} style={{ fontSize: '1.25rem' }}></i>
+                    <span>{copySuccessToast}</span>
                 </div>
             )}
         </div>

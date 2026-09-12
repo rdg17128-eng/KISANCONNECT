@@ -529,15 +529,24 @@ class KisanService {
 
             const { data, error } = await query;
             if (!error && data) {
-                list = data.map(item => ({
-                    ...item,
-                    enquiry_code: item.enquiry_code || ('ENQ-' + (item.id || '').replace(/-/g, '').slice(0, 8).toUpperCase()),
-                    transport_required: item.transport_required ?? item.with_transport ?? false,
-                    offered_price: item.price_per_quintal || item.offered_price || item.expected_price || 'Market Rate',
-                    expected_price: item.price_per_quintal || item.expected_price || item.offered_price || 'Market Rate',
-                    quantity: item.quantity || (item.acres ? item.acres * 2 : 10),
-                    status: (item.status || 'PENDING').toUpperCase()
-                }));
+                list = data.map(item => {
+                    const normStatus = (item.status || 'PENDING').toUpperCase();
+                    const derivedMillStatus = item.mill_status 
+                        ? item.mill_status.toUpperCase() 
+                        : (normStatus === 'ACCEPTED' || normStatus === 'WAITING_TRANSPORT' || normStatus === 'LOAD_RECEIVED') 
+                            ? 'ACCEPTED' 
+                            : (normStatus === 'REJECTED' ? 'REJECTED' : 'PENDING');
+                    return {
+                        ...item,
+                        enquiry_code: item.enquiry_code || ('ENQ-' + (item.id || '').replace(/-/g, '').slice(0, 8).toUpperCase()),
+                        transport_required: item.transport_required ?? item.with_transport ?? false,
+                        offered_price: item.price_per_quintal || item.offered_price || item.expected_price || 'Market Rate',
+                        expected_price: item.price_per_quintal || item.expected_price || item.offered_price || 'Market Rate',
+                        quantity: item.quantity || (item.acres ? item.acres * 2 : 10),
+                        mill_status: derivedMillStatus,
+                        status: normStatus
+                    };
+                });
             }
         } catch (e) {
             console.warn("Supabase fetch enquiries fallback:", e);
@@ -553,13 +562,31 @@ class KisanService {
             return true;
         });
 
-        // Combine unique by id or enquiry_code
+        // Combine unique by enquiry_code first, then id
         const map = new Map();
-        list.forEach(item => map.set(item.id || item.enquiry_code, item));
+        list.forEach(item => {
+            const key = item.enquiry_code || item.id;
+            if (key) map.set(key, item);
+        });
+
         filteredLocal.forEach(item => {
-            const key = item.id || item.enquiry_code;
-            if (!map.has(key)) map.set(key, item);
-            else map.set(key, { ...item, ...map.get(key), ...item });
+            const key = item.enquiry_code || item.id;
+            if (!key) return;
+            if (!map.has(key)) {
+                map.set(key, item);
+            } else {
+                const existing = map.get(key);
+                const mergedMillStatus = item.mill_status || existing.mill_status || 
+                    ((item.status === 'WAITING_TRANSPORT' || existing.status === 'WAITING_TRANSPORT') ? 'ACCEPTED' : undefined);
+                map.set(key, {
+                    ...existing,
+                    ...item,
+                    mill_status: mergedMillStatus,
+                    overall_status: item.overall_status || existing.overall_status,
+                    transport_status: item.transport_status || existing.transport_status,
+                    status: (item.status && item.status !== 'PENDING') ? item.status : (existing.status || item.status || 'PENDING')
+                });
+            }
         });
 
         return Array.from(map.values()).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
@@ -571,10 +598,12 @@ class KisanService {
     async acceptEnquiry(enquiryIdOrCode, millUser, extraEnquiryData = null) {
         const acceptedAt = new Date().toISOString();
         const localList = getLocal(STORAGE_KEYS.ENQUIRIES, []);
-        let updatedEnquiry = extraEnquiryData ? { ...extraEnquiryData } : null;
+        let updatedEnquiry = null;
+        let found = false;
 
         const updatedLocal = localList.map(eq => {
             if (eq.id === enquiryIdOrCode || eq.enquiry_code === enquiryIdOrCode) {
+                found = true;
                 eq.mill_status = 'ACCEPTED';
                 eq.accepted_at = acceptedAt;
                 eq.accepted_by = millUser?.name || millUser?.phone || 'Mill Admin';
@@ -595,18 +624,44 @@ class KisanService {
             }
             return eq;
         });
+
+        if (!found) {
+            const eq = extraEnquiryData ? { ...extraEnquiryData } : { id: enquiryIdOrCode, enquiry_code: enquiryIdOrCode };
+            eq.mill_status = 'ACCEPTED';
+            eq.accepted_at = acceptedAt;
+            eq.accepted_by = millUser?.name || millUser?.phone || 'Mill Admin';
+            const hasTransport = eq.transport_required || eq.with_transport;
+            const transportAccepted = eq.transport_status === 'ACCEPTED';
+            if (!hasTransport || transportAccepted) {
+                eq.overall_status = 'CONFIRMED';
+                eq.status = 'ACCEPTED';
+                eq.load_status = 'ACCEPTED';
+            } else {
+                eq.overall_status = 'WAITING_TRANSPORT';
+                eq.status = 'WAITING_TRANSPORT';
+            }
+            updatedLocal.push(eq);
+            updatedEnquiry = eq;
+        }
+
         setLocal(STORAGE_KEYS.ENQUIRIES, updatedLocal);
 
         const targetId = updatedEnquiry?.id || enquiryIdOrCode;
+        const targetCode = updatedEnquiry?.enquiry_code || (String(enquiryIdOrCode).startsWith('KC-') || String(enquiryIdOrCode).startsWith('ENQ-') ? enquiryIdOrCode : null);
 
         try {
-            await supabase
-                .from('enquiries')
-                .update({
-                    status: updatedEnquiry?.overall_status === 'CONFIRMED' ? 'accepted' : 'waiting_transport',
-                    updated_at: acceptedAt
-                })
-                .eq('id', targetId);
+            const dbStatus = updatedEnquiry?.overall_status === 'CONFIRMED' ? 'accepted' : 'waiting_transport';
+            if (targetCode) {
+                await supabase
+                    .from('enquiries')
+                    .update({ status: dbStatus, updated_at: acceptedAt })
+                    .eq('enquiry_code', targetCode);
+            } else if (targetId) {
+                await supabase
+                    .from('enquiries')
+                    .update({ status: dbStatus, updated_at: acceptedAt })
+                    .eq('id', targetId);
+            }
         } catch (e) {
             console.warn("Supabase update enquiry error:", e);
         }
@@ -703,12 +758,14 @@ class KisanService {
         return this.removeCropAfterAcceptance({ crop_id: cropId, farmer_phone: farmerPhone, crop_name: cropName });
     }
 
-    async rejectEnquiry(enquiryIdOrCode, reason = '') {
+    async rejectEnquiry(enquiryIdOrCode, reason = '', extraEnquiryData = null) {
         const localList = getLocal(STORAGE_KEYS.ENQUIRIES, []);
         let updatedEnquiry = null;
+        let found = false;
 
         const updatedLocal = localList.map(eq => {
             if (eq.id === enquiryIdOrCode || eq.enquiry_code === enquiryIdOrCode) {
+                found = true;
                 eq.mill_status = 'REJECTED';
                 eq.overall_status = 'REJECTED';
                 eq.status = 'REJECTED';
@@ -718,9 +775,22 @@ class KisanService {
             }
             return eq;
         });
+
+        if (!found) {
+            const eq = extraEnquiryData ? { ...extraEnquiryData } : { id: enquiryIdOrCode, enquiry_code: enquiryIdOrCode };
+            eq.mill_status = 'REJECTED';
+            eq.overall_status = 'REJECTED';
+            eq.status = 'REJECTED';
+            eq.load_status = 'REJECTED';
+            eq.reject_reason = reason;
+            updatedLocal.push(eq);
+            updatedEnquiry = eq;
+        }
+
         setLocal(STORAGE_KEYS.ENQUIRIES, updatedLocal);
 
         const targetId = updatedEnquiry?.id || enquiryIdOrCode;
+        const targetCode = updatedEnquiry?.enquiry_code || (String(enquiryIdOrCode).startsWith('KC-') || String(enquiryIdOrCode).startsWith('ENQ-') ? enquiryIdOrCode : null);
 
         // Cancel any pending transport requests linked to this enquiry so driver is not dispatched
         const requests = getLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, []);
@@ -734,10 +804,17 @@ class KisanService {
         setLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, updatedReqs);
 
         try {
-            await supabase
-                .from('enquiries')
-                .update({ status: 'rejected', updated_at: new Date().toISOString() })
-                .eq('id', targetId);
+            if (targetCode) {
+                await supabase
+                    .from('enquiries')
+                    .update({ status: 'rejected', updated_at: new Date().toISOString() })
+                    .eq('enquiry_code', targetCode);
+            } else if (targetId) {
+                await supabase
+                    .from('enquiries')
+                    .update({ status: 'rejected', updated_at: new Date().toISOString() })
+                    .eq('id', targetId);
+            }
         } catch (e) {
             console.warn("Supabase reject enquiry error:", e);
         }
