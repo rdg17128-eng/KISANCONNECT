@@ -225,11 +225,16 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
 
     const handleAcceptEnquiry = async (enquiry) => {
         const targetId = enquiry.id || enquiry.enquiry_code;
+        const hasTransport = Boolean(enquiry.transport_required || enquiry.with_transport);
 
         try {
             // Optimistically update local state immediately so user sees the change with 0 delay!
-            setEnquiries(prev => prev.map(e => (e.id === targetId || e.enquiry_code === targetId) ? { ...e, status: 'ACCEPTED' } : e));
-            setEnquiryFilter('ACCEPTED');
+            setEnquiries(prev => prev.map(e => (e.id === targetId || e.enquiry_code === targetId) ? { 
+                ...e, 
+                mill_status: 'ACCEPTED',
+                status: hasTransport ? 'WAITING_TRANSPORT' : 'ACCEPTED',
+                overall_status: hasTransport ? 'WAITING_TRANSPORT' : 'CONFIRMED'
+            } : e));
 
             const accepted = await kisanService.acceptEnquiry(targetId, {
                 name: profileName || user.phone,
@@ -786,8 +791,8 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                                                 {hasTransport ? 'Logistics Requested' : 'Self Arranged by Farmer'}
                                                             </span>
                                                             {hasTransport && (
-                                                                <span style={{ fontSize: '0.72rem', color: transportAccepted ? 'var(--primary)' : '#fbbf24', fontWeight: 700 }}>
-                                                                    {transportAccepted ? 'Driver Confirmed ✅' : 'Driver Pending ⏳'}
+                                                                <span style={{ fontSize: '0.72rem', color: transportAccepted ? 'var(--primary)' : millAccepted ? '#fbbf24' : 'var(--text-muted)', fontWeight: 700 }}>
+                                                                    {transportAccepted ? 'Driver Confirmed ✅' : millAccepted ? 'Driver Pending ⏳' : 'Dispatches on Accept 🔒'}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -806,14 +811,14 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                                         <div style={{ flex: 1, padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '0.4rem', border: '1px solid rgba(255,255,255,0.06)' }}>
                                                             <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem' }}>Mill Decision</span>
                                                             <strong style={{ color: millAccepted ? 'var(--primary)' : millRejected ? '#ef4444' : '#fbbf24' }}>
-                                                                {millAccepted ? '✅ Accepted' : millRejected ? '❌ Rejected' : '⏳ Pending'}
+                                                                {millAccepted ? '✅ Accepted' : millRejected ? '❌ Rejected' : '⏳ Pending (You)'}
                                                             </strong>
                                                         </div>
                                                         {hasTransport && (
                                                             <div style={{ flex: 1, padding: '0.35rem 0.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '0.4rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                                                                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem' }}>Transporter Decision</span>
-                                                                <strong style={{ color: transportAccepted ? 'var(--primary)' : transportRejected ? '#ef4444' : '#fbbf24' }}>
-                                                                    {transportAccepted ? '✅ Accepted' : transportRejected ? '❌ Rejected' : '⏳ Pending'}
+                                                                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem' }}>Transporter Status</span>
+                                                                <strong style={{ color: transportAccepted ? 'var(--primary)' : transportRejected ? '#ef4444' : millAccepted ? '#fbbf24' : 'var(--text-muted)' }}>
+                                                                    {transportAccepted ? '✅ Accepted' : transportRejected ? '❌ Rejected' : millAccepted ? '⏳ Pending Response' : '🔒 Dispatches on Accept'}
                                                                 </strong>
                                                             </div>
                                                         )}
@@ -845,7 +850,7 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                                                 style={{ flex: 1.5, justifyContent: 'center', padding: '0.65rem', fontWeight: 700 }}
                                                             >
                                                                 <i className="fa-solid fa-circle-check"></i>
-                                                                Accept Enquiry
+                                                                {hasTransport ? 'Accept & Dispatch Transport' : 'Accept Enquiry'}
                                                             </button>
                                                         </>
                                                     ) : millAccepted ? (

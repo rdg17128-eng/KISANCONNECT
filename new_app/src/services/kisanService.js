@@ -425,9 +425,9 @@ class KisanService {
             mill_location_name: enquiryData.mill_location_name || enquiryData.mill_name || '',
             distance: Number(enquiryData.distance || enquiryData.transport_distance || 35),
 
-            // Dual Status Tracking
+            // Dual Status Tracking: Initial state waiting for Mill review
             mill_status: 'PENDING',
-            transport_status: transportReq ? 'PENDING' : 'NOT_REQUIRED',
+            transport_status: transportReq ? 'AWAITING_MILL' : 'NOT_REQUIRED',
             overall_status: 'PENDING',
             status: 'PENDING',
             load_status: 'PENDING',
@@ -439,64 +439,10 @@ class KisanService {
         localEnquiries.unshift(fullEnquiry);
         setLocal(STORAGE_KEYS.ENQUIRIES, localEnquiries);
 
-        // 2. If transport is required, generate linked transport request record
-        if (transportReq && fullEnquiry.driver_phone) {
-            const transportCode = generateTransportId();
-            const transportReqRecord = {
-                id: 'TR-' + Date.now(),
-                transport_code: transportCode,
-                enquiry_id: fullEnquiry.id,
-                enquiry_code: enquiryCode,
-                farmer_id: fullEnquiry.farmer_phone,
-                farmer_name: fullEnquiry.farmer_name,
-                farmer_phone: fullEnquiry.farmer_phone,
-                mill_id: fullEnquiry.mill_id,
-                mill_name: fullEnquiry.mill_name,
-                buyer_phone: fullEnquiry.buyer_phone,
-                crop_name: fullEnquiry.crop_name,
-                quantity: fullEnquiry.quantity,
-                acres: fullEnquiry.acres,
-                pickup_lat: fullEnquiry.farmer_lat,
-                pickup_lng: fullEnquiry.farmer_lng,
-                pickup_address: fullEnquiry.pickup_location,
-                delivery_lat: fullEnquiry.mill_lat,
-                delivery_lng: fullEnquiry.mill_lng,
-                delivery_address: fullEnquiry.delivery_location,
-                required_capacity: fullEnquiry.quantity,
-                vehicle_type: fullEnquiry.vehicle_type,
-                vehicle_number: fullEnquiry.vehicle_number,
-                pickup_date: fullEnquiry.transport_date,
-                distance: fullEnquiry.transport_distance || fullEnquiry.distance,
-                assigned_provider_id: fullEnquiry.driver_phone,
-                assigned_provider_name: fullEnquiry.driver_name,
-                assigned_provider_phone: fullEnquiry.driver_phone,
-                final_price: fullEnquiry.estimated_transport_cost,
-                status: 'ASSIGNED',
-                created_at: new Date().toISOString()
-            };
+        // NOTE: Direct transport dispatch is deferred until the Mill accepts the enquiry!
+        // The transport provider will be notified and assigned only upon Mill acceptance.
 
-            const requests = getLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, []);
-            requests.unshift(transportReqRecord);
-            setLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, requests);
-
-            // Notify selected driver specifically
-            this.addNotification(
-                fullEnquiry.driver_phone,
-                'transporters',
-                '🚛 New Transport Request Assigned!',
-                `Farmer ${fullEnquiry.farmer_name} assigned you for ${fullEnquiry.quantity} Tons of ${fullEnquiry.crop_name} to ${fullEnquiry.mill_name}. Enquiry: ${enquiryCode}. Date: ${fullEnquiry.transport_date || 'Prompt'}.`,
-                'transport',
-                { enquiryCode, transportCode }
-            );
-
-            try {
-                supabase.from('transport_requests').insert([transportReqRecord]);
-            } catch (trErr) {
-                console.warn("Supabase transport request insert error:", trErr);
-            }
-        }
-
-        // 3. Insert into Supabase enquiries table
+        // 2. Insert into Supabase enquiries table
         try {
             const dbPayload = {
                 enquiry_code: enquiryCode,
@@ -543,13 +489,23 @@ class KisanService {
             console.warn("Supabase enquiry sync notice:", e);
         }
 
-        // 4. Notify Mill
+        // 3. Notify Mill of the new incoming enquiry
         this.addNotification(
             fullEnquiry.buyer_phone,
             'buyers',
             'New Farmer Enquiry Received',
-            `Farmer ${fullEnquiry.farmer_name} sent enquiry ${enquiryCode} for ${fullEnquiry.quantity} Tons of ${fullEnquiry.crop_name}.${transportReq ? ' (Transport Requested)' : ''}`,
+            `Farmer ${fullEnquiry.farmer_name} sent enquiry ${enquiryCode} for ${fullEnquiry.quantity} Tons of ${fullEnquiry.crop_name}.${transportReq ? ` (Transport requested with driver ${fullEnquiry.driver_name || 'selected transporter'})` : ''}`,
             'enquiry',
+            { enquiryCode }
+        );
+
+        // 4. Notify Farmer of enquiry submission
+        this.addNotification(
+            fullEnquiry.farmer_phone,
+            'farmers',
+            'Enquiry Submitted to Mill',
+            `Your enquiry ${enquiryCode} has been sent to ${fullEnquiry.mill_name || 'the mill'}.${transportReq ? ` Once the mill accepts, your transport request will automatically be sent to driver ${fullEnquiry.driver_name || 'selected driver'}.` : ''}`,
+            'info',
             { enquiryCode }
         );
 
@@ -659,24 +615,39 @@ class KisanService {
             // Automatically remove the crop from the farmer's active "My Crops"
             await this.removeCropAfterAcceptance(updatedEnquiry);
 
-            // If overall confirmed, generate QR token record immediately
+            const hasTransport = updatedEnquiry.transport_required || updatedEnquiry.with_transport;
+
+            // If overall confirmed (e.g. self transport or already accepted), generate QR token record immediately
             if (updatedEnquiry.overall_status === 'CONFIRMED') {
                 this.createQrToken(updatedEnquiry.id, updatedEnquiry.enquiry_code || targetId);
                 
                 this.addNotification(
                     updatedEnquiry.farmer_phone,
                     'farmers',
-                    'Enquiry & Logistics Confirmed! 🎉',
-                    `Your crop enquiry and transportation for ${updatedEnquiry.crop_name} (${updatedEnquiry.enquiry_code}) are now 100% confirmed! Your gate verification QR is ready.`,
+                    'Enquiry Confirmed! 🎉',
+                    `Your crop enquiry for ${updatedEnquiry.crop_name} (${updatedEnquiry.enquiry_code}) is confirmed! Your gate verification QR is ready.`,
                     'success',
                     { enquiryCode: updatedEnquiry.enquiry_code }
                 );
-            } else {
+            } else if (hasTransport) {
+                // FLOW RULE: Automatically dispatch transport request to the farmer-selected driver now that Mill has accepted!
+                const dispatchedReq = await this.createTransportRequestFromEnquiry(updatedEnquiry);
+                const driverName = dispatchedReq?.assigned_provider_name || updatedEnquiry.driver_name || 'Assigned Driver';
+
                 this.addNotification(
                     updatedEnquiry.farmer_phone,
                     'farmers',
-                    'Mill Accepted! Waiting for Driver',
-                    `Mill ${updatedEnquiry.mill_name || 'Buyer'} accepted enquiry ${updatedEnquiry.enquiry_code}. Awaiting transport provider confirmation.`,
+                    'Mill Accepted! Transport Dispatched 🚛',
+                    `Mill ${updatedEnquiry.mill_name || 'Buyer'} accepted enquiry ${updatedEnquiry.enquiry_code}. Transport request has been sent to driver ${driverName}. Awaiting driver confirmation.`,
+                    'info',
+                    { enquiryCode: updatedEnquiry.enquiry_code }
+                );
+
+                this.addNotification(
+                    updatedEnquiry.buyer_phone,
+                    'buyers',
+                    'Enquiry Accepted • Transport Dispatched',
+                    `You accepted enquiry ${updatedEnquiry.enquiry_code}. Transport request has been dispatched to ${driverName}. Awaiting driver acceptance.`,
                     'info',
                     { enquiryCode: updatedEnquiry.enquiry_code }
                 );
@@ -751,6 +722,17 @@ class KisanService {
 
         const targetId = updatedEnquiry?.id || enquiryIdOrCode;
 
+        // Cancel any pending transport requests linked to this enquiry so driver is not dispatched
+        const requests = getLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, []);
+        const updatedReqs = requests.map(r => {
+            if (r.enquiry_id === targetId || r.enquiry_code === enquiryIdOrCode || (updatedEnquiry && (r.enquiry_id === updatedEnquiry.id || r.enquiry_code === updatedEnquiry.enquiry_code))) {
+                r.status = 'CANCELLED';
+                r.transport_status = 'CANCELLED';
+            }
+            return r;
+        });
+        setLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, updatedReqs);
+
         try {
             await supabase
                 .from('enquiries')
@@ -771,6 +753,7 @@ class KisanService {
         }
 
         this.notify('enquiry_rejected', updatedEnquiry || { id: targetId, status: 'REJECTED' });
+        this.notify('transport_changed', updatedReqs);
         return updatedEnquiry || { id: targetId, status: 'REJECTED' };
     }
 
@@ -807,9 +790,12 @@ class KisanService {
         const requests = getLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, []);
         const updatedReqs = requests.map(r => {
             if (r.enquiry_id === enquiryIdOrCode || r.enquiry_code === enquiryIdOrCode) {
-                r.status = 'ASSIGNED';
+                r.status = 'VEHICLE_ASSIGNED';
                 r.transport_status = 'ACCEPTED';
                 r.updated_at = acceptedAt;
+                if (providerUser?.name) r.assigned_provider_name = providerUser.name;
+                if (providerUser?.phone) r.assigned_provider_phone = providerUser.phone;
+                if (providerUser?.vehicle_number) r.vehicle_number = providerUser.vehicle_number;
             }
             return r;
         });
@@ -851,6 +837,8 @@ class KisanService {
         }
 
         this.notify('transport_load_accepted', updatedEnquiry);
+        this.notify('transport_requests_changed', updatedReqs);
+        this.notify('enquiries_changed', updatedLocal);
         return updatedEnquiry;
     }
 
@@ -869,6 +857,19 @@ class KisanService {
         });
         setLocal(STORAGE_KEYS.ENQUIRIES, updatedLocal);
 
+        // Update transport requests table
+        const requests = getLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, []);
+        const updatedReqs = requests.map(r => {
+            if (r.enquiry_id === enquiryIdOrCode || r.enquiry_code === enquiryIdOrCode) {
+                r.status = 'REJECTED';
+                r.transport_status = 'REJECTED';
+                r.reject_reason = reason;
+                r.updated_at = new Date().toISOString();
+            }
+            return r;
+        });
+        setLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, updatedReqs);
+
         if (updatedEnquiry) {
             this.addNotification(
                 updatedEnquiry.farmer_phone,
@@ -880,6 +881,8 @@ class KisanService {
         }
 
         this.notify('transport_load_rejected', updatedEnquiry);
+        this.notify('transport_requests_changed', updatedReqs);
+        this.notify('enquiries_changed', updatedLocal);
         return updatedEnquiry;
     }
 
@@ -1167,6 +1170,8 @@ class KisanService {
         this.notify('load_received', loadRecord);
         this.notify('payments_changed', loadRecord);
         this.notify('enquiry_updated', targetEnquiry);
+        this.notify('enquiries_changed', updatedEnquiries);
+        this.notify('transport_requests_changed', updatedReqs);
         return loadRecord;
     }
 
@@ -1292,23 +1297,42 @@ class KisanService {
         const allProviders = getLocal(STORAGE_KEYS.TRANSPORT_PROVIDERS, DEFAULT_PROVIDERS);
         const availableProviders = allProviders.filter(p => (p.availability || 'AVAILABLE') === 'AVAILABLE');
         
-        // 2. Filter providers by vehicle capacity matching the crop load
-        let candidateDrivers = availableProviders.filter(p => p.capacity >= quantityTons);
-        if (candidateDrivers.length === 0) {
-            candidateDrivers = availableProviders.length > 0 ? availableProviders : allProviders;
+        // 2. Prioritize the farmer's selected driver if provided
+        let assignedDriver = null;
+        const selectedPhone = enquiry.driver_phone || enquiry.transport_provider_id;
+        if (selectedPhone) {
+            const matched = allProviders.find(p => p.phone === selectedPhone);
+            if (matched) {
+                assignedDriver = { ...matched };
+            } else {
+                assignedDriver = {
+                    name: enquiry.driver_name || 'Assigned Driver',
+                    phone: selectedPhone,
+                    vehicle_number: enquiry.vehicle_number || 'TS 09 EA 4421',
+                    vehicle_type: enquiry.vehicle_type || 'Truck',
+                    capacity: Number(enquiry.vehicle_capacity) || quantityTons,
+                    price_per_km: Number(enquiry.transport_rate_per_km) || 35
+                };
+            }
         }
 
-        // 3. Randomly select an available and free driver
-        const assignedDriver = candidateDrivers[Math.floor(Math.random() * candidateDrivers.length)] || allProviders[0];
+        // If no driver pre-selected, smart match based on load capacity
+        if (!assignedDriver) {
+            let candidateDrivers = availableProviders.filter(p => p.capacity >= quantityTons);
+            if (candidateDrivers.length === 0) {
+                candidateDrivers = availableProviders.length > 0 ? availableProviders : allProviders;
+            }
+            assignedDriver = candidateDrivers[Math.floor(Math.random() * candidateDrivers.length)] || allProviders[0];
+        }
 
-        // 4. Calculate route distance and agreed haulage price
+        // 3. Calculate route distance and agreed haulage price
         const dist = Number(enquiry.distance) || calculateDistance(
             enquiry.farmer_lat || 17.0916, 
             enquiry.farmer_lng || 80.0210, 
             enquiry.mill_lat || 17.1033, 
             enquiry.mill_lng || 80.0536
         ) || 38.5;
-        const agreedPrice = Math.round(dist * (assignedDriver.price_per_km || 35));
+        const agreedPrice = Number(enquiry.estimated_transport_cost) || Math.round(dist * (assignedDriver.price_per_km || 35));
 
         const req = {
             id: 'TR-' + Date.now(),
@@ -1320,6 +1344,7 @@ class KisanService {
             farmer_phone: enquiry.farmer_phone,
             mill_id: enquiry.mill_id,
             mill_name: enquiry.mill_name,
+            mill_status: 'ACCEPTED',
             buyer_phone: enquiry.buyer_phone,
             crop_name: enquiry.crop_name,
             quantity: quantityTons,
@@ -1331,15 +1356,16 @@ class KisanService {
             delivery_lng: enquiry.mill_lng || 80.0536,
             delivery_address: enquiry.mill_location_name || enquiry.delivery_location || 'Processing Mill',
             required_capacity: quantityTons,
-            vehicle_type: assignedDriver.vehicle_type || enquiry.vehicle_type || 'Truck',
-            vehicle_number: assignedDriver.vehicle_number,
-            pickup_date: enquiry.pickup_date || new Date().toISOString().split('T')[0],
+            vehicle_type: enquiry.vehicle_type || assignedDriver.vehicle_type || 'Truck',
+            vehicle_number: enquiry.vehicle_number || assignedDriver.vehicle_number,
+            pickup_date: enquiry.transport_date || enquiry.pickup_date || new Date().toISOString().split('T')[0],
             distance: dist,
             assigned_provider_id: assignedDriver.phone,
-            assigned_provider_name: assignedDriver.name,
+            assigned_provider_name: assignedDriver.driver_name || assignedDriver.name,
             assigned_provider_phone: assignedDriver.phone,
             final_price: agreedPrice,
             status: 'ASSIGNED',
+            transport_status: 'PENDING',
             created_at: new Date().toISOString()
         };
 
@@ -1352,33 +1378,42 @@ class KisanService {
         }
         setLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, requests);
 
+        // Update the enquiry's transport status in local storage to PENDING (awaiting driver acceptance)
+        const allEnquiries = getLocal(STORAGE_KEYS.ENQUIRIES, []);
+        const updatedEnquiries = allEnquiries.map(e => {
+            if (e.id === enquiry.id || e.enquiry_code === enquiry.enquiry_code) {
+                return {
+                    ...e,
+                    transport_status: 'PENDING',
+                    status: e.overall_status === 'CONFIRMED' ? 'ACCEPTED' : 'WAITING_TRANSPORT',
+                    overall_status: e.overall_status === 'CONFIRMED' ? 'CONFIRMED' : 'WAITING_TRANSPORT',
+                    driver_name: assignedDriver.driver_name || assignedDriver.name,
+                    driver_phone: assignedDriver.phone,
+                    vehicle_number: req.vehicle_number
+                };
+            }
+            return e;
+        });
+        setLocal(STORAGE_KEYS.ENQUIRIES, updatedEnquiries);
+
         try {
             await supabase.from('transport_requests').insert([req]);
         } catch (e) {
             console.warn("Supabase transport request insert error:", e);
         }
 
-        // Notify assigned driver
+        // Notify assigned driver specifically
         this.addNotification(
             assignedDriver.phone,
             'transporters',
             '🚛 New Crop Load Assigned!',
-            `You have been assigned to pick up ${quantityTons} Tons of ${req.crop_name} from Farmer ${req.farmer_name}. Pickup: ${req.pickup_address}. Farmer: ${req.farmer_phone}.`,
-            'transport',
-            { transportCode, enquiryCode: req.enquiry_code }
-        );
-
-        // Notify farmer
-        this.addNotification(
-            enquiry.farmer_phone,
-            'farmers',
-            '🚚 Transporter Assigned for Your Harvest',
-            `Driver ${assignedDriver.name} (${assignedDriver.phone}, ${assignedDriver.vehicle_number}) has been assigned to pick up your harvest.`,
+            `Mill ${req.mill_name || 'Buyer'} accepted enquiry ${req.enquiry_code}. Farmer ${req.farmer_name} requests transport for ${quantityTons} Tons of ${req.crop_name}. Please accept the load!`,
             'transport',
             { transportCode, enquiryCode: req.enquiry_code }
         );
 
         this.notify('transport_request_created', req);
+        this.notify('enquiries_changed', updatedEnquiries);
         return req;
     }
 
@@ -1432,13 +1467,14 @@ class KisanService {
     getTransportRequests({ farmerPhone, millId, providerPhone } = {}) {
         let requests = getLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, []);
 
-        // Auto-heal: Ensure all accepted enquiries with transport have an assigned transport request
+        // Auto-heal: Ensure all mill-accepted enquiries with transport have an assigned transport request
         const enquiries = getLocal(STORAGE_KEYS.ENQUIRIES, []);
         enquiries.forEach(enq => {
             const statusUpper = (enq.status || '').toUpperCase();
-            const isAccepted = statusUpper === 'ACCEPTED' || statusUpper === 'LOAD_RECEIVED';
+            const millStatusUpper = (enq.mill_status || '').toUpperCase();
+            const isAcceptedByMill = millStatusUpper === 'ACCEPTED' || statusUpper === 'ACCEPTED' || statusUpper === 'LOAD_RECEIVED' || statusUpper === 'WAITING_TRANSPORT';
             const hasTransport = enq.transport_required || enq.with_transport;
-            if (isAccepted && hasTransport) {
+            if (isAcceptedByMill && hasTransport) {
                 const enqCode = enq.enquiry_code || ('ENQ-' + (enq.id || '').replace(/-/g, '').slice(0, 8).toUpperCase());
                 const hasReq = requests.some(r => r.enquiry_id === enq.id || (r.enquiry_code && r.enquiry_code === enqCode));
                 if (!hasReq) {
@@ -1449,6 +1485,19 @@ class KisanService {
 
         requests = getLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, []);
         return requests.filter(req => {
+            // Guard: If linked to an enquiry, ensure that enquiry has been accepted by the mill!
+            if (req.enquiry_id || req.enquiry_code) {
+                const linkedEnq = enquiries.find(e => (req.enquiry_id && e.id === req.enquiry_id) || (req.enquiry_code && e.enquiry_code === req.enquiry_code));
+                if (linkedEnq) {
+                    const millStatus = (linkedEnq.mill_status || '').toUpperCase();
+                    const enqStatus = (linkedEnq.status || '').toUpperCase();
+                    const isMillAccepted = millStatus === 'ACCEPTED' || enqStatus === 'ACCEPTED' || enqStatus === 'LOAD_RECEIVED' || enqStatus === 'WAITING_TRANSPORT';
+                    if (!isMillAccepted) {
+                        return false; // Do not show to transporter if mill has not accepted yet!
+                    }
+                }
+            }
+            if (req.status === 'CANCELLED' || req.transport_status === 'CANCELLED') return false;
             if (farmerPhone && req.farmer_phone !== farmerPhone) return false;
             if (millId && String(req.mill_id) !== String(millId)) return false;
             if (providerPhone && req.assigned_provider_id && req.assigned_provider_id !== providerPhone && req.assigned_provider_phone !== providerPhone) return false;
@@ -1575,9 +1624,30 @@ class KisanService {
                 `Vehicle ${updatedReq.vehicle_number || ''} status for enquiry ${updatedReq.enquiry_code} updated to ${newStatus}.`,
                 'info'
             );
+
+            // Also synchronize enquiry state!
+            const allEnquiries = getLocal(STORAGE_KEYS.ENQUIRIES, []);
+            let enqChanged = false;
+            const updatedEnqs = allEnquiries.map(eq => {
+                if (eq.id === updatedReq.enquiry_id || (updatedReq.enquiry_code && eq.enquiry_code === updatedReq.enquiry_code)) {
+                    eq.transit_status = newStatus;
+                    if (newStatus === 'DELIVERED') {
+                        eq.status = 'LOAD_RECEIVED';
+                        eq.load_status = 'LOAD_RECEIVED';
+                        eq.qr_scanned = true;
+                    }
+                    enqChanged = true;
+                }
+                return eq;
+            });
+            if (enqChanged) {
+                setLocal(STORAGE_KEYS.ENQUIRIES, updatedEnqs);
+                this.notify('enquiries_changed', updatedEnqs);
+            }
         }
 
         this.notify('transport_status_updated', updatedReq);
+        this.notify('transport_requests_changed', requests);
         return updatedReq;
     }
 

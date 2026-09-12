@@ -20,9 +20,29 @@ export function AuthProvider({ children }) {
             return null;
         }
     });
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const hash = window.location.hash || '';
+            const search = window.location.search || '';
+            if (
+                hash.includes('access_token') ||
+                hash.includes('refresh_token') ||
+                hash.includes('token_type') ||
+                search.includes('code=')
+            ) {
+                return true;
+            }
+            try {
+                if (localStorage.getItem('kisan_intended_role')) {
+                    return true;
+                }
+            } catch {}
+        }
+        return false;
+    });
     const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
     const [googleUser, setGoogleUser] = useState(null);
+    const isProcessingRef = React.useRef(false);
 
     // Process authenticated Supabase user
     const processSupabaseUser = async (sbUser) => {
@@ -31,148 +51,197 @@ export function AuthProvider({ children }) {
             setRole(null);
             setNeedsRoleSelection(false);
             setGoogleUser(null);
+            setLoading(false);
             return;
         }
 
-        // 1. Check if user clicked a specific portal before OAuth (from URL or localStorage)
-        let urlRole = null;
-        if (typeof window !== 'undefined') {
-            if (window.location.pathname.startsWith('/login/')) {
-                urlRole = window.location.pathname.split('/login/')[1]?.split(/[?#/]/)[0];
-            }
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('role')) urlRole = params.get('role');
+        // Prevent duplicate concurrent executions from getSession and onAuthStateChange
+        if (isProcessingRef.current) {
+            return;
         }
-        const intendedRole = urlRole || localStorage.getItem('kisan_intended_role');
-        let userRole = null;
-        let profileData = null;
+        isProcessingRef.current = true;
 
-        if (intendedRole) {
-            userRole = intendedRole;
+        try {
+            // 1. Check if user clicked a specific portal before OAuth (from URL or localStorage)
+            let urlRole = null;
+            if (typeof window !== 'undefined') {
+                if (window.location.pathname.startsWith('/login/')) {
+                    urlRole = window.location.pathname.split('/login/')[1]?.split(/[?#/]/)[0];
+                }
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('role')) urlRole = params.get('role');
+            }
+            let intendedRole = urlRole;
             try {
-                localStorage.removeItem('kisan_intended_role');
+                if (!intendedRole) {
+                    intendedRole = localStorage.getItem('kisan_intended_role');
+                }
+                if (intendedRole) {
+                    localStorage.removeItem('kisan_intended_role');
+                }
             } catch (e) {
                 console.warn(e);
             }
-            try {
-                await supabase.auth.updateUser({ data: { role: intendedRole } });
-            } catch (uErr) {
-                console.warn("Error updating user role metadata:", uErr);
-            }
-        } else {
-            // 2. Check if role is stored in Supabase Auth user_metadata
-            userRole = sbUser.user_metadata?.role || null;
-        }
 
-        // 3. Look up existing profile in the role table
-        const targetTable = userRole === 'transporters' ? 'transport_providers' : (userRole || 'farmers');
-        if (userRole && sbUser.email) {
-            try {
-                const { data } = await supabase.from(targetTable).select('*').eq('email', sbUser.email).maybeSingle();
-                if (data) {
-                    profileData = data;
-                }
-            } catch (tErr) {
-                console.warn(`Profile lookup in ${targetTable}:`, tErr);
-            }
-        }
+            // 2. Derive user role from intended role or user_metadata
+            let userRole = intendedRole || sbUser.user_metadata?.role || null;
 
-        // 4. If no role was pre-selected or in metadata, check all tables by email
-        if (!userRole && sbUser.email) {
-            try {
-                const { data: farmer } = await supabase.from('farmers').select('*').eq('email', sbUser.email).maybeSingle();
-                if (farmer) {
-                    userRole = 'farmers';
-                    profileData = farmer;
-                }
-            } catch (err) {
-                console.warn("Farmers table lookup:", err);
-            }
+            // FAST-PATH: If role is already known from portal selection or metadata,
+            // resolve user immediately so navigation doesn't wait 3 seconds for DB queries!
+            if (userRole) {
+                const immediateUser = {
+                    id: sbUser.id,
+                    email: sbUser.email,
+                    name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Kisan Member',
+                    phone: sbUser.phone || sbUser.user_metadata?.phone || '',
+                    role: userRole,
+                    avatar: sbUser.user_metadata?.avatar_url || null,
+                };
 
-            if (!userRole) {
+                setUser(immediateUser);
+                setRole(userRole);
+                setNeedsRoleSelection(false);
+                setGoogleUser(null);
+                setLoading(false);
+
                 try {
-                    const { data: buyer } = await supabase.from('buyers').select('*').eq('email', sbUser.email).maybeSingle();
-                    if (buyer) {
-                        userRole = 'buyers';
-                        profileData = buyer;
+                    localStorage.setItem('kisan_active_user', JSON.stringify(immediateUser));
+                    localStorage.setItem('kisan_active_role', userRole);
+                } catch (e) {
+                    console.warn('Could not persist initial user session:', e);
+                }
+
+                // Asynchronously sync user metadata and database profile in the background
+                (async () => {
+                    try {
+                        if (intendedRole && sbUser.user_metadata?.role !== intendedRole) {
+                            supabase.auth.updateUser({ data: { role: intendedRole } }).catch(() => {});
+                        }
+
+                        const targetTable = userRole === 'transporters' ? 'transport_providers' : userRole;
+                        if (sbUser.email) {
+                            const { data: profileData } = await supabase.from(targetTable).select('*').eq('email', sbUser.email).maybeSingle();
+                            if (profileData) {
+                                setUser(prev => ({ ...prev, ...profileData }));
+                                try {
+                                    localStorage.setItem('kisan_active_user', JSON.stringify({ ...immediateUser, ...profileData }));
+                                } catch {}
+                            } else {
+                                const newProfile = {
+                                    email: sbUser.email,
+                                    phone: immediateUser.phone || '9' + Math.floor(100000000 + Math.random() * 900000000),
+                                    pin: '1234',
+                                    name: immediateUser.name,
+                                    role: userRole,
+                                    created_at: new Date().toISOString()
+                                };
+                                await supabase.from(targetTable).upsert(newProfile);
+                            }
+                        }
+                    } catch (bgErr) {
+                        console.warn("Background profile sync notice:", bgErr);
                     }
-                } catch (err) {
-                    console.warn("Buyers table lookup:", err);
-                }
+                })();
+
+                return;
             }
 
-            if (!userRole) {
+            // 3. If no role was pre-selected, query all tables in PARALLEL (single network round-trip)
+            if (sbUser.email) {
                 try {
-                    const { data: trans } = await supabase.from('transport_providers').select('*').eq('email', sbUser.email).maybeSingle();
-                    if (trans) {
-                        userRole = 'transporters';
-                        profileData = trans;
+                    const [farmerRes, buyerRes, transRes] = await Promise.all([
+                        supabase.from('farmers').select('*').eq('email', sbUser.email).maybeSingle(),
+                        supabase.from('buyers').select('*').eq('email', sbUser.email).maybeSingle(),
+                        supabase.from('transport_providers').select('*').eq('email', sbUser.email).maybeSingle()
+                    ]);
+
+                    let matchedRole = null;
+                    let matchedProfile = null;
+
+                    if (farmerRes?.data) {
+                        matchedRole = 'farmers';
+                        matchedProfile = farmerRes.data;
+                    } else if (buyerRes?.data) {
+                        matchedRole = 'buyers';
+                        matchedProfile = buyerRes.data;
+                    } else if (transRes?.data) {
+                        matchedRole = 'transporters';
+                        matchedProfile = transRes.data;
                     }
-                } catch (err) {
-                    console.warn("Transporters table lookup:", err);
-                }
-            }
-        }
 
-        // 5. Final role resolution:
-        if (userRole) {
-            const finalUser = {
-                id: sbUser.id,
-                email: sbUser.email,
-                name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Kisan Member',
-                phone: sbUser.phone || sbUser.user_metadata?.phone || '',
-                role: userRole,
-                avatar: sbUser.user_metadata?.avatar_url || null,
-                ...profileData
-            };
+                    if (matchedRole) {
+                        const finalUser = {
+                            id: sbUser.id,
+                            email: sbUser.email,
+                            name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Kisan Member',
+                            phone: sbUser.phone || sbUser.user_metadata?.phone || '',
+                            role: matchedRole,
+                            avatar: sbUser.user_metadata?.avatar_url || null,
+                            ...matchedProfile
+                        };
 
-            // If new user profile in database table is missing, auto-create it
-            if (!profileData && sbUser.email) {
-                try {
-                    const newProfile = {
-                        email: sbUser.email,
-                        phone: finalUser.phone || '9' + Math.floor(100000000 + Math.random() * 900000000),
-                        pin: '1234',
-                        name: finalUser.name,
-                        role: userRole,
-                        created_at: new Date().toISOString()
-                    };
-                    await supabase.from(targetTable).upsert(newProfile);
-                } catch (insErr) {
-                    console.warn(`Auto-creating initial profile in ${targetTable}:`, insErr);
+                        setUser(finalUser);
+                        setRole(matchedRole);
+                        setNeedsRoleSelection(false);
+                        setGoogleUser(null);
+                        setLoading(false);
+
+                        try {
+                            localStorage.setItem('kisan_active_user', JSON.stringify(finalUser));
+                            localStorage.setItem('kisan_active_role', matchedRole);
+                        } catch (e) {
+                            console.warn(e);
+                        }
+                        return;
+                    }
+                } catch (lookupErr) {
+                    console.warn("Parallel profile lookup error:", lookupErr);
                 }
             }
 
-            setUser(finalUser);
-            setRole(userRole);
-            setNeedsRoleSelection(false);
-            setGoogleUser(null);
-            try {
-                localStorage.setItem('kisan_active_user', JSON.stringify(finalUser));
-                localStorage.setItem('kisan_active_role', userRole);
-            } catch (e) {
-                console.warn('Could not persist final user session:', e);
-            }
-        } else {
-            // Only if absolutely no role could be inferred, show role selection
+            // 4. Only if absolutely no role could be inferred, prompt role picker modal
             setGoogleUser(sbUser);
             setNeedsRoleSelection(true);
+            setLoading(false);
+        } finally {
+            isProcessingRef.current = false;
         }
     };
 
     useEffect(() => {
+        let isMounted = true;
+
+        // Safety fallback: ensure loading is cleared after 6 seconds max
+        const safetyTimer = setTimeout(() => {
+            if (isMounted) setLoading(false);
+        }, 6000);
+
+        // Clear OAuth error if present in URL
+        if (typeof window !== 'undefined') {
+            const hash = window.location.hash || '';
+            const search = window.location.search || '';
+            if (hash.includes('error=') || search.includes('error=')) {
+                try {
+                    localStorage.removeItem('kisan_intended_role');
+                } catch {}
+                setLoading(false);
+            }
+        }
+
         // Initialize Supabase Auth Session (Source of Truth)
         const initSession = async () => {
             try {
                 const { data: { session: initialSession } } = await supabase.auth.getSession();
+                if (!isMounted) return;
                 setSession(initialSession);
                 if (initialSession?.user) {
                     await processSupabaseUser(initialSession.user);
+                } else {
+                    setLoading(false);
                 }
             } catch (err) {
                 console.error("Supabase getSession error:", err);
-            } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
 
@@ -180,16 +249,21 @@ export function AuthProvider({ children }) {
 
         // Listen to Supabase Auth State changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+            if (!isMounted) return;
             setSession(newSession);
             if (event === 'SIGNED_IN' && newSession?.user) {
                 await processSupabaseUser(newSession.user);
             } else if (event === 'SIGNED_OUT') {
-                setSession(null);
+                setUser(null);
+                setRole(null);
                 setGoogleUser(null);
+                setLoading(false);
             }
         });
 
         return () => {
+            isMounted = false;
+            clearTimeout(safetyTimer);
             subscription?.unsubscribe();
         };
     }, []);

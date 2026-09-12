@@ -9,10 +9,20 @@ import LanguageSelector from './LanguageSelector';
 
 export default function LandingPage() {
     const [selectedRole, setSelectedRole] = useState(null);
-    const { user, role, needsRoleSelection, assignRoleToGoogleUser } = useAuth();
+    const { user, role, loading, needsRoleSelection, assignRoleToGoogleUser } = useAuth();
     const { t } = useLanguage();
     const navigate = useNavigate();
     const { roleId } = useParams();
+
+    // Check if OAuth callback or active session redirection is in progress
+    const isOAuthInFlight = typeof window !== 'undefined' && (
+        window.location.hash.includes('access_token') ||
+        window.location.hash.includes('refresh_token') ||
+        window.location.search.includes('code=') ||
+        Boolean(localStorage.getItem('kisan_intended_role'))
+    );
+
+    const isRedirecting = Boolean((user && role) || loading || isOAuthInFlight);
 
     // If user is already authenticated and has a role, redirect to their portal
     React.useEffect(() => {
@@ -76,6 +86,58 @@ export default function LandingPage() {
                 : '/transport/dashboard';
         navigate(dest);
     };
+
+    if (needsRoleSelection) {
+        return <RolePickerModal />;
+    }
+
+    if (isRedirecting) {
+        const targetRole = role || (typeof localStorage !== 'undefined' && localStorage.getItem('kisan_intended_role'));
+        const targetTitle = targetRole === 'farmers'
+            ? 'Farmer Portal'
+            : targetRole === 'buyers'
+                ? 'Mill Portal'
+                : targetRole === 'transporters'
+                    ? 'Transport Provider Portal'
+                    : 'KisanConnect Portal';
+
+        return (
+            <div className="landing-page relative bg-neutral-950 font-sans text-neutral-50" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                <div className="fixed inset-0 z-0 opacity-40">
+                    <img
+                        src="/landing-bg.jpg"
+                        alt="Agriculture Field at Sunset"
+                        className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/80 to-neutral-950"></div>
+                </div>
+                <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', textAlign: 'center', maxWidth: '440px' }}>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <KisanLogo size="lg" />
+                    </div>
+                    <div style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '50%',
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '1.25rem'
+                    }}>
+                        <i className="fa-solid fa-circle-notch fa-spin fa-xl" style={{ color: 'var(--primary)' }}></i>
+                    </div>
+                    <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
+                        {targetRole ? `Entering ${targetTitle}...` : 'Connecting to KisanConnect...'}
+                    </h2>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                        Authenticating Google account and opening your workspace...
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="landing-page relative bg-neutral-900 font-sans text-neutral-50 selection:bg-green-500 selection:text-white" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

@@ -148,24 +148,38 @@ export default function TransportPortal({ user: propUser, onLogout }) {
     }, [providerInfo.phone]);
 
     // Smart truck matching & Assigned requests
-    const assignedRequests = transportRequests.filter(req => 
-        (req.assigned_provider_id === providerInfo.phone || req.assigned_provider_phone === providerInfo.phone) &&
-        (req.status === 'ASSIGNED' || req.transport_status === 'PENDING')
-    );
+    const assignedRequests = transportRequests.filter(req => {
+        const isMyPhone = req.assigned_provider_id === providerInfo.phone || req.assigned_provider_phone === providerInfo.phone;
+        const isPendingAcceptance = (req.transport_status === 'PENDING' || (!req.transport_status && req.status === 'ASSIGNED')) &&
+            req.status !== 'VEHICLE_ASSIGNED' &&
+            req.status !== 'PICKUP_STARTED' &&
+            req.status !== 'CROP_PICKED_UP' &&
+            req.status !== 'IN_TRANSIT' &&
+            req.status !== 'ARRIVED_AT_MILL' &&
+            req.status !== 'DELIVERED' &&
+            req.status !== 'REJECTED' &&
+            req.transport_status !== 'REJECTED' &&
+            req.status !== 'CANCELLED';
+        return isMyPhone && isPendingAcceptance;
+    });
 
     const suitableRequests = transportRequests.filter(req => {
         const reqCap = Number(req.required_capacity || req.quantity || 10);
         return providerInfo.capacity >= reqCap && (req.status === 'SEARCHING' || req.status === 'QUOTED');
     });
 
-    const activeTrips = transportRequests.filter(req => 
-        (req.assigned_provider_id === providerInfo.phone || req.assigned_provider_phone === providerInfo.phone) &&
-        req.status !== 'DELIVERED' && req.status !== 'REJECTED' && req.transport_status !== 'REJECTED'
-    );
+    const activeTrips = transportRequests.filter(req => {
+        const isMyPhone = req.assigned_provider_id === providerInfo.phone || req.assigned_provider_phone === providerInfo.phone;
+        const isAcceptedByDriver = req.transport_status === 'ACCEPTED' || 
+            ['VEHICLE_ASSIGNED', 'PICKUP_STARTED', 'CROP_PICKED_UP', 'IN_TRANSIT', 'ARRIVED_AT_MILL'].includes(req.status);
+        return isMyPhone && isAcceptedByDriver && req.status !== 'DELIVERED' && req.status !== 'REJECTED' && req.transport_status !== 'REJECTED';
+    });
 
-    const allFleetActiveTrips = transportRequests.filter(req => 
-        req.status && req.status !== 'DELIVERED' && req.status !== 'SEARCHING' && req.status !== 'QUOTED' && req.status !== 'REJECTED'
-    );
+    const allFleetActiveTrips = transportRequests.filter(req => {
+        const isAccepted = req.transport_status === 'ACCEPTED' || 
+            ['VEHICLE_ASSIGNED', 'PICKUP_STARTED', 'CROP_PICKED_UP', 'IN_TRANSIT', 'ARRIVED_AT_MILL'].includes(req.status);
+        return isAccepted && req.status !== 'DELIVERED' && req.status !== 'SEARCHING' && req.status !== 'QUOTED' && req.status !== 'REJECTED' && req.transport_status !== 'REJECTED';
+    });
 
     const completedTrips = transportRequests.filter(req => 
         (req.assigned_provider_id === providerInfo.phone || req.assigned_provider_phone === providerInfo.phone) &&
@@ -444,9 +458,14 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                                                 </div>
 
                                                 <div style={{ marginBottom: '1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.85rem' }}>
-                                                    <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '1.2rem', color: 'var(--text-main)' }}>
+                                                    <h3 style={{ margin: '0 0 0.2rem 0', fontSize: '1.2rem', color: 'var(--text-main)' }}>
                                                         {req.crop_name} • <span style={{ color: 'var(--primary)' }}>{req.quantity} Tons</span>
                                                     </h3>
+
+                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: 'var(--primary)', padding: '0.2rem 0.55rem', borderRadius: '0.35rem', fontSize: '0.72rem', fontWeight: 700, width: 'fit-content', marginBottom: '0.25rem' }}>
+                                                        <i className="fa-solid fa-circle-check"></i>
+                                                        <span>Mill Accepted: {req.mill_name || 'Buyer Confirmed'}</span>
+                                                    </div>
 
                                                     <div><span style={{ color: 'var(--text-muted)' }}>👨‍🌾 Farmer:</span> <strong>{req.farmer_name} ({req.farmer_phone})</strong></div>
                                                     <div><span style={{ color: 'var(--text-muted)' }}>📍 Pickup:</span> <strong>{req.pickup_address}</strong></div>

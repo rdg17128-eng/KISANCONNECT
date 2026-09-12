@@ -232,7 +232,7 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                             Enquiry Sent Successfully!
                         </h2>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-                            Your enquiry has been dispatched to <strong>{mill.millName}</strong>{withTransport ? ` with logistics assigned to ${selectedTransporter?.driver_name || selectedTransporter?.name}` : ''}.
+                            Your enquiry has been dispatched to <strong>{mill.millName}</strong>.{withTransport ? ` Once the mill accepts, your transport request will automatically be dispatched to driver ${selectedTransporter?.driver_name || selectedTransporter?.name}.` : ''}
                         </p>
 
                         <div style={{ background: 'rgba(0, 0, 0, 0.35)', borderRadius: '0.75rem', padding: '1.25rem', textAlign: 'left', marginBottom: '1.5rem', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
@@ -269,9 +269,9 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                                 </>
                             )}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Dual Status:</span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Status:</span>
                                 <span className="status-badge" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#fbbf24', padding: '0.25rem 0.6rem', fontSize: '0.75rem', fontWeight: 700, borderRadius: '0.4rem' }}>
-                                    {withTransport ? 'AWAITING MILL & DRIVER' : 'AWAITING MILL DECISION'}
+                                    {withTransport ? '⏳ AWAITING MILL ACCEPTANCE (Driver Dispatches Upon Approval)' : '⏳ AWAITING MILL DECISION'}
                                 </span>
                             </div>
                         </div>
@@ -327,6 +327,11 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                                     <div style={{ gridColumn: 'span 2', background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem' }}>
                                         <span style={{ fontWeight: 600 }}>Estimated Transport Cost:</span>
                                         <strong style={{ fontSize: '1.1rem', color: 'var(--accent-gold)' }}>₹{selectedTransporter.estimated_cost?.toLocaleString()}</strong>
+                                    </div>
+
+                                    <div style={{ gridColumn: 'span 2', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '0.55rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.78rem', color: '#a7f3d0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <i className="fa-solid fa-circle-info" style={{ color: 'var(--primary)' }}></i>
+                                        <span><strong>Order Flow:</strong> Enquiry is dispatched to <strong>{mill.millName}</strong> first. Once the mill accepts, the load assignment will automatically be sent to driver <strong>{selectedTransporter.driver_name || selectedTransporter.name}</strong> for pickup confirmation.</span>
                                     </div>
                                 </div>
                             )}
