@@ -1,105 +1,167 @@
 # KisanConnect 🌾
-> **Theme:** *Agriculture Reimagined for the Digital Era • Technology Empowering Nature*
+> **Agriculture Reimagined for the Digital Era • Technology Empowering Nature**
 
-**KisanConnect** is an advanced, unified agricultural ecosystem designed to bridge the gaps between core agricultural stakeholders: **Farmers**, **Procurement Buyers & Processing Mills**, and **Agro-Transport Logistics Providers**. By integrating real-time meteorological data, dynamic pricing engines, camera-based QR verification, digital load receiving manifests, and smart truck-capacity matching, KisanConnect removes inefficient intermediaries, ensures fair price discovery, and offers complete transparency from farm to fork.
+[![React](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Leaflet](https://img.shields.io/badge/Maps-Leaflet%20GPS-199900?logo=leaflet&logoColor=white)](https://leafletjs.com/)
+[![Supabase](https://img.shields.io/badge/Database-Supabase%20Realtime-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
----
+**KisanConnect** is a unified, next-generation agricultural commerce and logistics ecosystem designed to eliminate traditional supply-chain bottlenecks between **Farmers**, **Procurement Buyers & Processing Mills**, **Agro-Transport Logistics Providers**, and **Consumers**. 
 
-## 💡 Project Idea & Core Vision
-
-Traditional agricultural supply chains are plagued by lack of transparency, price manipulation by middle-men, and information asymmetry. Farmers often harvest without knowing current market demand, while buyers face difficulties sourcing quality produce. 
-
-**KisanConnect** solves this by establishing a secure, transparent, and connected web portal:
-* **Farmer-to-Mill Traceability:** Permanent Enquiry IDs (`KC-2026-XXXXXX`) connect crops directly to verified processing mills.
-* **Camera-Based QR Verification:** Accepted farmer enquiries automatically receive a cryptographically signed QR code. Gate operators scan the QR to verify crop authenticity, acreage, quantity, and mill matching before authorizing load entry.
-* **Digital Load Receiving:** In-system confirmation turns verified loads into permanent ledger receipts with timestamps.
-* **Smart Truck Matching & Logistics:** Haulage requests (`TR-2026-XXXXXX`) automatically match transport providers whose truck capacity (5T, 10T, 15T, 20T+) satisfies the crop load volume.
-* **Nature Meets Technology:** Combining Earth-toned, modern glassmorphic aesthetics with real-time data feeds to create an intuitive workspace for rural and commercial users alike.
+By bringing together **high-precision GPS farm tagging**, **direct mill discovery**, **algorithmic truck capacity matching**, **cryptographic QR gate authentication**, and **real-time payment settlement with instant digital billing**, KisanConnect provides complete transparency from farm field to processing mill.
 
 ---
 
-## 🏛️ Ecosystem Portals & Features
+## 💡 The New Application Idea
 
-KisanConnect is structured around four distinct user portals, each custom-tailored to a specific stakeholder's workflow:
+Traditional agricultural supply chains are plagued by opaque pricing, exploitative middlemen, inaccurate farm plot tagging, gate entry fraud, and delayed payment settlements that leave farmers waiting weeks for compensation.
 
-### 1. 🚜 Farmer Portal (*Empower Your Yield*)
-* **Crop Listings & Management:** Farmers register, update, and track active crop yields with GPS coordinates and acreage.
-* **Nearby Mills Discovery:** Search verified milling facilities buying specific crops, sorted by distance from the farm.
-* **Enquiry Dispatch:** Send supply proposals with quantity (Tons), acreage, expected rate, and transport requirements.
-* **Crop Verification QR Codes:** Instant access to digital QR codes for accepted enquiries with native Web Share and PNG Download.
-* **Load Status Lifecycle:** Visual stepper tracking:
-  `PENDING` ➔ `ACCEPTED BY MILL` ➔ `QR GENERATED` ➔ `QR SCANNED` ➔ `LOAD RECEIVED AT MILL` ➔ `COMPLETED`.
-* **Transport Fleet & Quotes:** Review haulage bids from verified logistics providers and assign vehicles in one click.
-* **Weather & Market Intelligence:** Location-specific forecast and live commodity rates.
+**KisanConnect transforms this with 6 core innovations:**
 
-### 2. 🏭 Mills Portal (*Source with Confidence & Precision*)
-* **Farmer Enquiries Inbox:** Real-time stream of incoming farmer supply proposals with distance and transport specs.
-* **Instant Acceptance & QR Generation:** Accept enquiries to auto-generate crop verification manifests.
-* **Camera-Based QR Scanner:** High-speed mobile and desktop camera scanner (powered by `html5-qrcode`) to authenticate arriving trucks:
-  * 🟢 **VERIFIED MATCH:** Authorizes gate entry and load acceptance.
-  * 🔴 **NOT MATCHED:** Prevents unauthorized loads or wrong mill routing.
-* **Load Receiving Confirmation:** One-tap digital confirmation recording `received_at`, `received_by`, and quantity into permanent records.
-* **Loads Received Audit Ledger:** Complete audit table of all received batches.
-* **Capacity & Price Management:** Set dynamic buying prices per quintal for cereals, pulses, and oilseeds.
+1. **High-Accuracy Farm GPS Geo-Tagging:**
+   - 1-tap **"Use Current Location"** utilizing satellite hardware GPS polling (`enableHighAccuracy: true`, `timeout: 10000`) providing down to `±8m` parcel accuracy.
+   - Deep rural Indian reverse-geocoding specifically tailored for villages, hamlets, mandals, tehsils, and districts.
+   - Interactive high-zoom map centering with search and live plot address resolution.
 
-### 3. 🚛 Transport Provider Portal (*Smart Agro-Logistics*)
-* **Smart Truck Matching:** Algorithmic filtering ensuring haulage requests are only shown to trucks with sufficient tonnage capacity ($\text{Capacity} \ge \text{Crop Quantity}$).
-* **Real-time Quoting:** Submit competitive price quotes and estimated pickup arrival windows.
-* **Dispatch & Transit Progression:** Live status transitions:
-  `ASSIGNED` ➔ `PICKUP_STARTED` ➔ `CROP_PICKED_UP` ➔ `IN_TRANSIT` ➔ `ARRIVED_AT_MILL` ➔ `DELIVERED`.
-* **Fleet Management:** Vehicle registration, tonnage rating, and price per km configurations.
+2. **Direct Mill Discovery & Price Transparency:**
+   - Real-time commodity rate indexing and transparent mill price listings per quintal.
+   - Distance-sorted mill directory so farmers can pick the most profitable and logistically efficient buyer.
+
+3. **Smart Agro-Transport Capacity Matching:**
+   - Transport requests (`TR-2026-XXXXXX`) automatically match only those transport vehicles whose rated tonnage meets or exceeds the crop load volume ($\text{Truck Capacity} \ge \text{Crop Quantity}$).
+   - Multi-transporter bidding with price quotes, arrival ETAs, and live trip progression.
+
+4. **Cryptographic QR Gate Verification:**
+   - Every accepted enquiry generates a tamper-proof digital QR code containing crop authenticity metadata, farmer details, crop tonnage, and assigned mill ID.
+   - Mill gate operators authenticate arriving loads in seconds using an in-browser camera scanner (`html5-qrcode`), preventing unauthorized deliveries or route manipulation.
+
+5. **Digital Load Receiving & Audit Ledger:**
+   - Digitally records truck weighment, accepted quantity, arrival timestamps, and operator signatures into an immutable ledger.
+
+6. **Instant Payment Settlement & Cross-Portal Synchronization:**
+   - Buyers record payment completion with payment mode (UPI, NEFT/RTGS, Net Banking, Cash) and bank transaction UTR numbers.
+   - Real-time cross-tab and database synchronization updates the farmer's portal instantly without page refresh:
+     - Advances the lifecycle to **Stage 6: `Payment Settled`**.
+     - Generates an itemized, printable, and downloadable **Payment Bill / Settlement Slip**.
+     - Updates the farmer's financial dashboard counters and lifetime earnings.
 
 ---
 
-## 🔄 The Complete KisanConnect Workflow
+## 🔄 The New End-to-End Application Flow
 
 ```
-FARMER                           MILL                           TRANSPORTER
-  │                                │                                │
-  ├── Register Crop & Find Mill    │                                │
-  ├── Send Enquiry (Enquiry ID) ──►│                                │
-  │   [Transport: YES]             ├── Review & Accept Enquiry      │
-  │◄── Receive Verification QR ────┤   [Auto-Creates Transport Req]─┼──► Receives Request (TR-ID)
-  │                                │                                ├── Submits Quote (₹ Price)
-  ├── Compares Quotes & Accepts ───┼────────────────────────────────┼──► Vehicle Assigned
-  │                                │                                ├── Pickup Started
-  │                                │                                ├── Crop Picked Up
-  │                                │                                ├── In Transit
-  │                                │                                ├── Arrived at Mill Gate
-  │                                ├── Mill Scans Farmer QR ◄───────┤
-  │                                ├── 🟢 VERIFIED MATCH            │
-  │                                ├── Confirms Load Received       │
-  │◄── 🟢 LOAD RECEIVED (Realtime) ┼── Status: LOAD_RECEIVED ───────┼──► Delivery Completed
+┌─────────────────┐           ┌──────────────────┐           ┌──────────────────────┐
+│  FARMER PORTAL  │           │   BUYER / MILL   │           │  TRANSPORTER PORTAL  │
+└────────┬────────┘           └────────┬─────────┘           └──────────┬───────────┘
+         │                             │                                │
+1. FIELD REGISTRATION                  │                                │
+   • 1-Tap "Use Current Location"      │                                │
+   • High-accuracy GPS (±8m)           │                                │
+   • Resolves Village & Mandal         │                                │
+         │                             │                                │
+2. ENQUIRY DISPATCH                    │                                │
+   • Select Crop & Enter Acreage       │                                │
+   • Request Mill Procurement ────────►│                                │
+   • Enquiry ID: KC-2026-XXXXXX        │                                │
+         │                             │                                │
+         │                    3. REVIEW & ACCEPT                        │
+         │                       • Validates rate & tonnage             │
+         │                       • Accepts enquiry                      │
+         │◄──────────────────────• Generates Crop QR Code               │
+         │                       • Creates Transport Req ──────────────►│
+         │                             │                                │
+         │                             │                     4. QUOTE & ASSIGN
+         │                             │                        • Filter trucks:
+         │                             │                          Capacity >= Load
+         │◄────────────────────────────┼────────────────────────• Submits Haulage Bid
+         │                             │                                │
+5. ACCEPTS QUOTE & MONITORS            │                                │
+   • Locks transporter vehicle         │                     6. TRANSIT PROGRESSION
+   • Tracks live transit status ◄──────┼────────────────────────• ASSIGNED
+         │                             │                        • PICKUP_STARTED
+         │                             │                        • CROP_PICKED_UP
+         │                             │                        • IN_TRANSIT
+         │                             │                        • ARRIVED_AT_MILL
+         │                             │                                │
+         │                    7. GATE ENTRY & QR SCAN                   │
+         │                       • Operator scans driver QR ◄───────────┘
+         │                       • 🟢 VERIFIED MATCH
+         │                             │
+         │                    8. DIGITAL LOAD RECEIVING
+         │                       • Confirms weighment & quality
+         │◄──────────────────────• Real-time Status: LOAD RECEIVED
+         │                             │
+         │                    9. PAYMENT SETTLEMENT
+         │                       • Records settlement:
+         │                         UPI / NEFT / UTR Ref
+         │◄──────────────────────• Real-time Cross-Portal Event
+         │                             │
+10. PAYMENT RECEIVED & BILLING         │
+    • Stage 6: Payment Settled         │
+    • Total Earnings Card Updated      │
+    • View & Print Settlement Bill     │
 ```
+
+---
+
+## 🏛️ Ecosystem Portals
+
+### 🚜 1. Farmer Portal (*Empower Your Yield*)
+* **Crop Inventory:** Register fields with accurate 1-tap GPS coordinates, crop type, and acreage.
+* **Mill Directory:** Browse nearby buyers sorted by distance and buying rates.
+* **Proposals & Enquiries:** Send custom supply proposals with haulage preference.
+* **Traceability & Lifecycle Stepper:** 6-stage real-time tracking:
+  `PENDING` ➔ `ACCEPTED` ➔ `QR GENERATED` ➔ `IN TRANSIT` ➔ `LOAD RECEIVED` ➔ `PAYMENT SETTLED`.
+* **Settlement Invoices:** View, print, or download official payment slips with UTR transaction references.
+* **Weather & Commodity Intel:** Real-time localized weather forecasts and market price indices.
+
+### 🏭 2. Buyer & Mill Operator Portal (*Precision Sourcing*)
+* **Live Enquiries Inbox:** Debounced, high-speed feed of incoming farmer proposals with instant status toggling.
+* **One-Click Acceptance:** Instantly approve farmer enquiries and dispatch transport notices.
+* **Hardware Camera QR Scanner:** In-browser scanner powered by `html5-qrcode` to verify arriving cargo.
+* **Digital Load Receiving:** One-click confirmation of received cargo with automated weight ledger entries.
+* **Payment Recording Engine:** Record settlements via UPI, Net Banking, or Cash with UTR tracking, triggering immediate synchronization to the farmer.
+
+### 🚛 3. Transporter Portal (*Smart Agro-Logistics*)
+* **Capacity-Matched Job Board:** Shows haulage jobs only to trucks capable of transporting the specified tonnage.
+* **Competitive Bidding:** Transporters bid with custom pricing and estimated pickup time.
+* **Live Transit Progression:** Status updater from initial dispatch to mill gate arrival.
+* **Fleet Management:** Register trucks with vehicle numbers, load capacities, and per-km tariffs.
+
+### 🥗 4. Consumer Portal (*Direct Farm Transparency*)
+* **Farm Produce Catalog:** Browse certified farm crops directly.
+* **Batch Traceability:** Trace food origin back to verified farmer coordinates and harvest timestamps.
 
 ---
 
 ## 🛠️ Technology Stack
 
-* **Frontend:** React 19 + Vite for ultra-fast HMR and performance.
-* **Branding & Assets:** Custom KisanConnect vector SVG identity with golden wheat stalk, emerald sprout, and digital connection nodes.
-* **Styling:** Curated Vanilla CSS with glassmorphism, responsive bento grids, and micro-animations.
-* **QR Engine:** `qrcode` for vector/raster QR generation + `html5-qrcode` for responsive camera hardware scanning.
-* **Mapping:** Leaflet & React-Leaflet for interactive farm plot and mill geo-coordinates.
-* **Backend Database:** **Supabase** (PostgreSQL) with Realtime channels, RLS policies, and localized offline resilience.
+| Layer | Technologies |
+|---|---|
+| **Frontend Framework** | React 19, Vite (Ultra-fast HMR) |
+| **Styling & Design** | Vanilla CSS, Glassmorphic Design System, Dynamic Accent Lighting |
+| **Geolocation & Maps** | Leaflet, React-Leaflet, High-Accuracy Geolocation API, OpenStreetMap Nominatim |
+| **QR Engine** | `qrcode` (Raster/Vector Generator), `html5-qrcode` (Live Camera Hardware Scanner) |
+| **State & Sync** | Supabase (PostgreSQL + Realtime Channels), Cross-Tab Storage Event Bus |
+| **Typography & Icons** | Google Fonts (Inter, Outfit), FontAwesome 6 Pro |
 
 ---
 
-## 🚀 Getting Started & Setup
+## 🚀 Getting Started
 
 ### Prerequisites
-* [Node.js](https://nodejs.org/) (v18 or higher recommended)
-* [npm](https://www.npmjs.com/)
+* [Node.js](https://nodejs.org/) (v18.0.0 or higher)
+* [npm](https://www.npmjs.com/) (v9.0.0 or higher)
 
-### Installation & Run
+### Installation & Local Run
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/rdg17128-eng/AGRI-CONNECT.git
-   cd AGRI-CONNECT
+   git clone https://github.com/rdg17128-eng/KISANCONNECT.git
+   cd KISANCONNECT
    ```
 
-2. **Navigate to the application directory:**
+2. **Navigate to the web application:**
    ```bash
    cd new_app
    ```
@@ -109,25 +171,27 @@ FARMER                           MILL                           TRANSPORTER
    npm install
    ```
 
-4. **Environment Configuration:**
-   Verify `.env` has Supabase and weather credentials:
-   ```env
-   VITE_SUPABASE_URL=YOUR_SUPABASE_URL
-   VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
-   VITE_OPENWEATHER_API_KEY=YOUR_OPENWEATHER_API_KEY
-   ```
-
-5. **Start the local development server:**
+4. **Start the development server:**
    ```bash
    npm run dev
    ```
-   Open `http://localhost:5173` to explore KisanConnect!
+   Open your browser at `http://localhost:5173`.
+
+5. **Build for production:**
+   ```bash
+   npm run build
+   ```
 
 ---
 
-## 🎨 Theme & Visual Philosophy
+## 📱 User Experience & Visual Design
 
-KisanConnect uses a curated, premium visual scheme:
-* **Emerald & Gold-Brown Color Palette:** Premium agricultural leaf green (`#10b981`) combined with a metallic golden wheat (`#f59e0b` / `#fbbf24`) for brand highlights, QR containers, and glowing badges.
-* **Glassmorphism:** Frosted translucent cards and modal windows that blend into the sunset farmland backdrop.
-* **Accessibility:** High-contrast QR codes and intuitive mobile camera scanner viewports.
+* **Rich Earth & Emerald Palette:** Premium agricultural emerald (`#10b981`), golden harvest wheat (`#f59e0b`), and deep volcanic slate backgrounds (`#0a0f0d`).
+* **Glassmorphic Bento Grids:** Frosted translucent cards with subtle borders and smooth micro-animations.
+* **Responsive & Mobile-First:** Designed to work smoothly on rural 4G mobile devices, tablets, and desktop workstations.
+* **Multi-Language Support:** Native language selector for accessible regional adoption.
+
+---
+
+## 📄 License
+This project is open-source and available under the [MIT License](LICENSE).
