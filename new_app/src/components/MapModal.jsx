@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { getCurrentCoordinates, reverseGeocode, searchLocations } from '../services/locationService';
 
-// Fix for default Leaflet marker icons in React
+// Fix Leaflet marker icons in React Vite
 import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
@@ -14,93 +15,265 @@ L.Icon.Default.mergeOptions({
     shadowUrl,
 });
 
-function MapEvents({ setPosition }) {
+// Map Click Listener
+function MapClickHandler({ onLocationSelect }) {
     useMapEvents({
         click(e) {
-            setPosition(e.latlng);
+            onLocationSelect(e.latlng.lat, e.latlng.lng);
         }
     });
     return null;
 }
 
-export default function MapModal({ onClose, onConfirm }) {
-    const [position, setPosition] = useState(null);
+// Controller to programmatic move map
+function MapFlyController({ targetPosition }) {
+    const map = useMap();
+    useEffect(() => {
+        if (targetPosition) {
+            map.flyTo([targetPosition.lat, targetPosition.lng], 15, { duration: 1.2 });
+        }
+    }, [targetPosition, map]);
+    return null;
+}
+
+export default function MapModal({ onClose, onConfirm, initialCoords = null }) {
+    const defaultCenter = initialCoords ? [initialCoords.lat, initialCoords.lng] : [17.3850, 78.4867];
+    const [position, setPosition] = useState(initialCoords || null);
+    const [placeName, setPlaceName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [isLocating, setIsLocating] = useState(false);
+    const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+    const [accuracyMeters, setAccuracyMeters] = useState(null);
+    const [flyTarget, setFlyTarget] = useState(initialCoords || null);
 
-    // Initial center (India approx)
-    const initCenter = [20.5937, 78.9629];
-    const mapRef = React.useRef();
+    // Initial load: resolve address if initialCoords provided, or attempt auto-GPS
+    useEffect(() => {
+        if (initialCoords) {
+            resolveLocation(initialCoords.lat, initialCoords.lng);
+        } else {
+            // Auto detect GPS on open for immediate relevance
+            handleGetLiveLocation(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    const handleSearch = async () => {
-        if (!searchQuery) return;
-        setLoading(true);
+    const resolveLocation = async (lat, lng) => {
+        setIsResolvingAddress(true);
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
-            const data = await res.json();
-            if (data && data.length > 0) {
-                const lat = parseFloat(data[0].lat);
-                const lon = parseFloat(data[0].lon);
-                setPosition({ lat, lng: lon });
-                if (mapRef.current) {
-                    mapRef.current.setView([lat, lon], 12);
-                }
-            } else {
-                alert('Location not found.');
-            }
-        } catch (err) {
-            console.error("Search failed:", err);
-            alert("Error searching location.");
+            const res = await reverseGeocode(lat, lng);
+            setPlaceName(res.placeName);
+        } catch (e) {
+            setPlaceName(`Farm Plot (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
         } finally {
-            setLoading(false);
+            setIsResolvingAddress(false);
         }
     };
 
-    const handleConfirm = async () => {
-        if (!position) return;
-        setLoading(true);
-        let placeName = "Selected Location";
+    const handleLocationSelect = async (lat, lng, label = null) => {
+        const newPos = { lat, lng };
+        setPosition(newPos);
+        setFlyTarget(newPos);
+        if (label) {
+            setPlaceName(label);
+        } else {
+            await resolveLocation(lat, lng);
+        }
+    };
+
+    const handleGetLiveLocation = async (manual = true) => {
+        setIsLocating(true);
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}`);
-            const data = await res.json();
-            if (data.address) {
-                placeName = data.address.city || data.address.town || data.address.village || data.address.county || data.address.state;
+            const coords = await getCurrentCoordinates();
+            setPosition({ lat: coords.lat, lng: coords.lng });
+            setFlyTarget({ lat: coords.lat, lng: coords.lng });
+            setAccuracyMeters(coords.accuracy);
+            await resolveLocation(coords.lat, coords.lng);
+        } catch (err) {
+            if (manual) {
+                alert("Could not access high-accuracy GPS. Please ensure location permissions are enabled or click directly on the map.");
+            }
+        } finally {
+            setIsLocating(false);
+        }
+    };
+
+    const handleSearch = async (e) => {
+        if (e) e.preventDefault();
+        if (!searchQuery.trim()) return;
+        setIsSearching(true);
+        try {
+            const results = await searchLocations(searchQuery);
+            setSearchResults(results);
+            if (results.length > 0) {
+                const first = results[0];
+                handleLocationSelect(first.lat, first.lng, first.placeName);
+            } else {
+                alert(`No locations found for "${searchQuery}". Please try another search or click on the map.`);
             }
         } catch (err) {
-            console.error("Geocoding failed", err);
-            placeName = `${position.lat.toFixed(2)}, ${position.lng.toFixed(2)}`;
+            console.error(err);
         } finally {
-            setLoading(false);
-            onConfirm(placeName, position.lat, position.lng);
+            setIsSearching(false);
         }
+    };
+
+    const handleConfirm = () => {
+        if (!position) return;
+        const finalName = placeName || `Farm Plot (${position.lat.toFixed(4)}, ${position.lng.toFixed(4)})`;
+        onConfirm(finalName, position.lat, position.lng);
     };
 
     return (
-        <div className="auth-modal" style={{ display: 'flex', zIndex: 3000 }}>
-            <div className="auth-content" style={{ maxWidth: '650px', padding: '1.5rem' }}>
-                <span className="close-btn" onClick={onClose}><i className="fa-solid fa-xmark"></i></span>
-                <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-main)' }}>Select Crop Location</h3>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.9rem' }}>Search for a location or click on the map to drop a pin.</p>
+        <div className="auth-modal" style={{ display: 'flex', zIndex: 9999 }}>
+            <div className="auth-content" style={{ maxWidth: '680px', width: '94%', padding: '1.5rem', background: '#0d1712', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem' }}>
+                    <div>
+                        <h3 style={{ margin: 0, color: '#f0fdf4', fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <i className="fa-solid fa-map-location-dot" style={{ color: 'var(--primary)' }}></i>
+                            Select Exact Plot Location
+                        </h3>
+                        <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0 0', fontSize: '0.8rem' }}>
+                            Click on the map, use live GPS, or search for your village/mandal
+                        </p>
+                    </div>
+                    <span className="close-btn" onClick={onClose} style={{ position: 'static', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                        <i className="fa-solid fa-xmark"></i>
+                    </span>
+                </div>
 
-                <div className="input-group" style={{ marginBottom: '1rem', position: 'relative' }}>
-                    <i className="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" placeholder="Search for your city, village, or town..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
-                    <button className="primary-btn" style={{ position: 'absolute', right: '4px', padding: '0.4rem 1rem', fontSize: '0.8rem', borderRadius: '0.5rem', boxShadow: 'none' }} onClick={handleSearch} disabled={loading}>
-                        {loading ? '...' : 'Search'}
+                {/* Action Row: Live GPS button & Search Bar */}
+                <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                    <button 
+                        type="button"
+                        className="primary-btn" 
+                        onClick={() => handleGetLiveLocation(true)}
+                        disabled={isLocating}
+                        style={{ 
+                            padding: '0.55rem 0.95rem', 
+                            fontSize: '0.82rem', 
+                            fontWeight: 700, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.45rem',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        <i className={`fa-solid ${isLocating ? 'fa-spinner fa-spin' : 'fa-crosshairs'}`}></i>
+                        {isLocating ? 'Locating GPS...' : 'My Live Location'}
                     </button>
+
+                    <form onSubmit={handleSearch} style={{ flex: 1, display: 'flex', gap: '0.4rem', minWidth: '220px' }}>
+                        <div className="input-group" style={{ flex: 1, padding: '0.4rem 0.75rem', background: 'rgba(0,0,0,0.35)' }}>
+                            <i className="fa-solid fa-magnifying-glass" style={{ fontSize: '0.85rem' }}></i>
+                            <input 
+                                type="text" 
+                                placeholder="Search village, mandal, or town..." 
+                                value={searchQuery} 
+                                onChange={(e) => setSearchQuery(e.target.value)} 
+                                style={{ background: 'transparent', width: '100%', fontSize: '0.85rem', color: '#fff' }} 
+                            />
+                        </div>
+                        <button 
+                            type="submit" 
+                            className="action-btn" 
+                            disabled={isSearching || !searchQuery.trim()}
+                            style={{ padding: '0.55rem 0.9rem', fontSize: '0.82rem' }}
+                        >
+                            {isSearching ? <i className="fa-solid fa-spinner fa-spin"></i> : 'Search'}
+                        </button>
+                    </form>
                 </div>
 
-                <div style={{ width: '100%', height: '350px', borderRadius: '1rem', marginBottom: '1.5rem', zIndex: 1, overflow: 'hidden' }}>
-                    <MapContainer center={initCenter} zoom={5} style={{ height: '100%', width: '100%' }} ref={mapRef}>
-                        <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                        <MapEvents setPosition={setPosition} />
-                        {position && <Marker position={position} />}
+                {/* Map Display */}
+                <div style={{ width: '100%', height: '340px', borderRadius: '0.75rem', overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.25)', position: 'relative' }}>
+                    <MapContainer center={defaultCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+                        <TileLayer 
+                            attribution='&copy; OpenStreetMap contributors' 
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+                        />
+                        <MapClickHandler onLocationSelect={handleLocationSelect} />
+                        {flyTarget && <MapFlyController targetPosition={flyTarget} />}
+                        {position && (
+                            <Marker position={[position.lat, position.lng]}>
+                                <Popup>
+                                    <div style={{ fontSize: '0.82rem', color: '#000' }}>
+                                        <strong>{placeName || 'Selected Location'}</strong>
+                                        <div style={{ fontSize: '0.72rem', color: '#666', marginTop: '0.2rem' }}>
+                                            {position.lat.toFixed(4)}, {position.lng.toFixed(4)}
+                                        </div>
+                                    </div>
+                                </Popup>
+                            </Marker>
+                        )}
                     </MapContainer>
+
+                    {/* Live Pin Instruction Overlay */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '10px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: 'rgba(0,0,0,0.75)',
+                        color: '#fff',
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        fontSize: '0.75rem',
+                        backdropFilter: 'blur(4px)',
+                        pointerEvents: 'none',
+                        zIndex: 1000,
+                        border: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                        <i className="fa-solid fa-hand-pointer" style={{ marginRight: '5px', color: 'var(--primary)' }}></i>
+                        Click anywhere on the map to pinpoint your exact plot
+                    </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                    <button className="text-btn" onClick={onClose} disabled={loading}>Cancel</button>
-                    <button className="primary-btn" onClick={handleConfirm} disabled={!position || loading}>{loading ? 'Confirming...' : 'Confirm Location'}</button>
+                {/* Selected Location Confirmation Bar */}
+                <div style={{ 
+                    background: position ? 'rgba(16, 185, 129, 0.08)' : 'rgba(0,0,0,0.3)', 
+                    border: position ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255,255,255,0.06)', 
+                    borderRadius: '0.75rem', 
+                    padding: '0.75rem 1rem', 
+                    marginTop: '0.75rem', 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    flexWrap: 'wrap', 
+                    gap: '0.5rem' 
+                }}>
+                    <div style={{ flex: 1, minWidth: '220px' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                            Selected Plot Location:
+                        </div>
+                        <div style={{ fontWeight: 800, color: position ? 'var(--primary)' : 'var(--text-muted)', fontSize: '0.92rem', marginTop: '0.15rem' }}>
+                            {isResolvingAddress ? (
+                                <span><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.3rem' }}></i> Resolving village & mandal...</span>
+                            ) : placeName || (position ? `${position.lat.toFixed(4)}, ${position.lng.toFixed(4)}` : 'No location selected yet')}
+                        </div>
+                        {position && (
+                            <div style={{ fontSize: '0.72rem', color: 'var(--accent-gold)', marginTop: '0.15rem', fontFamily: 'monospace' }}>
+                                GPS: {position.lat.toFixed(5)}, {position.lng.toFixed(5)} {accuracyMeters ? `(±${accuracyMeters}m accuracy)` : ''}
+                            </div>
+                        )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.6rem' }}>
+                        <button type="button" className="text-btn" onClick={onClose} style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                            Cancel
+                        </button>
+                        <button 
+                            type="button" 
+                            className="primary-btn" 
+                            onClick={handleConfirm} 
+                            disabled={!position || isResolvingAddress}
+                            style={{ padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 800 }}
+                        >
+                            <i className="fa-solid fa-check" style={{ marginRight: '0.3rem' }}></i>
+                            Confirm Location
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
