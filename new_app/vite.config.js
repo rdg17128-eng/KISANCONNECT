@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import http from 'http'
 import { handleCreateOrderRequest, handleVerifyPaymentRequest, handleAutoSuccessPaymentRequest } from './server/razorpayHandler.js'
+import { handleSendOtpRequest, handleVerifyAuthRequest } from './server/aadhaarHandler.js'
 
 // Vite plugin: OAuth Port 3000 Redirect Bridge
 // Listens on port 3000 across network interfaces (0.0.0.0). When redirected to port 3000,
@@ -164,6 +165,83 @@ function razorpayApiPlugin() {
   };
 }
 
+// Vite plugin: UIDAI Aadhaar 2.5 Sandbox Auth API Backend
+// Handles POST /api/aadhaar/send-otp and POST /api/aadhaar/verify during development
+function aadhaarApiPlugin() {
+  return {
+    name: 'aadhaar-api-plugin',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const urlPath = req.url ? req.url.split('?')[0] : '';
+
+        if (urlPath === '/api/aadhaar/send-otp') {
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+          if (req.method === 'OPTIONS') {
+            res.writeHead(200);
+            return res.end();
+          }
+
+          if (req.method !== 'POST') {
+            res.writeHead(405, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ error: 'Method Not Allowed. Use POST.' }));
+          }
+
+          let bodyStr = '';
+          req.on('data', chunk => { bodyStr += chunk; });
+          req.on('end', async () => {
+            try {
+              const body = bodyStr ? JSON.parse(bodyStr) : {};
+              const result = await handleSendOtpRequest(body);
+              res.writeHead(result.status, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify(result.data));
+            } catch (err) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: err.message || 'Internal Server Error' }));
+            }
+          });
+          return;
+        }
+
+        if (urlPath === '/api/aadhaar/verify') {
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+          if (req.method === 'OPTIONS') {
+            res.writeHead(200);
+            return res.end();
+          }
+
+          if (req.method !== 'POST') {
+            res.writeHead(405, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ error: 'Method Not Allowed. Use POST.' }));
+          }
+
+          let bodyStr = '';
+          req.on('data', chunk => { bodyStr += chunk; });
+          req.on('end', async () => {
+            try {
+              const body = bodyStr ? JSON.parse(bodyStr) : {};
+              const result = await handleVerifyAuthRequest(body);
+              res.writeHead(result.status, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify(result.data));
+            } catch (err) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: err.message || 'Internal Server Error' }));
+            }
+          });
+          return;
+        }
+
+        next();
+      });
+    }
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -172,7 +250,7 @@ export default defineConfig(({ mode }) => {
   process.env.VITE_RAZORPAY_KEY_ID = env.VITE_RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
 
   return {
-    plugins: [react(), tailwindcss(), oauthBridgePlugin(), razorpayApiPlugin()],
+    plugins: [react(), tailwindcss(), oauthBridgePlugin(), razorpayApiPlugin(), aadhaarApiPlugin()],
     server: {
       host: '0.0.0.0',
       port: 5173,
