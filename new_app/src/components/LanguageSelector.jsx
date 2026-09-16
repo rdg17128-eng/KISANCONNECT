@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
-export default function LanguageSelector({ variant = 'dropdown', style = {} }) {
+export default function LanguageSelector({ variant = 'dropdown', align = 'auto', style = {} }) {
     const { language, setLanguage, languages } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [dropdownPlacement, setDropdownPlacement] = useState({ alignLeft: false });
     const dropdownRef = useRef(null);
 
     const activeLang = languages.find(l => l.code === language) || languages[0];
@@ -18,6 +19,27 @@ export default function LanguageSelector({ variant = 'dropdown', style = {} }) {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Calculate smart positioning on open
+    useEffect(() => {
+        if (isOpen && dropdownRef.current) {
+            const rect = dropdownRef.current.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+
+            if (align === 'left') {
+                setDropdownPlacement({ alignLeft: true });
+            } else if (align === 'right') {
+                setDropdownPlacement({ alignLeft: false });
+            } else {
+                // If button is near left edge (< 220px) or in left half of screen, open towards the right
+                if (rect.left < 220 || rect.left < viewportWidth / 2) {
+                    setDropdownPlacement({ alignLeft: true });
+                } else {
+                    setDropdownPlacement({ alignLeft: false });
+                }
+            }
+        }
+    }, [isOpen, align]);
 
     const filteredLanguages = languages.filter(l => {
         if (!searchTerm) return true;
@@ -100,49 +122,55 @@ export default function LanguageSelector({ variant = 'dropdown', style = {} }) {
 
     // Default compact dropdown (for top headers) with quick-search
     return (
-        <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block', ...style }}>
+        <div ref={dropdownRef} className="language-selector-wrapper" style={{ position: 'relative', display: 'inline-block', ...style }}>
             <button
                 type="button"
                 onClick={() => {
                     setIsOpen(!isOpen);
                     setSearchTerm('');
                 }}
-                className="action-btn"
+                className="action-btn lang-selector-btn"
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.45rem 0.85rem',
+                    gap: '0.45rem',
+                    padding: '0.45rem 0.75rem',
                     fontSize: '0.82rem',
                     borderRadius: '2rem',
                     background: 'rgba(255, 255, 255, 0.06)',
                     border: '1px solid rgba(255, 255, 255, 0.12)',
                     color: 'var(--text-main)',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
                 }}
             >
-                <i className="fa-solid fa-language" style={{ color: 'var(--primary)', fontSize: '1rem' }}></i>
-                <span style={{ fontWeight: 700 }}>{activeLang.flag} {activeLang.native}</span>
-                <i className="fa-solid fa-chevron-down" style={{ fontSize: '0.65rem', opacity: 0.7, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}></i>
+                <i className="fa-solid fa-language" style={{ color: 'var(--primary)', fontSize: '0.95rem' }}></i>
+                <span className="lang-selector-label" style={{ fontWeight: 700 }}>{activeLang.flag} {activeLang.native}</span>
+                <i className="fa-solid fa-chevron-down" style={{ fontSize: '0.6rem', opacity: 0.7, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}></i>
             </button>
 
             {isOpen && (
-                <div style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 6px)',
-                    right: 0,
-                    width: '260px',
-                    maxHeight: '380px',
-                    background: '#102117',
-                    border: '1px solid rgba(16, 185, 129, 0.35)',
-                    borderRadius: '0.85rem',
-                    boxShadow: '0 12px 35px rgba(0,0,0,0.65)',
-                    padding: '0.5rem',
-                    zIndex: 99999,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.4rem'
-                }}>
+                <div 
+                    className="language-dropdown-menu"
+                    style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        left: dropdownPlacement.alignLeft ? 0 : 'auto',
+                        right: dropdownPlacement.alignLeft ? 'auto' : 0,
+                        width: 'min(270px, calc(100vw - 20px))',
+                        maxWidth: 'calc(100vw - 20px)',
+                        maxHeight: '380px',
+                        background: '#102117',
+                        border: '1px solid rgba(16, 185, 129, 0.35)',
+                        borderRadius: '0.85rem',
+                        boxShadow: '0 12px 35px rgba(0,0,0,0.75)',
+                        padding: '0.5rem',
+                        zIndex: 99999,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.4rem'
+                    }}
+                >
                     {/* Search Input for 20 Languages */}
                     <div style={{ position: 'relative', padding: '0.2rem' }}>
                         <i className="fa-solid fa-search" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '0.75rem' }}></i>

@@ -15,6 +15,7 @@ import LanguageSelector from './LanguageSelector';
 import PassbookOcrUploader from './PassbookOcrUploader';
 import SandboxPayoutModal from './SandboxPayoutModal';
 import RazorpayCheckoutModal from './RazorpayCheckoutModal';
+import { compressImageFile } from '../utils/imageUtils';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -130,6 +131,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
     const [loadingEnquiries, setLoadingEnquiries] = useState(false);
     const [historyList, setHistoryList] = useState([]);
     const [historyFilter, setHistoryFilter] = useState('ALL');
+    const [cropLightboxImage, setCropLightboxImage] = useState(null);
 
     // Payments & Settlements States
     const [loadsAndPayments, setLoadsAndPayments] = useState([]);
@@ -192,6 +194,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
             if (error) throw error;
 
             if (fetchedCrops && fetchedCrops.length > 0) {
+                const localCropImages = JSON.parse(localStorage.getItem('kisan_farmer_crop_images') || '{}');
                 const mappedCrops = fetchedCrops.map(c => ({
                     id: c.id,
                     cropName: c.crop_name,
@@ -199,6 +202,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                     latitude: c.latitude,
                     longitude: c.longitude,
                     acres: c.acres,
+                    cropImage: c.crop_image || localCropImages[c.id] || localCropImages[`${c.crop_name}_${c.location_name}`] || '',
                     addedAt: c.added_at
                 }));
                 setCrops(mappedCrops);
@@ -372,6 +376,18 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
 
             if (error) throw error;
 
+            if (cropData.cropImage) {
+                try {
+                    const compressed = await compressImageFile(cropData.cropImage, 1000, 1000, 0.78);
+                    const localCropImages = JSON.parse(localStorage.getItem('kisan_farmer_crop_images') || '{}');
+                    localCropImages[data.id] = compressed;
+                    localCropImages[`${data.crop_name}_${data.location_name}`] = compressed;
+                    localStorage.setItem('kisan_farmer_crop_images', JSON.stringify(localCropImages));
+                } catch (storageErr) {
+                    console.warn("LocalStorage quota warning on save crop:", storageErr);
+                }
+            }
+
             const mappedNewCrop = {
                 id: data.id,
                 cropName: data.crop_name,
@@ -379,6 +395,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                 latitude: data.latitude,
                 longitude: data.longitude,
                 acres: data.acres,
+                cropImage: cropData.cropImage || '',
                 addedAt: data.added_at
             };
 
@@ -390,6 +407,68 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
         } catch (error) {
             console.error(error);
             alert('Failed to save crop');
+        }
+    };
+
+    const handleUpdateCropImage = async (cropId, imageDataUrlOrFile) => {
+        try {
+            let processedImage = '';
+            if (imageDataUrlOrFile) {
+                processedImage = await compressImageFile(imageDataUrlOrFile, 1000, 1000, 0.78);
+            }
+
+            // 1. Immediately update React state for instant UI responsiveness
+            setCrops(prev => prev.map(c => c.id === cropId ? { ...c, cropImage: processedImage } : c));
+            if (selectedCropForSearch?.id === cropId) {
+                setSelectedCropForSearch(prev => ({ ...prev, cropImage: processedImage }));
+            }
+
+            // Update lightbox if open
+            if (cropLightboxImage && cropLightboxImage.cropId === cropId) {
+                if (processedImage) {
+                    setCropLightboxImage(prev => ({ ...prev, url: processedImage }));
+                } else {
+                    setCropLightboxImage(null);
+                }
+            }
+
+            // 2. Safely persist in LocalStorage with quota protection
+            try {
+                const localCropImages = JSON.parse(localStorage.getItem('kisan_farmer_crop_images') || '{}');
+                const targetCrop = crops.find(c => c.id === cropId);
+                if (processedImage) {
+                    localCropImages[cropId] = processedImage;
+                    if (targetCrop) {
+                        localCropImages[`${targetCrop.cropName}_${targetCrop.locationName}`] = processedImage;
+                    }
+                } else {
+                    delete localCropImages[cropId];
+                    if (targetCrop) {
+                        delete localCropImages[`${targetCrop.cropName}_${targetCrop.locationName}`];
+                    }
+                }
+                localStorage.setItem('kisan_farmer_crop_images', JSON.stringify(localCropImages));
+            } catch (storageErr) {
+                console.warn("LocalStorage quota reached, pruning old keys:", storageErr);
+                try {
+                    const fallbackObj = {};
+                    if (processedImage) fallbackObj[cropId] = processedImage;
+                    localStorage.setItem('kisan_farmer_crop_images', JSON.stringify(fallbackObj));
+                } catch (cleanErr) {
+                    // Safe fallback
+                }
+            }
+
+            // 3. Update Supabase if connected
+            try {
+                if (supabase) {
+                    await supabase.from('crops').update({ crop_image: processedImage || null }).eq('id', cropId);
+                }
+            } catch (supaErr) {
+                console.warn("Supabase photo update warning:", supaErr);
+            }
+        } catch (err) {
+            console.error("Error updating crop photo:", err);
         }
     };
 
@@ -1060,251 +1139,456 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                     </div>
                                 </div>
 
-                                {/* Master-Detail Split Layout */}
-                                <div className="crops-mills-layout">
-                                    {/* LEFT PANEL: My Farmland Holdings */}
-                                    <div className="bento-card" style={{ padding: '1.25rem', height: 'fit-content' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                            <div>
-                                                <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                                                    <i className="fa-solid fa-seedling" style={{ color: 'var(--primary)' }}></i>
-                                                    <span>My Farmlands ({crops.length})</span>
-                                                </h3>
-                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                    Click to view matching mills
-                                                </span>
-                                            </div>
+                                {/* TOP SECTION: Horizontal My Farmlands */}
+                                <div className="bento-card" style={{ padding: '1.35rem', marginBottom: '1.5rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <i className="fa-solid fa-seedling" style={{ color: 'var(--primary)' }}></i>
+                                                <span>My Farmlands ({crops.length})</span>
+                                            </h3>
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                Click any farmland below to view and match verified buyer mills below
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             <button 
                                                 className="action-btn" 
-                                                onClick={() => setIsAddCropOpen(true)}
-                                                style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
+                                                onClick={fetchCrops} 
+                                                title="Refresh Farmlands" 
+                                                style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem' }}
                                             >
-                                                <i className="fa-solid fa-plus"></i> Add
+                                                <i className={`fa-solid fa-arrows-rotate ${loadingCrops ? 'fa-spin' : ''}`}></i>
+                                            </button>
+                                            <button 
+                                                className="primary-btn" 
+                                                onClick={() => setIsAddCropOpen(true)} 
+                                                style={{ padding: '0.45rem 1rem', fontSize: '0.82rem' }}
+                                            >
+                                                <i className="fa-solid fa-plus"></i> Add Farmland
                                             </button>
                                         </div>
+                                    </div>
 
-                                        {loadingCrops ? (
-                                            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                                <i className="fa-solid fa-spinner fa-spin" style={{ color: 'var(--primary)', marginRight: '0.5rem' }}></i>
-                                                Loading farmlands...
-                                            </div>
-                                        ) : crops.length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '0.75rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                                <i className="fa-solid fa-seedling fa-2x" style={{ color: 'var(--primary)', marginBottom: '0.75rem', opacity: 0.8 }}></i>
-                                                <h4 style={{ margin: '0 0 0.35rem 0', fontSize: '1rem' }}>No Farmlands Added</h4>
-                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 1rem 0' }}>
-                                                    Register your crop and location to discover nearby mills.
-                                                </p>
-                                                <button className="primary-btn" onClick={() => setIsAddCropOpen(true)} style={{ fontSize: '0.8rem', padding: '0.45rem 1rem' }}>
-                                                    <i className="fa-solid fa-plus"></i> Add Crop
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', maxHeight: '650px', overflowY: 'auto', paddingRight: '0.2rem' }}>
-                                                {crops.map(c => {
-                                                    const isSelected = selectedCropForSearch?.id === c.id;
-                                                    const estYield = (parseFloat(c.acres) || 0) * 20;
-                                                    return (
-                                                        <div 
-                                                            key={c.id} 
-                                                            className={`farmland-card ${isSelected ? 'active' : ''}`}
-                                                            onClick={() => handleSearchMills(c)}
-                                                        >
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.35rem' }}>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                                                                    <span style={{ fontSize: '1.05rem' }}>🌾</span>
-                                                                    <strong style={{ fontSize: '0.98rem', color: isSelected ? 'var(--primary)' : 'var(--text-main)' }}>
-                                                                        {c.cropName}
-                                                                    </strong>
-                                                                </div>
-                                                                <span style={{ 
-                                                                    background: isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.07)', 
-                                                                    color: isSelected ? '#000' : 'var(--text-main)', 
-                                                                    fontSize: '0.76rem', 
+                                    {loadingCrops ? (
+                                        <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                            <i className="fa-solid fa-spinner fa-spin" style={{ color: 'var(--primary)', marginRight: '0.5rem' }}></i>
+                                            Loading farmlands...
+                                        </div>
+                                    ) : crops.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '0.85rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                            <i className="fa-solid fa-seedling fa-2x" style={{ color: 'var(--primary)', marginBottom: '0.75rem', opacity: 0.8 }}></i>
+                                            <h4 style={{ margin: '0 0 0.35rem 0', fontSize: '1.1rem' }}>No Farmlands Added Yet</h4>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 1.25rem 0' }}>
+                                                Register your farmland crops with acreage and photos to automatically discover verified buyer mills.
+                                            </p>
+                                            <button className="primary-btn" onClick={() => setIsAddCropOpen(true)} style={{ fontSize: '0.85rem', padding: '0.55rem 1.25rem' }}>
+                                                <i className="fa-solid fa-plus"></i> Add First Crop
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="crops-horizontal-container">
+                                            {crops.map(c => {
+                                                const isSelected = selectedCropForSearch?.id === c.id;
+                                                const estYield = (parseFloat(c.acres) || 0) * 20;
+                                                return (
+                                                    <div 
+                                                        key={c.id} 
+                                                        className={`farmland-card-horizontal ${isSelected ? 'active' : ''}`}
+                                                        onClick={() => {
+                                                            handleSearchMills(c);
+                                                            const millsEl = document.getElementById('matching-mills-section');
+                                                            if (millsEl) {
+                                                                millsEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                                            }
+                                                        }}
+                                                    >
+                                                        {/* Large Farmland Image Banner */}
+                                                        {c.cropImage ? (
+                                                            <div style={{ position: 'relative', width: '100%', height: '155px', overflow: 'hidden', background: '#0a1a12' }}>
+                                                                <img 
+                                                                    src={c.cropImage} 
+                                                                    alt={c.cropName} 
+                                                                    style={{ 
+                                                                        width: '100%', 
+                                                                        height: '100%', 
+                                                                        objectFit: 'cover', 
+                                                                        cursor: 'pointer',
+                                                                        display: 'block'
+                                                                    }} 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setCropLightboxImage({ url: c.cropImage, title: `${c.cropName} (${c.locationName}) - Farmland Plot Photo`, cropId: c.id });
+                                                                    }}
+                                                                    title="Click to view full photo"
+                                                                />
+                                                                <div style={{ position: 'absolute', inset: '0', background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 45%, rgba(0,0,0,0.7) 100%)', pointerEvents: 'none' }} />
+
+                                                                {/* Acreage Floating Pill */}
+                                                                <div style={{ 
+                                                                    position: 'absolute', 
+                                                                    top: '8px', 
+                                                                    left: '8px', 
+                                                                    background: 'rgba(0, 0, 0, 0.78)', 
+                                                                    backdropFilter: 'blur(6px)',
+                                                                    border: '1px solid rgba(255,255,255,0.2)',
+                                                                    color: '#fff', 
+                                                                    fontSize: '0.74rem', 
                                                                     fontWeight: 700, 
-                                                                    padding: '0.15rem 0.55rem', 
-                                                                    borderRadius: '1rem' 
+                                                                    padding: '0.22rem 0.6rem', 
+                                                                    borderRadius: '1rem',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '0.3rem',
+                                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
                                                                 }}>
-                                                                    {c.acres} Acres
-                                                                </span>
+                                                                    <i className="fa-solid fa-layer-group" style={{ color: 'var(--primary)', fontSize: '0.7rem' }}></i>
+                                                                    <span>{c.acres} Acres</span>
+                                                                </div>
+
+                                                                {/* Re-upload / Change & Remove Photo Controls */}
+                                                                <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', alignItems: 'center', gap: '0.35rem', zIndex: 2 }}>
+                                                                    <label 
+                                                                        onClick={(e) => e.stopPropagation()} 
+                                                                        style={{ 
+                                                                            background: 'rgba(0,0,0,0.78)', 
+                                                                            backdropFilter: 'blur(6px)',
+                                                                            border: '1px solid rgba(255,255,255,0.25)',
+                                                                            color: 'var(--accent-gold)', 
+                                                                            padding: '0.22rem 0.55rem', 
+                                                                            borderRadius: '1rem', 
+                                                                            display: 'flex', 
+                                                                            alignItems: 'center', 
+                                                                            gap: '0.3rem', 
+                                                                            cursor: 'pointer', 
+                                                                            fontSize: '0.7rem',
+                                                                            fontWeight: 600,
+                                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
+                                                                        }}
+                                                                        title="Re-upload / replace crop photo"
+                                                                    >
+                                                                        <i className="fa-solid fa-arrows-rotate"></i>
+                                                                        <span>Re-upload</span>
+                                                                        <input 
+                                                                            type="file" 
+                                                                            accept="image/*" 
+                                                                            capture="environment" 
+                                                                            style={{ display: 'none' }} 
+                                                                            onChange={(e) => {
+                                                                                if (e.target.files && e.target.files[0]) {
+                                                                                    const file = e.target.files[0];
+                                                                                    e.target.value = '';
+                                                                                    handleUpdateCropImage(c.id, file);
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                    </label>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            if (window.confirm("Remove this crop photo? You can re-upload a new photo anytime.")) {
+                                                                                handleUpdateCropImage(c.id, '');
+                                                                            }
+                                                                        }}
+                                                                        style={{
+                                                                            background: 'rgba(0,0,0,0.78)',
+                                                                            backdropFilter: 'blur(6px)',
+                                                                            border: '1px solid rgba(239, 68, 68, 0.45)',
+                                                                            color: '#ff6b6b',
+                                                                            width: '26px',
+                                                                            height: '26px',
+                                                                            borderRadius: '50%',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            cursor: 'pointer',
+                                                                            fontSize: '0.7rem',
+                                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                                                                            padding: 0
+                                                                        }}
+                                                                        title="Remove wrong photo"
+                                                                    >
+                                                                        <i className="fa-solid fa-trash-can"></i>
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Tap to Enlarge Indicator */}
+                                                                <div 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setCropLightboxImage({ url: c.cropImage, title: `${c.cropName} (${c.locationName}) - Farmland Plot Photo`, cropId: c.id });
+                                                                    }}
+                                                                    style={{
+                                                                        position: 'absolute',
+                                                                        bottom: '8px',
+                                                                        right: '8px',
+                                                                        background: 'rgba(0,0,0,0.68)',
+                                                                        backdropFilter: 'blur(4px)',
+                                                                        color: '#fff',
+                                                                        borderRadius: '0.4rem',
+                                                                        padding: '0.18rem 0.45rem',
+                                                                        fontSize: '0.68rem',
+                                                                        cursor: 'pointer',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '0.25rem',
+                                                                        border: '1px solid rgba(255,255,255,0.15)'
+                                                                    }}
+                                                                >
+                                                                    <i className="fa-solid fa-magnifying-glass-plus"></i> View Full
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            /* Empty Photo Dropzone Banner */
+                                                            <label 
+                                                                onClick={(e) => e.stopPropagation()} 
+                                                                style={{ 
+                                                                    width: '100%', 
+                                                                    height: '110px', 
+                                                                    display: 'flex', 
+                                                                    flexDirection: 'column', 
+                                                                    alignItems: 'center', 
+                                                                    justifyContent: 'center', 
+                                                                    cursor: 'pointer', 
+                                                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(16,185,129,0.06) 100%)',
+                                                                    borderBottom: '1px dashed rgba(255,255,255,0.12)',
+                                                                    color: 'var(--text-muted)',
+                                                                    gap: '0.35rem'
+                                                                }}
+                                                                title="Upload or take crop photo"
+                                                            >
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600 }}>
+                                                                    <i className="fa-solid fa-camera"></i>
+                                                                    <span>+ Add Crop Photo</span>
+                                                                </div>
+                                                                <span style={{ fontSize: '0.68rem', opacity: 0.7 }}>Tap to upload plot photo</span>
+                                                                <input 
+                                                                    type="file" 
+                                                                    accept="image/*" 
+                                                                    capture="environment" 
+                                                                    style={{ display: 'none' }} 
+                                                                    onChange={(e) => {
+                                                                        if (e.target.files && e.target.files[0]) {
+                                                                            const file = e.target.files[0];
+                                                                            e.target.value = '';
+                                                                            handleUpdateCropImage(c.id, file);
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </label>
+                                                        )}
+
+                                                        {/* Farmland Information & Actions Body */}
+                                                        <div style={{ padding: '0.9rem 1rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
+                                                            <div>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                                                        <i className="fa-solid fa-seedling" style={{ color: isSelected ? 'var(--primary)' : 'var(--accent-gold)', fontSize: '1rem' }}></i>
+                                                                        <strong style={{ fontSize: '1.1rem', color: isSelected ? 'var(--primary)' : 'var(--text-main)', letterSpacing: '0.2px' }}>
+                                                                            {c.cropName}
+                                                                        </strong>
+                                                                    </div>
+                                                                    {!c.cropImage && (
+                                                                        <span style={{ 
+                                                                            background: isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.07)', 
+                                                                            color: isSelected ? '#000' : 'var(--text-main)', 
+                                                                            fontSize: '0.74rem', 
+                                                                            fontWeight: 700, 
+                                                                            padding: '0.15rem 0.55rem', 
+                                                                            borderRadius: '1rem',
+                                                                            flexShrink: 0
+                                                                        }}>
+                                                                            {c.acres} Acres
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '0.75rem' }}>
+                                                                    <i className="fa-solid fa-location-dot" style={{ color: 'var(--primary)', fontSize: '0.78rem' }}></i>
+                                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.locationName}</span>
+                                                                    <span style={{ opacity: 0.35 }}>•</span>
+                                                                    <span style={{ flexShrink: 0, fontWeight: 600, color: 'var(--text-main)' }}>~{estYield.toFixed(0)} Qtl</span>
+                                                                </div>
                                                             </div>
 
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '0.45rem' }}>
-                                                                <i className="fa-solid fa-location-dot" style={{ color: 'var(--primary)', fontSize: '0.75rem' }}></i>
-                                                                <span>{c.locationName}</span>
-                                                                <span style={{ margin: '0 0.2rem', opacity: 0.3 }}>•</span>
-                                                                <span>~{estYield.toFixed(0)} Qtl est.</span>
-                                                            </div>
-
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: '0.74rem' }}>
-                                                                <span style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)', fontWeight: isSelected ? 700 : 500, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                            {/* Footer Status & Delete */}
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: '0.78rem' }}>
+                                                                <span style={{ 
+                                                                    color: isSelected ? 'var(--primary)' : 'var(--text-muted)', 
+                                                                    fontWeight: isSelected ? 700 : 500, 
+                                                                    display: 'inline-flex', 
+                                                                    alignItems: 'center', 
+                                                                    gap: '0.35rem' 
+                                                                }}>
                                                                     {isSelected ? (
-                                                                        <><i className="fa-solid fa-circle-check"></i> Showing Mills</>
+                                                                        <><i className="fa-solid fa-circle-check" style={{ color: 'var(--primary)' }}></i> <span style={{ color: 'var(--primary)' }}>Showing Mills Below ↓</span></>
                                                                     ) : (
-                                                                        <><i className="fa-solid fa-arrow-right"></i> Click to Match Mills</>
+                                                                        <><i className="fa-solid fa-arrow-down"></i> Click to View Mills</>
                                                                     )}
                                                                 </span>
                                                                 <button 
                                                                     className="action-btn text-btn" 
                                                                     onClick={(e) => { e.stopPropagation(); handleDeleteCrop(c.id); }}
                                                                     title="Delete Farmland"
-                                                                    style={{ color: 'var(--danger)', padding: '0.2rem 0.35rem', fontSize: '0.75rem' }}
+                                                                    style={{ color: 'var(--danger)', padding: '0.2rem 0.4rem', fontSize: '0.82rem', borderRadius: '0.4rem' }}
                                                                 >
                                                                     <i className="fa-solid fa-trash"></i>
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
 
-                                    {/* RIGHT PANEL: Nearby Verified Processing Mills */}
-                                    <div className="bento-card" style={{ padding: '1.25rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
-                                            <div>
-                                                <h3 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <i className="fa-solid fa-industry" style={{ color: 'var(--primary)' }}></i>
-                                                    <span>
-                                                        Verified Mills {selectedCropForSearch ? `Buying "${selectedCropForSearch.cropName}"` : 'Nearby'}
-                                                    </span>
-                                                </h3>
-                                                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                    Ranked by proximity to {selectedCropForSearch?.locationName ? <strong>{selectedCropForSearch.locationName}</strong> : 'your farmlands'}.
-                                                </p>
-                                            </div>
-
-                                            {/* Deduplicated Crop Filter Pills */}
-                                            {uniqueCrops.length > 1 && (
-                                                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Filter Crop:</span>
-                                                    {uniqueCrops.map(cropName => {
-                                                        const cropLots = crops.filter(c => c.cropName === cropName);
-                                                        const isCurrent = selectedCropForSearch?.cropName === cropName;
-                                                        return (
-                                                            <button
-                                                                key={cropName}
-                                                                className={`crop-filter-chip ${isCurrent ? 'active' : ''}`}
-                                                                onClick={() => {
-                                                                    const match = crops.find(c => c.cropName === cropName);
-                                                                    if (match) handleSearchMills(match);
-                                                                }}
-                                                            >
-                                                                <span>🌾 {cropName}</span>
-                                                                <span style={{ opacity: 0.7, fontSize: '0.7rem' }}>({cropLots.length})</span>
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
+                                {/* BOTTOM SECTION: Nearby Verified Processing Mills */}
+                                <div id="matching-mills-section" className="bento-card" style={{ padding: '1.5rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <i className="fa-solid fa-industry" style={{ color: 'var(--primary)' }}></i>
+                                                <span>
+                                                    Verified Mills {selectedCropForSearch ? `Buying "${selectedCropForSearch.cropName}"` : 'Nearby'}
+                                                </span>
+                                            </h3>
+                                            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                                Ranked by proximity to {selectedCropForSearch?.locationName ? <strong>{selectedCropForSearch.locationName}</strong> : 'your farmlands'} {selectedCropForSearch?.acres ? `(${selectedCropForSearch.acres} Acres, ~${((parseFloat(selectedCropForSearch.acres) || 0) * 20).toFixed(0)} Qtl est.)` : ''}.
+                                            </p>
                                         </div>
 
-                                        {/* Mills List / Grid */}
-                                        {isSearchingMills ? (
-                                            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
-                                                <i className="fa-solid fa-circle-notch fa-spin fa-2x" style={{ color: 'var(--primary)', marginBottom: '0.75rem' }}></i>
-                                                <div style={{ fontSize: '0.9rem' }}>Searching verified mills near {selectedCropForSearch?.locationName || 'your farm'}...</div>
-                                            </div>
-                                        ) : crops.length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
-                                                <i className="fa-solid fa-wheat-awn-circle-exclamation fa-2x" style={{ marginBottom: '0.75rem', opacity: 0.5 }}></i>
-                                                <p style={{ margin: 0, fontSize: '0.88rem' }}>Please register a farmland crop on the left to see matching buyer mills.</p>
-                                            </div>
-                                        ) : nearbyMills.length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '0.75rem' }}>
-                                                <i className="fa-solid fa-industry fa-2x" style={{ color: 'var(--text-muted)', marginBottom: '0.75rem' }}></i>
-                                                <h4 style={{ margin: '0 0 0.35rem 0' }}>No Mills Currently Buying {selectedCropForSearch?.cropName || 'This Crop'}</h4>
-                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', maxWidth: '380px', margin: '0 auto 1.25rem' }}>
-                                                    No mills currently listed for this crop near {selectedCropForSearch?.locationName}. Check live APMC Mandi rates or select another farmland.
-                                                </p>
-                                                <button className="action-btn" onClick={() => setActiveTab('market')} style={{ fontSize: '0.8rem' }}>
-                                                    <i className="fa-solid fa-chart-line"></i> View APMC Rates
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-                                                {nearbyMills.map(mill => {
-                                                    const cropRate = selectedCropForSearch?.cropName ? mill.prices?.[selectedCropForSearch.cropName] : null;
+                                        {/* Deduplicated Crop Filter Pills */}
+                                        {uniqueCrops.length > 1 && (
+                                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Filter Crop:</span>
+                                                {uniqueCrops.map(cropName => {
+                                                    const cropLots = crops.filter(c => c.cropName === cropName);
+                                                    const isCurrent = selectedCropForSearch?.cropName === cropName;
                                                     return (
-                                                        <div 
-                                                            key={mill.id} 
-                                                            style={{ 
-                                                                background: 'rgba(255, 255, 255, 0.03)', 
-                                                                border: '1px solid rgba(255, 255, 255, 0.08)', 
-                                                                borderRadius: '0.75rem', 
-                                                                padding: '1rem',
-                                                                display: 'flex', 
-                                                                flexDirection: 'column',
-                                                                transition: 'border-color 0.2s ease'
+                                                        <button
+                                                            key={cropName}
+                                                            className={`crop-filter-chip ${isCurrent ? 'active' : ''}`}
+                                                            onClick={() => {
+                                                                const match = crops.find(c => c.cropName === cropName);
+                                                                if (match) handleSearchMills(match);
                                                             }}
                                                         >
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.6rem' }}>
-                                                                <div>
-                                                                    <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{mill.millName}</h4>
-                                                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.2rem' }}>
-                                                                        <i className="fa-solid fa-location-dot" style={{ color: 'var(--primary)', marginRight: '0.3rem', fontSize: '0.75rem' }}></i>
-                                                                        {mill.locationName}
-                                                                    </div>
-                                                                </div>
-                                                                <span style={{ 
-                                                                    background: 'rgba(16, 185, 129, 0.15)', 
-                                                                    color: 'var(--primary)', 
-                                                                    fontWeight: 700, 
-                                                                    fontSize: '0.75rem', 
-                                                                    padding: '0.2rem 0.5rem', 
-                                                                    borderRadius: '1rem', 
-                                                                    whiteSpace: 'nowrap' 
-                                                                }}>
-                                                                    ~{mill.distance.toFixed(1)} km
-                                                                </span>
-                                                            </div>
-
-                                                            <div style={{ 
-                                                                background: 'rgba(0, 0, 0, 0.25)', 
-                                                                border: '1px solid rgba(255, 255, 255, 0.04)',
-                                                                padding: '0.65rem 0.8rem', 
-                                                                borderRadius: '0.5rem', 
-                                                                marginBottom: '1rem', 
-                                                                fontSize: '0.8rem', 
-                                                                display: 'flex', 
-                                                                flexDirection: 'column', 
-                                                                gap: '0.3rem' 
-                                                            }}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                    <span style={{ color: 'var(--text-muted)' }}>Milling Capacity:</span>
-                                                                    <strong>{mill.capacity || 50} TPD</strong>
-                                                                </div>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                    <span style={{ color: 'var(--text-muted)' }}>Cold Storage:</span>
-                                                                    <strong style={{ color: mill.hasColdStorage ? 'var(--primary)' : 'var(--text-muted)' }}>
-                                                                        {mill.hasColdStorage ? 'Available ✅' : 'None'}
-                                                                    </strong>
-                                                                </div>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.2rem', paddingTop: '0.35rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                                                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Direct Mill Rate:</span>
-                                                                    <strong style={{ color: 'var(--primary)', fontSize: '0.98rem' }}>
-                                                                        ₹{cropRate || 2450} <span style={{ fontSize: '0.7rem', fontWeight: 500, color: 'var(--text-muted)' }}>/ Qtl</span>
-                                                                    </strong>
-                                                                </div>
-                                                            </div>
-
-                                                            <div style={{ marginTop: 'auto' }}>
-                                                                <button 
-                                                                    className="primary-btn" 
-                                                                    onClick={() => setSelectedMillForEnquiry(mill)}
-                                                                    style={{ width: '100%', justifyContent: 'center', padding: '0.55rem', fontSize: '0.82rem' }}
-                                                                >
-                                                                    <i className="fa-solid fa-paper-plane"></i>
-                                                                    Send Direct Enquiry
-                                                                </button>
-                                                            </div>
-                                                        </div>
+                                                            <span>🌾 {cropName}</span>
+                                                            <span style={{ opacity: 0.7, fontSize: '0.7rem' }}>({cropLots.length})</span>
+                                                        </button>
                                                     );
                                                 })}
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Mills List / Grid */}
+                                    {isSearchingMills ? (
+                                        <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--text-muted)' }}>
+                                            <i className="fa-solid fa-circle-notch fa-spin fa-2x" style={{ color: 'var(--primary)', marginBottom: '0.75rem' }}></i>
+                                            <div style={{ fontSize: '0.95rem' }}>Searching verified mills near {selectedCropForSearch?.locationName || 'your farm'}...</div>
+                                        </div>
+                                    ) : crops.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+                                            <i className="fa-solid fa-wheat-awn-circle-exclamation fa-2x" style={{ marginBottom: '0.75rem', opacity: 0.5 }}></i>
+                                            <p style={{ margin: 0, fontSize: '0.9rem' }}>Please register a farmland crop above to see matching buyer mills.</p>
+                                        </div>
+                                    ) : nearbyMills.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '0.75rem' }}>
+                                            <i className="fa-solid fa-industry fa-2x" style={{ color: 'var(--text-muted)', marginBottom: '0.75rem' }}></i>
+                                            <h4 style={{ margin: '0 0 0.35rem 0' }}>No Mills Currently Buying {selectedCropForSearch?.cropName || 'This Crop'}</h4>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '420px', margin: '0 auto 1.25rem' }}>
+                                                No mills currently listed for this crop near {selectedCropForSearch?.locationName}. Check live APMC Mandi rates or select another farmland above.
+                                            </p>
+                                            <button className="action-btn" onClick={() => setActiveTab('market')} style={{ fontSize: '0.82rem' }}>
+                                                <i className="fa-solid fa-chart-line"></i> View APMC Rates
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '1.25rem' }}>
+                                            {nearbyMills.map(mill => {
+                                                const cropRate = selectedCropForSearch?.cropName ? mill.prices?.[selectedCropForSearch.cropName] : null;
+                                                return (
+                                                    <div 
+                                                        key={mill.id} 
+                                                        style={{ 
+                                                            background: 'rgba(255, 255, 255, 0.03)', 
+                                                            border: '1px solid rgba(255, 255, 255, 0.08)', 
+                                                            borderRadius: '0.85rem', 
+                                                            padding: '1.15rem', 
+                                                            display: 'flex', 
+                                                            flexDirection: 'column',
+                                                            transition: 'border-color 0.2s ease, transform 0.2s ease'
+                                                        }}
+                                                    >
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                                                            <div>
+                                                                <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>{mill.millName}</h4>
+                                                                <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '0.25rem' }}>
+                                                                    <i className="fa-solid fa-location-dot" style={{ color: 'var(--primary)', marginRight: '0.35rem', fontSize: '0.78rem' }}></i>
+                                                                    {mill.locationName}
+                                                                </div>
+                                                            </div>
+                                                            <span style={{ 
+                                                                background: 'rgba(16, 185, 129, 0.15)', 
+                                                                color: 'var(--primary)', 
+                                                                fontWeight: 700, 
+                                                                fontSize: '0.75rem', 
+                                                                padding: '0.2rem 0.55rem', 
+                                                                borderRadius: '1rem', 
+                                                                whiteSpace: 'nowrap' 
+                                                            }}>
+                                                                ~{mill.distance.toFixed(1)} km
+                                                            </span>
+                                                        </div>
+
+                                                        <div style={{ 
+                                                            background: 'rgba(0, 0, 0, 0.25)', 
+                                                            border: '1px solid rgba(255, 255, 255, 0.04)',
+                                                            padding: '0.75rem 0.9rem', 
+                                                            borderRadius: '0.6rem', 
+                                                            marginBottom: '1rem', 
+                                                            fontSize: '0.82rem', 
+                                                            display: 'flex', 
+                                                            flexDirection: 'column', 
+                                                            gap: '0.35rem' 
+                                                        }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                <span style={{ color: 'var(--text-muted)' }}>Milling Capacity:</span>
+                                                                <strong>{mill.capacity || 50} TPD</strong>
+                                                            </div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                <span style={{ color: 'var(--text-muted)' }}>Cold Storage:</span>
+                                                                <strong style={{ color: mill.hasColdStorage ? 'var(--primary)' : 'var(--text-muted)' }}>
+                                                                    {mill.hasColdStorage ? 'Available ✅' : 'None'}
+                                                                </strong>
+                                                            </div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem', paddingTop: '0.45rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Direct Mill Rate:</span>
+                                                                <strong style={{ color: 'var(--primary)', fontSize: '1.05rem' }}>
+                                                                    ₹{cropRate || 2450} <span style={{ fontSize: '0.72rem', fontWeight: 500, color: 'var(--text-muted)' }}>/ Qtl</span>
+                                                                </strong>
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ marginTop: 'auto' }}>
+                                                            <button 
+                                                                className="primary-btn" 
+                                                                onClick={() => setSelectedMillForEnquiry(mill)}
+                                                                style={{ width: '100%', justifyContent: 'center', padding: '0.6rem', fontSize: '0.85rem' }}
+                                                            >
+                                                                <i className="fa-solid fa-paper-plane"></i>
+                                                                Send Direct Enquiry
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );
@@ -1832,23 +2116,45 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
 
                                                 {/* Transporter Details Strip */}
                                                 {hasTransport ? (
-                                                    <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
-                                                        <div style={{ fontSize: '0.85rem' }}>
-                                                            <div style={{ fontWeight: 700, color: 'var(--accent-gold)' }}>
-                                                                <i className="fa-solid fa-truck-moving" style={{ marginRight: '0.35rem' }}></i>
-                                                                Transporter: {tr?.assigned_provider_name || enq.driver_name || 'Fleet Driver'}
+                                                    <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
+                                                            <div style={{ fontSize: '0.85rem' }}>
+                                                                <div style={{ fontWeight: 700, color: 'var(--accent-gold)' }}>
+                                                                    <i className="fa-solid fa-truck-moving" style={{ marginRight: '0.35rem' }}></i>
+                                                                    Transporter: {tr?.assigned_provider_name || enq.driver_name || 'Fleet Driver'}
+                                                                </div>
+                                                                <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.15rem' }}>
+                                                                    Vehicle: <strong>{tr?.vehicle_number || enq.vehicle_number || 'TS 09 EA 4421'}</strong> ({enq.vehicle_type || 'Truck'}) • 
+                                                                    Status: <strong style={{ color: isDriverAccepted ? 'var(--primary)' : isMillAccepted ? '#fbbf24' : 'var(--text-muted)' }}>
+                                                                        {isDriverAccepted ? (tr?.status ? tr.status.replace(/_/g, ' ') : 'LOGISTICS CONFIRMED') : isMillAccepted ? 'DISPATCHED • AWAITING DRIVER' : 'DISPATCHES ON MILL APPROVAL'}
+                                                                    </strong>
+                                                                </div>
                                                             </div>
-                                                            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.15rem' }}>
-                                                                Vehicle: <strong>{tr?.vehicle_number || enq.vehicle_number || 'TS 09 EA 4421'}</strong> ({enq.vehicle_type || 'Truck'}) • 
-                                                                Status: <strong style={{ color: isDriverAccepted ? 'var(--primary)' : isMillAccepted ? '#fbbf24' : 'var(--text-muted)' }}>
-                                                                    {isDriverAccepted ? (tr?.status ? tr.status.replace(/_/g, ' ') : 'LOGISTICS CONFIRMED') : isMillAccepted ? 'DISPATCHED • AWAITING DRIVER' : 'DISPATCHES ON MILL APPROVAL'}
-                                                                </strong>
-                                                            </div>
+                                                            {(tr?.assigned_provider_phone || enq.driver_phone) && (
+                                                                <a href={`tel:${tr?.assigned_provider_phone || enq.driver_phone}`} className="action-btn" style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', textDecoration: 'none', color: 'inherit' }}>
+                                                                    <i className="fa-solid fa-phone"></i> Call Driver ({tr?.assigned_provider_phone || enq.driver_phone})
+                                                                </a>
+                                                            )}
                                                         </div>
-                                                        {(tr?.assigned_provider_phone || enq.driver_phone) && (
-                                                            <a href={`tel:${tr?.assigned_provider_phone || enq.driver_phone}`} className="action-btn" style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', textDecoration: 'none', color: 'inherit' }}>
-                                                                <i className="fa-solid fa-phone"></i> Call Driver ({tr?.assigned_provider_phone || enq.driver_phone})
-                                                            </a>
+
+                                                        {/* Assigned Vehicle 2 Photos */}
+                                                        {((tr?.vehicle_images && tr.vehicle_images.length > 0) || (enq.vehicle_images && enq.vehicle_images.length > 0)) && (
+                                                            <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '0.45rem' }}>
+                                                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Vehicle Photos:</span>
+                                                                {(tr?.vehicle_images || enq.vehicle_images).slice(0, 2).map((imgUrl, i) => (
+                                                                    <div 
+                                                                        key={i}
+                                                                        onClick={() => setCropLightboxImage({ url: imgUrl, title: `Assigned Vehicle (${tr?.vehicle_number || enq.vehicle_number}) - ${i === 0 ? 'Front View' : 'Cargo Bed'}` })}
+                                                                        style={{ height: '48px', width: '75px', borderRadius: '0.35rem', overflow: 'hidden', position: 'relative', cursor: 'pointer', background: '#000', border: '1px solid rgba(255,255,255,0.1)' }}
+                                                                        title="Click to view truck photo"
+                                                                    >
+                                                                        <img src={imgUrl} alt="Truck Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                        <span style={{ position: 'absolute', bottom: '1px', left: '2px', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: '0.58rem', padding: '0.02rem 0.2rem', borderRadius: '0.2rem' }}>
+                                                                            {i === 0 ? 'Front' : 'Cargo'}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 ) : (
@@ -2029,9 +2335,28 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                                         <strong>{q.provider_name}</strong>
                                                                         <strong style={{ color: 'var(--primary)', fontSize: '1.1rem' }}>₹{q.price?.toLocaleString()}</strong>
                                                                     </div>
-                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.55rem' }}>
                                                                         Vehicle: {q.vehicle_number} ({q.vehicle_capacity}T) • Est: {q.estimated_time}
                                                                     </div>
+
+                                                                    {/* 2 Vehicle Images Preview on Quote */}
+                                                                    {q.vehicle_images && q.vehicle_images.length > 0 && (
+                                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                                                                            {q.vehicle_images.slice(0, 2).map((imgUrl, i) => (
+                                                                                <div 
+                                                                                    key={i}
+                                                                                    onClick={() => setCropLightboxImage({ url: imgUrl, title: `${q.vehicle_number} (${q.provider_name}) - ${i === 0 ? 'Front View' : 'Cargo Bed'}` })}
+                                                                                    style={{ height: '52px', borderRadius: '0.35rem', overflow: 'hidden', position: 'relative', cursor: 'pointer', background: '#000', border: '1px solid rgba(255,255,255,0.1)' }}
+                                                                                    title="Click to view truck photo"
+                                                                                >
+                                                                                    <img src={imgUrl} alt={`Truck Angle ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                                    <span style={{ position: 'absolute', bottom: '2px', left: '2px', background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.6rem', padding: '0.05rem 0.25rem', borderRadius: '0.2rem' }}>
+                                                                                        {i === 0 ? 'Front' : 'Cargo'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
 
                                                                     {q.status === 'ACCEPTED' ? (
                                                                         <span style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '0.85rem' }}>
@@ -3054,6 +3379,94 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                 }}
             />
 
+            {/* LIGHTBOX MODAL FOR CROP & VEHICLE PHOTOS */}
+            {cropLightboxImage && (
+                <div 
+                    className="modal-overlay" 
+                    style={{ zIndex: 10001, background: 'rgba(0, 0, 0, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+                    onClick={() => setCropLightboxImage(null)}
+                >
+                    <div 
+                        className="bento-card" 
+                        style={{ maxWidth: '650px', width: '100%', padding: '1.25rem', position: 'relative', border: '1px solid rgba(255,255,255,0.2)' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                            <h4 style={{ margin: 0, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <i className="fa-solid fa-image" style={{ color: 'var(--primary)' }}></i>
+                                {cropLightboxImage.title || 'Photo Preview'}
+                            </h4>
+                            <button 
+                                className="action-btn text-btn" 
+                                onClick={() => setCropLightboxImage(null)}
+                                style={{ width: '28px', height: '28px', padding: 0 }}
+                            >
+                                <i className="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <div style={{ maxHeight: '65vh', borderRadius: '0.5rem', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000', marginBottom: cropLightboxImage.cropId ? '1rem' : '0' }}>
+                            <img 
+                                src={cropLightboxImage.url} 
+                                alt="Full Photo View" 
+                                style={{ width: '100%', height: 'auto', maxHeight: '65vh', objectFit: 'contain' }} 
+                            />
+                        </div>
+
+                        {/* Re-upload / Replace & Remove Photo Toolbar inside Lightbox */}
+                        {cropLightboxImage.cropId && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                                    <label 
+                                        className="action-btn"
+                                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem', background: 'rgba(255,255,255,0.08)' }}
+                                        title="Re-upload a new photo if this one is incorrect"
+                                    >
+                                        <i className="fa-solid fa-arrows-rotate" style={{ color: 'var(--accent-gold)' }}></i>
+                                        <span>Re-upload New Photo</span>
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            capture="environment" 
+                                            style={{ display: 'none' }} 
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    const file = e.target.files[0];
+                                                    e.target.value = '';
+                                                    handleUpdateCropImage(cropLightboxImage.cropId, file);
+                                                }
+                                            }}
+                                        />
+                                    </label>
+
+                                    <button
+                                        type="button"
+                                        className="action-btn text-btn"
+                                        style={{ color: '#ff6b6b', fontSize: '0.8rem', padding: '0.4rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                                        onClick={() => {
+                                            if (window.confirm("Remove this photo? You can re-upload a new photo anytime.")) {
+                                                handleUpdateCropImage(cropLightboxImage.cropId, '');
+                                                setCropLightboxImage(null);
+                                            }
+                                        }}
+                                        title="Remove wrong photo"
+                                    >
+                                        <i className="fa-solid fa-trash-can"></i>
+                                        <span>Remove Photo</span>
+                                    </button>
+                                </div>
+
+                                <button 
+                                    className="primary-btn" 
+                                    onClick={() => setCropLightboxImage(null)}
+                                    style={{ fontSize: '0.8rem', padding: '0.4rem 1rem' }}
+                                >
+                                    Done
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -459,306 +459,242 @@ export const TRANSLATIONS = {
         cropVariety: 'फसल की किस्म',
         acres: 'एकड़',
         estimatedYield: 'अनुमानित उपज (टन)',
-        harvestDate: 'कटाई तिथि',
-        farmLocation: 'खेत का स्थान',
-        actions: 'कार्रवाई',
-        deleteCrop: 'फसल हटाएं',
-        findNearbyMills: 'मिलें खोजें',
-        noCropsFound: 'अभी तक कोई फसल नहीं जोड़ी गई। कृपया ऊपर नई फसल जोड़ें!',
-        
-        // Mills Tab
-        verifiedMillsTitle: 'सत्यापित मिलें और लाइव भाव',
-        comparePrices: 'मंडी भाव (APMC) के साथ मिलों के खरीद भाव की तुलना करें',
-        highestOffer: 'सर्वोत्तम भाव',
-        perQuintal: 'प्रति क्विंटल',
-        sendEnquiry: 'पूछताछ भेजें',
-        capacity: 'दैनिक क्षमता',
-        distance: 'दूरी',
-        contactMill: 'मिल से संपर्क करें',
-        noMillsFound: 'आपके क्षेत्र में अभी कोई मिल उपलब्ध नहीं है।',
-        
-        // Enquiries Tab
-        produceEnquiriesTitle: 'मेरी फसल पूछताछ और भाव बातचीत',
-        filterAll: 'सभी',
-        filterPending: 'लंबित',
-        filterAccepted: 'स्वीकृत',
-        filterRejected: 'अस्वीकृत',
-        offeredRate: 'प्रस्तावित भाव',
-        agreedPrice: 'सहमति भाव',
-        transportRequired: 'परिवहन की आवश्यकता',
-        pickupDate: 'लोडिंग तिथि',
-        weighedQuantity: 'तौली गई मात्रा',
-        paymentStatus: 'भुगतान स्थिति',
-        
-        // Payments & Settlements
-        paymentsTitle: 'मिल प्रत्यक्ष भुगतान और निपटान',
-        paymentsSubtitle: 'वेब्रिज पर सही वजन, स्वचालित क्विंटल गणना और बैंक खाते में सीधा भुगतान',
-        updateBankAccount: 'बैंक खाता बदलें',
-        totalPaymentsReceived: 'कुल प्राप्त भुगतान',
-        completedTransfers: 'सफल बैंक ट्रांसफर',
-        pendingSettlements: 'लंबित भुगतान',
-        awaitingMillPayment: 'भुगतान के लिए प्रतीक्षारत लोड',
-        totalWeighedProduce: 'कुल तौला गया माल',
-        deliveredQuintals: 'डिलीवर किए गए क्विंटल',
-        registeredBankTitle: 'मिल से सीधे भुगतान के लिए पंजीकृत बैंक खाता',
-        verifiedForTransfer: 'प्रत्यक्ष ट्रांसफर के लिए सत्यापित',
-        accountHolder: 'खाताधारक का नाम',
-        bankName: 'बैंक का नाम',
-        accountNumber: 'खाता संख्या',
-        ifscCode: 'आईएफएससी (IFSC) कोड',
-        upiId: 'यूपीआई (UPI) आईडी',
-        allTransactions: 'सभी लेन-देन',
-        paymentCompleted: 'भुगतान पूर्ण',
-        paymentPending: 'भुगतान लंबित',
-        awaitingMill: 'मिल भुगतान प्रतीक्षारत',
-        enquiryRef: 'पूछताछ संदर्भ',
-        purchaserMill: 'खरीदार मिल',
-        cropAndQuantity: 'फसल और मात्रा',
-        pricePerQuintal: 'भाव प्रति क्विंटल',
-        totalAmount: 'कुल राशि',
-        status: 'स्थिति',
-        paymentDate: 'भुगतान तिथि',
-        receipt: 'रसीद',
-        viewBill: 'बिल देखें',
-        viewSlip: 'पर्ची देखें',
-        close: 'बंद करें',
-        print: 'प्रिंट करें',
-        saveBankDetails: 'बैंक विवरण सहेजें',
-        tonnes: 'टन',
-        quintals: 'क्विंटल',
-        shareWhatsApp: 'व्हाट्सएप पर साझा करें',
-        
-        // Profile & Preferences
-        profileTitle: 'किसान प्रोफ़ाइल और सेटिंग्स',
-        generalTab: 'सामान्य विवरण',
-        farmPersonalTab: 'कृषि एवं व्यक्तिगत विवरण',
-        payoutTab: 'बैंक विवरण और भुगतान',
-        securityTab: 'सुरक्षा पिन (PIN)',
-        preferencesTab: 'प्राथमिकताएं और भाषा',
-        preferredLanguage: 'पसंदीदा क्षेत्रीय भाषा',
-        languageSettingDesc: 'डैशबोर्ड और अलर्ट्स के लिए अपनी क्षेत्रीय भाषा चुनें।',
-        savePreferences: 'प्राथमिकताएं सहेजें',
-        savedSuccess: 'भाषा प्राथमिकता सफलतापूर्वक अपडेट हो गई!',
-        fullName: 'पूरा नाम',
-        primaryPhone: 'पंजीकृत प्राथमिक फोन',
-        altPhone: 'व्हाट्सएप / वैकल्पिक फोन',
-        village: 'गाँव / ग्राम पंचायत',
-        districtState: 'जिला और राज्य',
-        farmingPractice: 'मुख्य कृषि पद्धति',
-        saveProfileChanges: 'विवरण सहेजें',
-        totalLandHolding: 'कुल जोत भूमि',
-        registeredCrops: 'पंजीकृत फसलें',
-        millEnquiries: 'मिल पूछताछ',
-        kycStatus: 'केवाईसी (KYC) स्थिति',
-        verifiedFarmer: 'सत्यापित किसान',
-        dailyMandiAlerts: 'दैनिक मंडी भाव अलर्ट',
-        loadDispatchSms: 'गाड़ी रवानगी एवं आगमन एसएमएस',
-        extremeWeatherAlerts: 'खराब मौसम पूर्व चेतावनी',
-        
-        // Mill Buyer Portal
-        paymentsAndLoads: 'भुगतान और लोड',
-        loadsPendingBadge: 'लंबित',
-        confirmLoadReceived: 'लोड प्राप्ति की पुष्टि करें',
-        actualTonnesReceived: 'वेब्रिज वास्तविक वजन (टन)',
-        convertedQuintals: 'क्विंटल में परिवर्तन (1 टन = 10 क्विंटल)',
-        automatedCalculation: 'स्वचालित बिल गणना',
-        totalPayableAmount: 'कुल देय राशि',
-        makePayment: 'भुगतान करें',
-        farmerBankDetailsTitle: 'किसान बैंक विवरण (ट्रांसफर हेतु)',
-        copyAccount: 'खाता संख्या कॉपी करें',
-        copyIfsc: 'IFSC कोड कॉपी करें',
-        copyUpi: 'UPI आईडी कॉपी करें',
-        paymentMethod: 'भुगतान का तरीका',
-        utrReference: 'लेन-देन / UTR संदर्भ संख्या',
-        confirmPaymentCompleted: 'भुगतान पूर्ण हुआ',
-        produceIntakeReceipt: 'अनाज आवक भुगतान रसीद',
-        scanFarmerQr: 'गेट क्यूआर स्कैन करें',
-        
-        // Common
-        save: 'सहेजें',
-        cancel: 'रद्द करें',
-        confirm: 'पुष्टि करें',
-        delete: 'हटाएं',
-        edit: 'संपादित करें',
-        active: 'सक्रिय',
-        pending: 'लंबित',
-        completed: 'पूर्ण',
-        paid: 'भुगतान किया गया',
-        yes: 'हाँ',
-        no: 'नहीं',
-        back: 'पीछे जाएं',
-        footerCopyright: '© 2026 किसान कनेक्ट इकोसिस्टम'
+        harvestDate: 'कटाई तिथि'
+    },
+    // Tamil (தமிழ்)
+    ta: {
+        appName: 'கிசான் கனெக்ட்',
+        tagline: 'ஒருங்கிணைந்த விவசாய டிஜிட்டல் தளம்',
+        taglineDesc: 'விவசாயிகள், ஆலை உரிமையாளர்கள் மற்றும் லாரி ஓட்டுநர்களை டிஜிட்டல் எடை மற்றும் உடனடி வங்கி கொடுப்பனவுகளுடன் இணைக்கிறது.',
+        farmerPortal: 'விவசாயி போர்ட்டல்',
+        farmerPortalSubtitle: 'உங்கள் விளைச்சலுக்கு நியாயமான விலை',
+        farmerPortalDesc: 'வானிலை, சந்தை விலை, நேரடி ஆலை விசாரணைகள், QR கேட் பாஸ் மற்றும் நேரடி வங்கி பரிவர்த்தனை.',
+        millPortal: 'ஆலைகள் & வாங்குவோர்',
+        millPortalSubtitle: 'தானிய கொள்முதல் & செயலாக்கம்',
+        millPortalDesc: 'எடைபாலம் எடை, தானியங்கி குவிண்டால் கணக்கீடு, நேரடி வங்கி கொடுப்பனவு மற்றும் QR ஸ்கேன்.',
+        transportPortal: 'போக்குவரத்து சேவை',
+        transportPortalSubtitle: 'ஸ்மார்ட் விவசாய சரக்கு',
+        transportPortalDesc: 'டிரக் கொள்ளளவு பொருத்தம், கட்டண ஏலம், நேரடி கண்காணிப்பு மற்றும் உடனடி வாடகை கொடுப்பனவு.',
+        enterPortal: 'நுழையவும்',
+        dashboard: 'டாஷ்போர்டு',
+        crops: 'எனது பயிர்கள்',
+        myCrops: 'எனது பயிர்கள்',
+        mills: 'அருகிலுள்ள ஆலைகள்',
+        nearbyMills: 'அருகிலுள்ள ஆலைகள்',
+        cropsAndMills: 'எனது பயிர்கள் & ஆலைகள்',
+        enquiries: 'எனது விசாரணைகள்',
+        myEnquiries: 'எனது விசாரணைகள்',
+        qrcodes: 'எனது QR குறியீடுகள்',
+        myQrCodes: 'எனது QR குறியீடுகள்',
+        payments: 'கொடுப்பனவுகள்',
+        loadstatus: 'சுமை நிலை',
+        transport: 'போக்குவரத்து',
+        history: 'வரலாறு & பேரேடு',
+        market: 'சந்தை விலைகள்',
+        profile: 'சுயவிவரம்',
+        profileSettings: 'சுயவிவரம் & அமைப்புகள்',
+        logout: 'வெளியேறு',
+        goodDay: 'வணக்கம்',
+        welcomeSub: 'ஆலைகளுடன் நேரடி தொடர்பு, வெளிப்படையான விலை மற்றும் உடனடி QR சரிபார்ப்பு.',
+        addNewCrop: 'புதிய பயிர் சேர்க்க',
+        activeCrops: 'செயலில் உள்ள பயிர்கள்',
+        sentEnquiries: 'அனுப்பிய விசாரணைகள்',
+        verificationQrs: 'சரிபார்ப்பு QR',
+        directPayments: 'நேரடி கொடுப்பனவு',
+        settlementsReceived: 'பெறப்பட்ட பணம்',
+        readyForDelivery: 'டெலிவரிக்கு தயார்',
+        viewQr: 'QR பார்க்க',
+        paymentsTitle: 'நேரடி ஆலை கொடுப்பனவு & தீர்வு',
+        paymentsSubtitle: 'எடைபாலம் துல்லிய எடை, குவிண்டால் கணக்கீடு மற்றும் நேரடி வங்கி வரவு',
+        updateBankAccount: 'வங்கி கணக்கை புதுப்பிக்க',
+        totalPaymentsReceived: 'மொத்தம் பெறப்பட்ட தொகை',
+        completedTransfers: 'வெற்றிகரமான வங்கி பரிமாற்றங்கள்',
+        pendingSettlements: 'நிலுவையில் உள்ள கொடுப்பனவு',
+        totalWeighedProduce: 'மொத்த எடையுள்ள விளைச்சல்',
+        registeredBankTitle: 'நேரடி கொடுப்பனவுக்கான பதிவு செய்யப்பட்ட வங்கி கணக்கு',
+        verifiedForTransfer: 'நேரடி பரிமாற்றத்திற்கு சரிபார்க்கப்பட்டது',
+        accountHolder: 'கணக்கு வைத்திருப்பவர் பெயர்',
+        bankName: 'வங்கி பெயர்',
+        accountNumber: 'கணக்கு எண்',
+        ifscCode: 'IFSC குறியீடு',
+        upiId: 'UPI ஐடி',
+        allTransactions: 'அனைத்து பரிவர்த்தனைகள்',
+        paymentCompleted: 'பணம் செலுத்தப்பட்டது',
+        paymentPending: 'பணம் நிலுவையில் உள்ளது',
+        preferredLanguage: 'விருப்பமான மொழி',
+        save: 'சேமி',
+        cancel: 'ரத்து செய்',
+        footerCopyright: '© 2026 கிசான் கனெக்ட்'
     },
 
-    kn: {
-        // App Core (ಕನ್ನಡ)
-        appName: 'ಕಿಸಾನ್ ಕನೆಕ್ಟ್',
-        tagline: 'ಸಮಗ್ರ ಕೃಷಿ ಡಿಜಿಟಲ್ ವೇದಿಕೆ',
-        taglineDesc: 'ರೈತರು, ಗಿರಣಿ ಮಾಲೀಕರು ಮತ್ತು ಸಾರಿಗೆದಾರರನ್ನು ಡಿಜಿಟಲ್ ತೂಕ ಮತ್ತು ನೇರ ಬ್ಯಾಂಕ್ ಪಾವತಿಗಳೊಂದಿಗೆ ಸಂಪರ್ಕಿಸುವುದು.',
-        farmerPortal: 'ರೈತ ಪೋರ್ಟಲ್',
-        farmerPortalSubtitle: 'ನಿಮ್ಮ ಬೆಳೆಗೆ ಉತ್ತಮ ಮೌಲ್ಯ',
-        farmerPortalDesc: 'ಹವಾಮಾನ, ಮಾರುಕಟ್ಟೆ ದರಗಳು, ನೇರ ಗಿರಣಿ ವಿಚಾರಣೆಗಳು ಮತ್ತು ನೇರ ಬ್ಯಾಂಕ್ ಪಾವತಿಗಳು.',
-        millPortal: 'ಗಿರಣಿಗಳು & ಖರೀದಿದಾರರು',
-        millPortalSubtitle: 'ಧಾನ್ಯ ಖರೀದಿ & ಸಂಸ್ಕರಣೆ',
-        millPortalDesc: 'ವೇಬ್ರಿಡ್ಜ್ ತೂಕ, ಕ್ವಿಂಟಾಲ್ ಲೆಕ್ಕಾಚಾರ, ನೇರ ಪಾವತಿಗಳು ಮತ್ತು ಕ್ಯೂಆರ್ ಸ್ಕ್ಯಾನ್.',
-        transportPortal: 'ಸಾರಿಗೆ ಸೇವೆಗಳು',
-        transportPortalSubtitle: 'ಸ್ಮಾರ್ಟ್ ಕೃಷಿ ಸಾರಿಗೆ',
-        transportPortalDesc: 'ಸ್ಮಾರ್ಟ್ ಟ್ರಕ್ ಸಾಮರ್ಥ್ಯ ಹೊಂದಾಣಿಕೆ ಮತ್ತು ಲೈವ್ ಟ್ರ್ಯಾಕಿಂಗ್.',
-        enterPortal: 'ಪ್ರವೇಶಿಸಿ',
-        dashboard: 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
-        crops: 'ನನ್ನ ಬೆಳೆಗಳು',
-        myCrops: 'ನನ್ನ ಬೆಳೆಗಳು',
-        mills: 'ಹತ್ತಿರದ ಗಿರಣಿಗಳು',
-        nearbyMills: 'ಹತ್ತಿರದ ಗಿರಣಿಗಳು',
-        enquiries: 'ನನ್ನ ವಿಚಾರಣೆಗಳು',
-        myEnquiries: 'ನನ್ನ ವಿಚಾರಣೆಗಳು',
-        qrcodes: 'ನನ್ನ ಕ್ಯೂಆರ್ ಕೋಡ್‌ಗಳು',
-        myQrCodes: 'ನನ್ನ ಕ್ಯೂಆರ್ ಕೋಡ್‌ಗಳು',
-        payments: 'ಪಾವತಿಗಳು',
-        loadstatus: 'ಲೋಡ್ ಸ್ಥಿತಿ',
-        transport: 'ಸಾರಿಗೆ',
-        history: 'ಇತಿಹಾಸ & ಲೆಡ್ಜರ್',
-        market: 'ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳು',
-        profile: 'ಪ್ರೊಫೈಲ್',
-        profileSettings: 'ಪ್ರೊಫೈಲ್ & ಸೆಟ್ಟಿಂಗ್‌ಗಳು',
-        logout: 'ಲಾಗ್‌ಔಟ್',
-        goodDay: 'ನಮಸ್ಕಾರ',
-        welcomeSub: 'ಗಿರಣಿಗಳಿಗೆ ನೇರ ಸಂಪರ್ಕ, ಪಾರದರ್ಶಕ ಬೆಲೆಗಳು ಮತ್ತು ತ್ವರಿತ ಕ್ಯೂಆರ್ ಪರಿಶೀಲನೆ.',
-        addNewCrop: 'ಹೊಸ ಬೆಳೆ ಸೇರಿಸಿ',
-        activeCrops: 'ಸಕ್ರಿಯ ಬೆಳೆಗಳು',
-        sentEnquiries: 'ಕಳುಹಿಸಿದ ವಿಚಾರಣೆಗಳು',
-        verificationQrs: 'ಪರಿಶೀಲನಾ ಕ್ಯೂಆರ್',
-        directPayments: 'ನೇರ ಪಾವತಿಗಳು',
-        settlementsReceived: 'ಸ್ವೀಕರಿಸಿದ ಪಾವತಿಗಳು',
-        readyForDelivery: 'ವಿತರಣೆಗೆ ಸಿದ್ಧವಾಗಿದೆ',
-        viewQr: 'ಕ್ಯೂಆರ್ ವೀಕ್ಷಿಸಿ',
-        paymentsTitle: 'ನೇರ ಗಿರಣಿ ಪಾವತಿಗಳು & ಇತ್ಯರ್ಥ',
-        paymentsSubtitle: 'ವೇಬ್ರಿಡ್ಜ್ ತೂಕ, ಕ್ವಿಂಟಾಲ್ ಲೆಕ್ಕಾಚಾರ ಮತ್ತು ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ ನೇರ ಪಾವತಿ',
-        updateBankAccount: 'ಬ್ಯಾಂಕ್ ಖಾತೆ ನವೀಕರಿಸಿ',
-        totalPaymentsReceived: 'ಒಟ್ಟು ಸ್ವೀಕರಿಸಿದ ಪಾವತಿಗಳು',
-        completedTransfers: 'ಯಶಸ್ವಿ ವರ್ಗಾವಣೆಗಳು',
-        pendingSettlements: 'ಬಾಕಿ ಪಾವತಿಗಳು',
-        totalWeighedProduce: 'ಒಟ್ಟು ತೂಕದ ಬೆಳೆ',
-        registeredBankTitle: 'ನೇರ ಪಾವತಿಗಾಗಿ ನೋಂದಾಯಿತ ಬ್ಯಾಂಕ್ ಖಾತೆ',
-        verifiedForTransfer: 'ನೇರ ವರ್ಗಾವಣೆಗೆ ದೃಢೀಕರಿಸಲಾಗಿದೆ',
-        accountHolder: 'ಖಾತೆದಾರರ ಹೆಸರು',
-        bankName: 'ಬ್ಯಾಂಕ್ ಹೆಸರು',
-        accountNumber: 'ಖಾತೆ ಸಂಖ್ಯೆ',
-        ifscCode: 'IFSC ಕೋಡ್',
-        upiId: 'UPI ಐಡಿ',
-        allTransactions: 'ಎಲ್ಲಾ ವಹಿವಾಟುಗಳು',
-        paymentCompleted: 'ಪಾವತಿ ಪೂರ್ಣಗೊಂಡಿದೆ',
-        paymentPending: 'ಪಾವತಿ ಬಾಕಿ ಇದೆ',
-        preferredLanguage: 'ಆದ್ಯತೆಯ ಭಾಷೆ',
-        save: 'ಉಳಿಸಿ',
-        cancel: 'ರದ್ದುಮಾಡಿ',
-        footerCopyright: '© 2026 ಕಿಸಾನ್ ಕನೆಕ್ಟ್'
+    // Marathi (मराठी)
+    mr: {
+        appName: 'किसान कनेक्ट',
+        tagline: 'एकीकृत कृषी डिजिटल प्लॅटफॉर्म',
+        taglineDesc: 'शेतकरी, मिल मालक आणि वाहतूकदारांना डिजिटल वजन आणि थेट बँक पेमेंटसह जोडणे.',
+        farmerPortal: 'शेतकरी पोर्टल',
+        farmerPortalSubtitle: 'तुमच्या पिकाला योग्य भाव',
+        farmerPortalDesc: 'हवामान, बाजार भाव, थेट मिल सौदे, QR गेट पास आणि बँक खात्यात थेट पेमेंट.',
+        millPortal: 'मिल आणि खरेदीदार',
+        millPortalSubtitle: 'धान्य खरेदी व प्रक्रिया',
+        millPortalDesc: 'वेब्रिज वजन, स्वयंचलित क्विंटल बिल, थेट बँक ट्रान्सफर आणि QR स्कॅन.',
+        transportPortal: 'वाहतूक सेवा',
+        transportPortalSubtitle: 'स्मार्ट कृषी लॉजिस्टिक्स',
+        transportPortalDesc: 'ट्रक क्षमता जुळणी, भाडे बोली, थेट ट्रॅकिंग आणि त्वरित भाडे पेमेंट.',
+        enterPortal: 'प्रवेश करा',
+        dashboard: 'डॅशबोर्ड',
+        crops: 'माझी पिके',
+        myCrops: 'माझी पिके',
+        mills: 'जवळपासच्या मिल्स',
+        nearbyMills: 'जवळपासच्या मिल्स',
+        cropsAndMills: 'माझी पिके आणि मिल्स',
+        enquiries: 'माझ्या चौकशी',
+        myEnquiries: 'माझ्या चौकशी',
+        qrcodes: 'माझे QR कोड',
+        myQrCodes: 'माझे QR कोड',
+        payments: 'पेमेंट्स',
+        loadstatus: 'लोड स्थिती',
+        transport: 'वाहतूक',
+        history: 'इतिहास आणि लेजर',
+        market: 'बाजार भाव',
+        profile: 'प्रोफाइल',
+        profileSettings: 'प्रोफाइल आणि सेटिंग्ज',
+        logout: 'लॉग आउट',
+        goodDay: 'नमस्कार',
+        welcomeSub: 'मिलशी थेट संपर्क, पारदर्शक दर आणि त्वरित QR पडताळणी.',
+        addNewCrop: 'नवीन पीक जोडा',
+        activeCrops: 'सक्रिय पिके',
+        sentEnquiries: 'पाठवलेली चौकशी',
+        verificationQrs: 'सत्यापन QR',
+        directPayments: 'थेट पेमेंट्स',
+        settlementsReceived: 'प्राप्त पेमेंट्स',
+        readyForDelivery: 'वितरणासाठी तयार',
+        viewQr: 'QR पहा',
+        paymentsTitle: 'थेट मिल पेमेंट्स आणि सेटलमेंट',
+        paymentsSubtitle: 'वेब्रिज वजन, क्विंटल गणना आणि बँक खात्यात थेट पेमेंट',
+        updateBankAccount: 'बँक खाते बदला',
+        totalPaymentsReceived: 'एकूण प्राप्त पेमेंट्स',
+        completedTransfers: 'यशस्वी बँक ट्रान्सफर',
+        pendingSettlements: 'प्रलंबित पेमेंट्स',
+        totalWeighedProduce: 'एकूण वजन केलेले पीक',
+        registeredBankTitle: 'थेट पेमेंटसाठी नोंदणीकृत बँक खाते',
+        verifiedForTransfer: 'थेट ट्रान्सफरसाठी सत्यापित',
+        accountHolder: 'खातेदाराचे नाव',
+        bankName: 'बँकेचे नाव',
+        accountNumber: 'खाते क्रमांक',
+        ifscCode: 'IFSC कोड',
+        upiId: 'UPI आयडी',
+        allTransactions: 'सर्व व्यवहार',
+        paymentCompleted: 'पेमेंट पूर्ण झाले',
+        paymentPending: 'पेमेंट प्रलंबित',
+        preferredLanguage: 'पसंतीची भाषा',
+        save: 'जतन करा',
+        cancel: 'रद्द करा',
+        footerCopyright: '© 2026 किसान कनेक्ट'
     }
 };
 
-// Global direct string reverse map: maps any known English phrase directly to te, hi, kn
+// Global direct string reverse map: maps any known English phrase directly to other languages
 const STRING_MAP = {};
 Object.keys(TRANSLATIONS.en).forEach(k => {
     const enText = TRANSLATIONS.en[k];
     if (typeof enText === 'string' && enText.trim()) {
-        STRING_MAP[enText.trim()] = {
-            te: TRANSLATIONS.te[k] || enText,
-            hi: TRANSLATIONS.hi[k] || enText,
-            kn: TRANSLATIONS.kn[k] || enText
-        };
+        STRING_MAP[enText.trim()] = {};
+        Object.keys(TRANSLATIONS).forEach(lang => {
+            STRING_MAP[enText.trim()][lang] = TRANSLATIONS[lang]?.[k] || enText;
+        });
     }
 });
 
 // Additional commonly displayed UI sentences & phrases
 const EXTRA_PHRASES = {
-    "Unified Agricultural Ecosystem": { te: "సమగ్ర వ్యవసాయ డిజిటల్ వ్యవస్థ", hi: "एकीकृत कृषि डिजिटल मंच", kn: "ಸಮಗ್ರ ಕೃಷಿ ಡಿಜಿಟಲ್ ವೇದಿಕೆ" },
-    "Farmer Portal": { te: "రైతు పోర్టల్", hi: "किसान पोर्टल", kn: "ರೈತ ಪೋರ್ಟಲ್" },
-    "Empower Your Yield": { te: "మీ దిగుబడికి నిజమైన విలువ", hi: "अपनी उपज का सही मूल्य पाएं", kn: "ನಿಮ್ಮ ಬೆಳೆಗೆ ಉತ್ತಮ ಮೌಲ್ಯ" },
-    "Grain Procurement": { te: "ధాన్య సేకరణ & ప్రాసెసింగ్", hi: "अनाज खरीद एवं प्रसंस्करण", kn: "ಧಾನ್ಯ ಖರೀದಿ" },
-    "Smart Agro-Logistics": { te: "స్మార్ట్ వ్యవసాయ రవాణా", hi: "स्मार्ट कृषि लॉजिस्टिक्स", kn: "ಸ್ಮಾರ್ಟ್ ಕೃಷಿ ಸಾರಿಗೆ" },
-    "Transport Provider": { te: "రవాణా సేవలు", hi: "परिवहन सेवा", kn: "ಸಾರಿಗೆ ಸೇವೆಗಳು" },
-    "Enter Portal": { te: "పోర్టల్‌లోకి ప్రవేశించండి", hi: "पोर्टल में प्रवेश करें", kn: "ಪ್ರವೇಶಿಸಿ" },
-    "Dashboard": { te: "డ్యాష్‌బోర్డ్", hi: "डैशबोर्ड", kn: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್" },
-    "My Crops": { te: "నా పంటలు", hi: "मेरी फसलें", kn: "ನನ್ನ ಬೆಳೆಗಳು" },
-    "Nearby Mills": { te: "సమీప మిల్లులు", hi: "नजदीकी मिलें", kn: "ಹತ್ತಿರದ ಗಿರಣಿಗಳು" },
-    "My Enquiries": { te: "నా విచారణలు", hi: "मेरी पूछताछ", kn: "ನನ್ನ ವಿಚಾರಣೆಗಳು" },
-    "My QR Codes": { te: "నా క్యూఆర్ కోడ్‌లు", hi: "मेरे क्यूआर कोड", kn: "ನನ್ನ ಕ್ಯೂಆರ್ ಕೋಡ್‌ಗಳು" },
-    "Payments": { te: "చెల్లింపులు", hi: "भुगतान", kn: "ಪಾವತಿಗಳು" },
-    "Load Status": { te: "లోడ్ స్థితి", hi: "लोड स्थिति", kn: "ಲೋಡ್ ಸ್ಥಿತಿ" },
-    "Transport": { te: "రవాణా", hi: "परिवहन", kn: "ಸಾರಿಗೆ" },
-    "History & Ledger": { te: "చరిత్ర & లెడ్జర్", hi: "इतिहास और लेज़र", kn: "ಇತಿಹಾಸ & ಲೆಡ್ಜರ್" },
-    "Market Prices": { te: "మార్కెట్ ధరలు", hi: "मंडी भाव", kn: "ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳು" },
-    "Profile": { te: "ప్రొఫైల్", hi: "प्रोफ़ाइल", kn: "ಪ್ರೊಫೈಲ್" },
-    "Profile & Settings": { te: "ప్రొఫైల్ & సెట్టింగ్‌లు", hi: "प्रोफ़ाइल और सेटिंग्स", kn: "ಪ್ರೊಫೈಲ್ & ಸೆಟ್ಟಿಂಗ್‌ಗಳು" },
-    "Logout": { te: "లాగ్ అవుట్", hi: "लॉग आउट", kn: "ಲಾಗ್‌ಔಟ್" },
-    "Add New Crop": { te: "కొత్త పంట జోడించండి", hi: "नई फसल जोड़ें", kn: "ಹೊಸ ಬೆಳೆ ಸೇರಿಸಿ" },
-    "Active Crops": { te: "క్రియాశీల పంటలు", hi: "सक्रिय फसलें", kn: "ಸಕ್ರಿಯ ಬೆಳೆಗಳು" },
-    "Sent Enquiries": { te: "పంపిన విచారణలు", hi: "भेजी गई पूछताछ", kn: "ಕಳುಹಿಸಿದ ವಿಚಾರಣೆಗಳು" },
-    "Verification QRs": { te: "ధృవీకరణ క్యూఆర్", hi: "सत्यापन क्यूआर", kn: "ಪರಿಶೀಲನಾ ಕ್ಯೂಆರ್" },
-    "Direct Payments": { te: "ప్రత్యక్ష చెల్లింపులు", hi: "सीधा भुगतान", kn: "ನೇರ ಪಾವತಿಗಳು" },
-    "Settlements Received": { te: "అందిన చెల్లింపులు", hi: "प्राप्त भुगतान", kn: "ಸ್ವೀಕರಿಸಿದ ಪಾವತಿಗಳು" },
-    "Scan-ready for delivery": { te: "రవాణాకు సిద్ధంగా ఉంది", hi: "डिलीवरी के लिए तैयार", kn: "ವಿತರಣೆಗೆ ಸಿದ್ಧವಾಗಿದೆ" },
-    "Total Payments Received": { te: "మొత్తం అందిన చెల్లింపులు", hi: "कुल प्राप्त भुगतान", kn: "ಒಟ್ಟು ಸ್ವೀಕರಿಸಿದ ಪಾವತಿಗಳು" },
-    "Pending Settlements": { te: "పెండింగ్ చెల్లింపులు", hi: "लंबित भुगतान", kn: "ಬಾಕಿ ಪಾವತಿಗಳು" },
-    "Total Weighed Produce": { te: "మొత్తం తూకం వేసిన పంట", hi: "कुल तौला गया माल", kn: "ಒಟ್ಟು ತೂಕದ ಬೆಳೆ" },
-    "Update Bank Account": { te: "బ్యాంక్ ఖాతా నవీకరణ", hi: "बैंक खाता बदलें", kn: "ಬ್ಯಾಂಕ್ ಖಾತೆ ನವೀಕರಿಸಿ" },
-    "Verified for Direct Transfer": { te: "ప్రత్యక్ష బదిలీకి ధృవీకరించబడింది", hi: "प्रत्यक्ष ट्रांसफर के लिए सत्यापित", kn: "ನೇರ ವರ್ಗಾವಣೆಗೆ ದೃಢೀಕರಿಸಲಾಗಿದೆ" },
-    "All Transactions": { te: "అన్ని లావాదేవీలు", hi: "सभी लेन-देन", kn: "ಎಲ್ಲಾ ವಹಿವಾಟುಗಳು" },
-    "Payment Completed": { te: "చెల్లింపు పూర్తయింది", hi: "भुगतान पूर्ण", kn: "ಪಾವತಿ ಪೂರ್ಣಗೊಂಡಿದೆ" },
-    "Payment Pending": { te: "చెల్లింపు పెండింగ్", hi: "भुगतान लंबित", kn: "ಪಾವತಿ ಬಾಕಿ ಇದೆ" },
-    "Enquiry Ref": { te: "విచారణ సంఖ్య", hi: "पूछताछ संदर्भ", kn: "ವಿಚಾರಣೆ ಸಂಖ್ಯೆ" },
-    "Purchaser Mill": { te: "కొనుగోలు మిల్లు", hi: "खरीदार मिल", kn: "ಖರೀದಿದಾರ ಗಿರಣಿ" },
-    "Crop & Quantity": { te: "పంట & పరిమాణం", hi: "फसल और मात्रा", kn: "ಬೆಳೆ & ಪ್ರಮಾಣ" },
-    "Price / Quintal": { te: "క్వింటా ధర", hi: "भाव प्रति क्विंटल", kn: "ದರ / ಕ್ವಿಂಟಾಲ್" },
-    "Total Amount": { te: "మొత్తం సొమ్ము", hi: "कुल राशि", kn: "ಒಟ್ಟು ಮೊತ್ತ" },
-    "Status": { te: "స్థితి", hi: "स्थिति", kn: "ಸ್ಥಿತಿ" },
-    "Payment Date": { te: "చెల్లింపు తేదీ", hi: "भुगतान तिथि", kn: "ಪಾವತಿ ದಿನಾಂಕ" },
-    "Receipt": { te: "రసీదు", hi: "रसीद", kn: "ರಸೀದಿ" },
-    "View Bill": { te: "బిల్లు చూడండి", hi: "बिल देखें", kn: "ಬಿಲ್ ವೀಕ್ಷಿಸಿ" },
-    "View Slip": { te: "స్లిప్ చూడండి", hi: "पर्ची देखें", kn: "ಸ್ಲಿಪ್ ವೀಕ್ಷಿಸಿ" },
-    "Close": { te: "మూసివేయి", hi: "बंद करें", kn: "ಮುಚ್ಚಿ" },
-    "Print": { te: "ప్రింట్", hi: "प्रिंट करें", kn: "ಮುದ್ರಿಸಿ" },
-    "Save Profile Changes": { te: "ప్రొఫైల్ మార్పులు భద్రపరచండి", hi: "विवरण सहेजें", kn: "ಉಳಿಸಿ" },
-    "Personal & Agricultural Details": { te: "వ్యక్తిగత మరియు వ్యవసాయ వివరాలు", hi: "व्यक्तिगत एवं कृषि विवरण", kn: "ವೈಯಕ್ತಿಕ & ಕೃಷಿ ವಿವರಗಳು" },
-    "Farm & Personal Info": { te: "వ్యవసాయ & వ్యక్తిగత సమాచారం", hi: "कृषि एवं व्यक्तिगत विवरण", kn: "ವೈಯಕ್ತಿಕ ಮಾಹಿತಿ" },
-    "Direct Payout & Bank": { te: "బ్యాంక్ వివరాలు & చెల్లింపులు", hi: "बैंक विवरण और भुगतान", kn: "ಬ್ಯಾಂಕ್ & ಪಾವತಿಗಳು" },
-    "Security & PIN": { te: "భద్రత & పిన్ (PIN)", hi: "सुरक्षा और पिन (PIN)", kn: "ಭದ್ರತೆ & ಪಿನ್" },
-    "Alerts & Language": { te: "హెచ్చరికలు & భాష", hi: "अलर्ट और भाषा", kn: "ಎಚ್ಚರಿಕೆಗಳು & ಭಾಷೆ" },
-    "Full Name": { te: "పూర్తి పేరు", hi: "पूरा नाम", kn: "ಪೂರ್ಣ ಹೆಸರು" },
-    "Primary Phone (Registered)": { te: "నమోదిత ప్రాథమిక ఫోన్", hi: "पंजीकृत प्राथमिक फोन", kn: "ನೋಂದಾಯಿತ ಫೋನ್" },
-    "WhatsApp / Alternate Phone": { te: "వాట్సాప్ / ప్రత్యామ్నాయ ఫోన్", hi: "व्हाट्सएप / वैकल्पिक फोन", kn: "ವಾಟ್ಸಾಪ್ / ಪರ್ಯಾಯ ಫೋನ್" },
-    "Village / Gram Panchayat": { te: "గ్రామం / గ్రామ పంచాయితీ", hi: "गाँव / ग्राम पंचायत", kn: "ಗ್ರಾಮ / ಪಂಚಾಯತ್" },
-    "District & State": { te: "జిల్లా & రాష్ట్రం", hi: "जिला और राज्य", kn: "ಜಿಲ್ಲೆ & ರಾಜ್ಯ" },
-    "Primary Farming Practice": { te: "ప్రధాన వ్యవసాయ పద్ధతి", hi: "मुख्य कृषि पद्धति", kn: "ಮುಖ್ಯ ಕೃಷಿ ಪದ್ಧತಿ" },
-    "Total Land Holding": { te: "మొత్తం సాగు భూమి", hi: "कुल जोत भूमि", kn: "ಒಟ್ಟು ಭೂಮಿ" },
-    "Registered Crops": { te: "నమోదిత పంటలు", hi: "पंजीकृत फसलें", kn: "ನೋಂದಾಯಿತ ಬೆಳೆಗಳು" },
-    "Mill Enquiries": { te: "మిల్లు విచారణలు", hi: "मिल पूछताछ", kn: "ಗಿರಣಿ ವಿಚಾರಣೆಗಳು" },
-    "KYC Status": { te: "కేవైసీ (KYC) స్థితి", hi: "केवाईसी (KYC) स्थिति", kn: "ಕೆವೈಸಿ ಸ್ಥಿತಿ" },
-    "Verified Farmer": { te: "ధృవీకరించబడిన రైతు", hi: "सत्यापित किसान", kn: "ದೃಢೀಕೃತ ರೈತ" },
-    "Account Holder Name": { te: "ఖాతాదారుని పేరు", hi: "खाताधारक का नाम", kn: "ಖಾತೆದಾರರ ಹೆಸರು" },
-    "Bank Name": { te: "బ్యాంక్ పేరు", hi: "बैंक का नाम", kn: "ಬ್ಯಾಂಕ್ ಹೆಸರು" },
-    "Account Number": { te: "ఖాతా సంఖ్య", hi: "खाता संख्या", kn: "ಖಾತೆ ಸಂಖ್ಯೆ" },
-    "IFSC Code": { te: "ఐఎఫ్‌ఎస్‌సి (IFSC) కోడ్", hi: "आईएफएससी (IFSC) कोड", kn: "IFSC ಕೋಡ್" },
-    "UPI ID": { te: "యుపిఐ (UPI) ఐడీ", hi: "यूपीआई (UPI) आईडी", kn: "UPI ಐಡಿ" },
-    "Payments & Loads": { te: "చెల్లింపులు & లోడ్లు", hi: "भुगतान और लोड", kn: "ಪಾವತಿಗಳು & ಲೋಡ್ಗಳು" },
-    "Make Payment": { te: "చెల్లింపు చేయండి", hi: "भुगतान करें", kn: "ಪಾವತಿ ಮಾಡಿ" },
-    "Record Produce Intake": { te: "పంట రాక నమోదు", hi: "उपज आवक दर्ज करें", kn: "ದಾಸ್ತಾನು ದಾಖಲಿಸಿ" },
-    "Actual Tonnes Received (Weighbridge)": { te: "వేబ్రిడ్జి వాస్తవ టన్నుల తూకం", hi: "वेब्रिज वास्तविक वजन (टन)", kn: "ವೇಬ್ರಿಡ್ಜ್ ತೂಕ (ಟನ್)" },
-    "Converted Quintals (1T = 10 Qtl)": { te: "మార్చిన క్వింటాళ్లు (1 టన్ను = 10 క్వింటాళ్లు)", hi: "क्विंटल में परिवर्तन (1 टन = 10 क्विंटल)", kn: "ಕ್ವಿಂಟಾಲ್ ಪರಿವರ್ತನೆ" },
-    "Automated Bill Calculation": { te: "ఆటోమేటిక్ బిల్లు లెక్కింపు", hi: "स्वचालित बिल गणना", kn: "ಸ್ವಯಂಚಾಲಿತ ಬಿಲ್ ಲೆಕ್ಕ" },
-    "Total Payable Amount": { te: "చెల్లించవలసిన మొత్తం", hi: "कुल देय राशि", kn: "ಒಟ್ಟು ಪಾವತಿಸಬೇಕಾದ ಮೊತ್ತ" },
-    "Confirm Load Received": { te: "లోడ్ రసీదును నిర్ధారించండి", hi: "लोड प्राप्ति की पुष्टि करें", kn: "ಲೋಡ್ ದೃಢೀಕರಿಸಿ" },
-    "Produce Intake Payment Receipt": { te: "పంట కొనుగోలు చెల్లింపు రసీదు", hi: "अनाज आवक भुगतान रसीद", kn: "ಧಾನ್ಯ ಖರೀದಿ ರಸೀದಿ" },
-    "Scan Gate QR": { te: "గేట్ క్యూఆర్ స్కాన్ చేయండి", hi: "गेट क्यूआर स्कैन करें", kn: "ಗೇಟ್ ಕ್ಯೂಆರ್ ಸ್ಕ್ಯಾನ್" }
+    "Unified Agricultural Ecosystem": { te: "సమగ్ర వ్యవసాయ డిజిటల్ వ్యవస్థ", hi: "एकीकृत कृषि डिजिटल मंच", kn: "ಸಮಗ್ರ ಕೃಷಿ ಡಿಜಿಟಲ್ ವೇದಿಕೆ", ta: "ஒருங்கிணைந்த விவசாய டிஜிட்டல் தளம்", mr: "एकीकृत कृषी डिजिटल प्लॅटफॉर्म" },
+    "Farmer Portal": { te: "రైతు పోర్టల్", hi: "किसान पोर्टल", kn: "ರೈತ ಪೋರ್ಟಲ್", ta: "விவசாயி போர்ட்டல்", mr: "शेतकरी पोर्टल" },
+    "Empower Your Yield": { te: "మీ దిగుబడికి నిజమైన విలువ", hi: "अपनी उपज का सही मूल्य पाएं", kn: "ನಿಮ್ಮ ಬೆಳೆಗೆ ಉತ್ತಮ ಮೌಲ್ಯ", ta: "உங்கள் விளைச்சலுக்கு நியாயமான விலை", mr: "तुमच्या पिकाला योग्य भाव" },
+    "Grain Procurement": { te: "ధాన్య సేకరణ & ప్రాసెసింగ్", hi: "अनाज खरीद एवं प्रसंस्करण", kn: "ಧಾನ್ಯ ಖರೀದಿ", ta: "தானிய கொள்முதல்", mr: "धान्य खरेदी" },
+    "Smart Agro-Logistics": { te: "స్మార్ట్ వ్యవసాయ రవాణా", hi: "स्मार्ट कृषि लॉजिस्टिक्स", kn: "ಸ್ಮಾರ್ಟ್ ಕೃಷಿ ಸಾರಿಗೆ", ta: "ஸ்மார்ட் விவசாய சரக்கு", mr: "स्मार्ट कृषी लॉजिस्टिक्स" },
+    "Transport Provider": { te: "రవాణా సేవలు", hi: "परिवहन सेवा", kn: "ಸಾರಿಗೆ ಸೇವೆಗಳು", ta: "போக்குவரத்து சேவை", mr: "वाहतूक सेवा" },
+    "Enter Portal": { te: "పోర్టల్‌లోకి ప్రవేశించండి", hi: "पोर्टल में प्रवेश करें", kn: "ಪ್ರವೇಶಿಸಿ", ta: "நுழையவும்", mr: "प्रवेश करा" },
+    "Dashboard": { te: "డ్యాష్‌బోర్డ్", hi: "डैशबोर्ड", kn: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", ta: "டாஷ்போர்டு", mr: "डॅशबोर्ड" },
+    "My Crops": { te: "నా పంటలు", hi: "मेरी फसलें", kn: "ನನ್ನ ಬೆಳೆಗಳು", ta: "எனது பயிர்கள்", mr: "माझी पिके" },
+    "Nearby Mills": { te: "సమీప మిల్లులు", hi: "नजदीकी मिलें", kn: "ಹತ್ತಿರದ ಗಿರಣಿಗಳು", ta: "அருகிலுள்ள ஆலைகள்", mr: "जवळपासच्या मिल्स" },
+    "My Enquiries": { te: "నా విచారణలు", hi: "मेरी पूछताछ", kn: "ನನ್ನ ವಿಚಾರಣೆಗಳು", ta: "எனது விசாரணைகள்", mr: "माझ्या चौकशी" },
+    "My QR Codes": { te: "నా క్యూఆర్ కోడ్‌లు", hi: "मेरे क्यूआर कोड", kn: "ನನ್ನ ಕ್ಯೂಆರ್ ಕೋಡ್‌ಗಳು", ta: "எனது QR குறியீடுகள்", mr: "माझे QR कोड" },
+    "Payments": { te: "చెల్లింపులు", hi: "भुगतान", kn: "ಪಾವತಿಗಳು", ta: "கொடுப்பனவுகள்", mr: "पेमेंट्स" },
+    "Load Status": { te: "లోడ్ స్థితి", hi: "लोड स्थिति", kn: "ಲೋಡ್ ಸ್ಥಿತಿ", ta: "சுமை நிலை", mr: "लोड स्थिती" },
+    "Transport": { te: "రవాణా", hi: "परिवहन", kn: "ಸಾರಿಗೆ", ta: "போக்குவரத்து", mr: "वाहतूक" },
+    "History & Ledger": { te: "చరిత్ర & లెడ్జర్", hi: "इतिहास और लेज़र", kn: "ಇತಿಹಾಸ & ಲೆಡ್ಜರ್", ta: "வரலாறு & பேரேடு", mr: "इतिहास आणि लेजर" },
+    "Market Prices": { te: "మార్కెట్ ధరలు", hi: "मंडी भाव", kn: "ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳು", ta: "சந்தை விலைகள்", mr: "बाजार भाव" },
+    "Profile": { te: "ప్రొఫైల్", hi: "प्रोफ़ाइल", kn: "ಪ್ರೊಫೈಲ್", ta: "சுயவிவரம்", mr: "प्रोफाइल" },
+    "Profile & Settings": { te: "ప్రొఫైల్ & సెట్టింగ్‌లు", hi: "प्रोफ़ाइल और सेटिंग्स", kn: "ಪ್ರೊಫೈಲ್ & ಸೆಟ್ಟಿಂಗ್‌ಗಳು", ta: "சுயவிவரம் & அமைப்புகள்", mr: "प्रोफाइल आणि सेटिंग्ज" },
+    "Logout": { te: "లాగ్ అవుట్", hi: "लॉग आउट", kn: "ಲಾಗ್‌ಔಟ್", ta: "வெளியேறு", mr: "लॉग आउट" },
+    "Add New Crop": { te: "కొత్త పంట జోడించండి", hi: "नई फसल जोड़ें", kn: "ಹೊಸ ಬೆಳೆ ಸೇರಿಸಿ", ta: "புதிய பயிர் சேர்க்க", mr: "नवीन पीक जोडा" },
+    "Active Crops": { te: "క్రియాశీల పంటలు", hi: "सक्रिय फसलें", kn: "ಸಕ್ರಿಯ ಬೆಳೆಗಳು", ta: "செயலில் உள்ள பயிர்கள்", mr: "सक्रिय पिके" },
+    "Sent Enquiries": { te: "పంపిన విచారణలు", hi: "भेजी गई पूछताछ", kn: "ಕಳುಹಿಸಿದ ವಿಚಾರಣೆಗಳು", ta: "அனுப்பிய விசாரணைகள்", mr: "पाठवलेली चौकशी" },
+    "Verification QRs": { te: "ధృవీకరణ క్యూఆర్", hi: "सत्यापन क्यूआर", kn: "ಪರಿಶೀಲನಾ ಕ್ಯೂಆರ್", ta: "சரிபார்ப்பு QR", mr: "सत्यापन QR" },
+    "Direct Payments": { te: "ప్రత్యక్ష చెల్లింపులు", hi: "सीधा भुगतान", kn: "ನೇರ ಪಾವತಿಗಳು", ta: "நேரடி கொடுப்பனவு", mr: "थेट पेमेंट्स" },
+    "Settlements Received": { te: "అందిన చెల్లింపులు", hi: "प्राप्त भुगतान", kn: "ಸ್ವೀಕರಿಸಿದ ಪಾವತಿಗಳು", ta: "பெறப்பட்ட பணம்", mr: "प्राप्त पेमेंट्स" },
+    "Scan-ready for delivery": { te: "రవాణాకు సిద్ధంగా ఉంది", hi: "डिलीवरी के लिए तैयार", kn: "ವಿತರಣೆಗೆ ಸಿದ್ಧವಾಗಿದೆ", ta: "டெலிவரிக்கு தயார்", mr: "वितरणासाठी तयार" },
+    "Total Payments Received": { te: "మొత్తం అందిన చెల్లింపులు", hi: "कुल प्राप्त भुगतान", kn: "ಒಟ್ಟು ಸ್ವೀಕರಿಸಿದ ಪಾವತಿಗಳು", ta: "மொத்தம் பெறப்பட்ட தொகை", mr: "एकूण प्राप्त पेमेंट्स" },
+    "Pending Settlements": { te: "పెండింగ్ చెల్లింపులు", hi: "लंबित भुगतान", kn: "ಬಾಕಿ ಪಾವತಿಗಳು", ta: "நிலுவையில் உள்ள கொடுப்பனவு", mr: "प्रलंबित पेमेंट्स" },
+    "Total Weighed Produce": { te: "మొత్తం తూకం వేసిన పంట", hi: "कुल तौला गया माल", kn: "ಒಟ್ಟು ತೂಕದ ಬೆಳೆ", ta: "மொத்த எடையுள்ள விளைச்சல்", mr: "एकूण वजन केलेले पीक" },
+    "Update Bank Account": { te: "బ్యాంక్ ఖాతా నవీకరణ", hi: "बैंक खाता बदलें", kn: "ಬ್ಯಾಂಕ್ ಖಾತೆ ನವೀಕರಿಸಿ", ta: "வங்கி கணக்கை புதுப்பிக்க", mr: "बँक खाते बदला" },
+    "Verified for Direct Transfer": { te: "ప్రత్యక్ష బదిలీకి ధృవీకరించబడింది", hi: "प्रत्यक्ष ट्रांसफर के लिए सत्यापित", kn: "ನೇರ ವರ್ಗಾವಣೆಗೆ ದೃಢೀಕರಿಸಲಾಗಿದೆ", ta: "நேரடி பரிமாற்றத்திற்கு சரிபார்க்கப்பட்டது", mr: "थेट ट्रान्सफरसाठी सत्यापित" },
+    "All Transactions": { te: "అన్ని లావాదేవీలు", hi: "सभी लेन-देन", kn: "ಎಲ್ಲಾ ವಹಿವಾಟುಗಳು", ta: "அனைத்து பரிவர்த்தனைகள்", mr: "सर्व व्यवहार" },
+    "Payment Completed": { te: "చెల్లింపు పూర్తయింది", hi: "भुगतान पूर्ण", kn: "ಪಾವತಿ ಪೂರ್ಣಗೊಂಡಿದೆ", ta: "பணம் செலுத்தப்பட்டது", mr: "पेमेंट पूर्ण झाले" },
+    "Payment Pending": { te: "చెల్లింపు పెండింగ్", hi: "भुगतान लंबित", kn: "ಪಾವತಿ ಬಾಕಿ ಇದೆ", ta: "பணம் நிலுவையில் உள்ளது", mr: "पेमेंट प्रलंबित" },
+    "Enquiry Ref": { te: "విచారణ సంఖ్య", hi: "पूछताछ संदर्भ", kn: "ವಿಚಾರಣೆ ಸಂಖ್ಯೆ", ta: "விசாரணை எண்", mr: "चौकशी संदर्भ" },
+    "Purchaser Mill": { te: "కొనుగోలు మిల్లు", hi: "खरीदार मिल", kn: "ಖರೀದಿದಾರ ಗಿರಣಿ", ta: "வாங்குபவர் ஆலை", mr: "खरेदीदार मिल" },
+    "Crop & Quantity": { te: "పంట & పరిమాణం", hi: "फसल और मात्रा", kn: "ಬೆಳೆ & ಪ್ರಮಾಣ", ta: "பயிர் & அளவு", mr: "पीक आणि प्रमाण" },
+    "Price / Quintal": { te: "క్వింటా ధర", hi: "भाव प्रति क्विंटल", kn: "ದರ / ಕ್ವಿಂಟಾಲ್", ta: "விலை / குவிண்டால்", mr: "दर प्रति क्विंटल" },
+    "Total Amount": { te: "మొత్తం సొమ్ము", hi: "कुल राशि", kn: "ಒಟ್ಟು ಮೊತ್ತ", ta: "மொத்த தொகை", mr: "एकूण रक्कम" },
+    "Status": { te: "స్థితి", hi: "स्थिति", kn: "ಸ್ಥಿತಿ", ta: "நிலை", mr: "स्थिती" },
+    "Payment Date": { te: "చెల్లింపు తేదీ", hi: "भुगतान तिथि", kn: "ಪಾವತಿ ದಿನಾಂಕ", ta: "பணம் செலுத்திய தேதி", mr: "पेमेंट तारीख" },
+    "Receipt": { te: "రసీదు", hi: "रसीद", kn: "ರಸೀದಿ", ta: "ரசீது", mr: "पावती" },
+    "View Bill": { te: "బిల్లు చూడండి", hi: "बिल देखें", kn: "ಬಿಲ್ ವೀಕ್ಷಿಸಿ", ta: "பில் பார்க்க", mr: "बिल पहा" },
+    "View Slip": { te: "స్లిప్ చూడండి", hi: "पर्ची देखें", kn: "ಸ್ಲಿಪ್ ವೀಕ್ಷಿಸಿ", ta: "ரசீது பார்க்க", mr: "पावती पहा" },
+    "Close": { te: "మూసివేయి", hi: "बंद करें", kn: "ಮುಚ್ಚಿ", ta: "மூடு", mr: "बंद करा" },
+    "Print": { te: "ప్రింట్", hi: "प्रिंट करें", kn: "ಮುದ್ರಿಸಿ", ta: "அச்சிடுக", mr: "प्रिंट करा" },
+    "Save Profile Changes": { te: "ప్రొఫైల్ మార్పులు భద్రపరచండి", hi: "विवरण सहेजें", kn: "ಉಳಿಸಿ", ta: "சுயவிவரத்தை சேமி", mr: "बदल जतन करा" },
+    "Personal & Agricultural Details": { te: "వ్యక్తిగత మరియు వ్యవసాయ వివరాలు", hi: "व्यक्तिगत एवं कृषि विवरण", kn: "ವೈಯಕ್ತಿಕ & ಕೃಷಿ ವಿವರಗಳು", ta: "தனிப்பட்ட & விவசாய விவரங்கள்", mr: "वैयक्तिक आणि कृषी तपशील" },
+    "Farm & Personal Info": { te: "వ్యవసాయ & వ్యక్తిగత సమాచారం", hi: "कृषि एवं व्यक्तिगत विवरण", kn: "ವೈಯಕ್ತಿಕ ಮಾಹಿತಿ", ta: "பண்ணை & தனிப்பட்ட தகவல்", mr: "शेती आणि वैयक्तिक माहिती" },
+    "Direct Payout & Bank": { te: "బ్యాంక్ వివరాలు & చెల్లింపులు", hi: "बैंक विवरण और भुगतान", kn: "ಬ್ಯಾಂಕ್ & ಪಾವತಿಗಳು", ta: "வங்கி & கொடுப்பனவுகள்", mr: "थेट पेआउट आणि बँक" },
+    "Security & PIN": { te: "భద్రత & పిన్ (PIN)", hi: "सुरक्षा और पिन (PIN)", kn: "ಭದ್ರತೆ & ಪಿನ್", ta: "பாதுகாப்பு & பின்", mr: "सुरक्षा आणि पिन" },
+    "Alerts & Language": { te: "హెచ్చరికలు & భాష", hi: "अलर्ट और भाषा", kn: "ಎಚ್ಚರಿಕೆಗಳು & ಭಾಷೆ", ta: "எச்சரிக்கைகள் & மொழி", mr: "सूचना आणि भाषा" },
+    "Full Name": { te: "పూర్తి పేరు", hi: "पूरा नाम", kn: "ಪೂರ್ಣ ಹೆಸರು", ta: "முழு பெயர்", mr: "पूर्ण नाव" },
+    "Primary Phone (Registered)": { te: "నమోదిత ప్రాథమిక ఫోన్", hi: "पंजीकृत प्राथमिक फोन", kn: "ನೋಂದಾಯಿತ ಫೋನ್", ta: "பதிவு செய்யப்பட்ட தொலைபேசி", mr: "नोंदणीकृत फोन" },
+    "WhatsApp / Alternate Phone": { te: "వాట్సాప్ / ప్రత్యామ్నాయ ఫోన్", hi: "व्हाट्सएप / वैकल्पिक फोन", kn: "ವಾಟ್ಸಾಪ್ / ಪರ್ಯಾಯ ಫೋನ್", ta: "வாட்ஸ்அப் தொலைபேசி", mr: "व्हॉट्सअॅप / पर्यायी फोन" },
+    "Village / Gram Panchayat": { te: "గ్రామం / గ్రామ పంచాయితీ", hi: "गाँव / ग्राम पंचायत", kn: "ಗ್ರಾಮ / ಪಂಚಾಯತ್", ta: "கிராமம் / பஞ்சாயத்து", mr: "गाव / ग्रामपंचायत" },
+    "District & State": { te: "జిల్లా & రాష్ట్రం", hi: "जिला और राज्य", kn: "ಜಿಲ್ಲೆ & ರಾಜ್ಯ", ta: "மாவட்டம் & மாநிலம்", mr: "जिल्हा आणि राज्य" },
+    "Primary Farming Practice": { te: "ప్రధాన వ్యవసాయ పద్ధతి", hi: "मुख्य कृषि पद्धति", kn: "ಮುಖ್ಯ ಕೃಷಿ ಪದ್ಧತಿ", ta: "முதன்மை விவசாய முறை", mr: "प्रमुख शेती पद्धत" },
+    "Total Land Holding": { te: "మొత్తం సాగు భూమి", hi: "कुल जोत भूमि", kn: "ಒಟ್ಟು ಭೂಮಿ", ta: "மொத்த நிலம்", mr: "एकूण जमीन" },
+    "Registered Crops": { te: "నమోదిత పంటలు", hi: "पंजीकृत फसलें", kn: "ನೋಂದಾಯಿತ ಬೆಳೆಗಳು", ta: "பதிவு செய்யப்பட்ட பயிர்கள்", mr: "नोंदणीकृत पिके" },
+    "Mill Enquiries": { te: "మిల్లు విచారణలు", hi: "मिल पूछताछ", kn: "ಗಿರಣಿ ವಿಚಾರಣೆಗಳು", ta: "ஆலை விசாரணைகள்", mr: "मिल चौकशी" },
+    "KYC Status": { te: "కేవైసీ (KYC) స్థితి", hi: "केवाईसी (KYC) स्थिति", kn: "ಕೆವೈಸಿ ಸ್ಥಿತಿ", ta: "KYC நிலை", mr: "KYC स्थिती" },
+    "Verified Farmer": { te: "ధృవీకరించబడిన రైతు", hi: "सत्यापित किसान", kn: "ದೃಢೀಕೃತ ರೈತ", ta: "சரிபார்க்கப்பட்ட விவசாயி", mr: "सत्यापित शेतकरी" },
+    "Account Holder Name": { te: "ఖాతాదారుని పేరు", hi: "खाताधारक का नाम", kn: "ಖಾತೆದಾರರ ಹೆಸರು", ta: "கணக்கு வைத்திருப்பவர் பெயர்", mr: "खातेदाराचे नाव" },
+    "Bank Name": { te: "బ్యాంక్ పేరు", hi: "बैंक का नाम", kn: "ಬ್ಯಾಂಕ್ ಹೆಸರು", ta: "வங்கி பெயர்", mr: "बँकेचे नाव" },
+    "Account Number": { te: "ఖాతా సంఖ్య", hi: "खाता संख्या", kn: "ಖಾತೆ ಸಂಖ್ಯೆ", ta: "கணக்கு எண்", mr: "खाते क्रमांक" },
+    "IFSC Code": { te: "ఐఎఫ్‌ఎస్‌సి (IFSC) కోడ్", hi: "आईएफएससी (IFSC) कोड", kn: "IFSC ಕೋಡ್", ta: "IFSC குறியீடு", mr: "IFSC कोड" },
+    "UPI ID": { te: "యుపిఐ (UPI) ఐడీ", hi: "यूपीआई (UPI) आईडी", kn: "UPI ಐಡಿ", ta: "UPI ஐடி", mr: "UPI आयडी" },
+    "Payments & Loads": { te: "చెల్లింపులు & లోడ్లు", hi: "भुगतान और लोड", kn: "ಪಾವತಿಗಳು & ಲೋಡ್ಗಳು", ta: "கொடுப்பனவுகள் & சுமைகள்", mr: "पेमेंट्स आणि लोड्स" },
+    "Make Payment": { te: "చెల్లింపు చేయండి", hi: "भुगतान करें", kn: "ಪಾವತಿ ಮಾಡಿ", ta: "பணம் செலுத்துங்கள்", mr: "पेमेंट करा" },
+    "Record Produce Intake": { te: "పంట రాక నమోదు", hi: "उपज आवक दर्ज करें", kn: "ದಾಸ್ತಾನು ದಾಖಲಿಸಿ", ta: "விளைச்சல் பதிவேடு", mr: "आवक नोंदवा" },
+    "Actual Tonnes Received (Weighbridge)": { te: "వేబ్రిడ్జి వాస్తవ టన్నుల తూకం", hi: "वेब्रिज वास्तविक वजन (टन)", kn: "ವೇಬ್ರಿಡ್ಜ್ ತೂಕ (ಟನ್)", ta: "உண்மையான எடை (டன்)", mr: "प्रत्यक्ष वजन (टन)" },
+    "Converted Quintals (1T = 10 Qtl)": { te: "మార్చిన క్వింటాళ్లు (1 టన్ను = 10 క్వింటాళ్లు)", hi: "क्विंटल में परिवर्तन (1 टन = 10 क्विंटल)", kn: "ಕ್ವಿಂಟಾಲ್ ಪರಿವರ್ತನೆ", ta: "குவிண்டால் மாற்றம்", mr: "क्विंटल रूपांतरण" },
+    "Automated Bill Calculation": { te: "ఆటోమేటిక్ బిల్లు లెక్కింపు", hi: "स्वचालित बिल गणना", kn: "ಸ್ವಯಂಚಾಲಿತ ಬಿಲ್ ಲೆಕ್ಕ", ta: "தானியங்கி பில் கணக்கீடு", mr: "स्वयंचलित बिल गणना" },
+    "Total Payable Amount": { te: "చెల్లించవలసిన మొత్తం", hi: "कुल देय राशि", kn: "ಒಟ್ಟು ಪಾವತಿಸಬೇಕಾದ ಮೊತ್ತ", ta: "செலுத்த வேண்டிய மொத்த தொகை", mr: "एकूण देय रक्कम" },
+    "Confirm Load Received": { te: "లోడ్ రసీదును నిర్ధారించండి", hi: "लोड प्राप्ति की पुष्टि करें", kn: "ಲೋಡ್ ದೃಢೀಕರಿಸಿ", ta: "சுமை ரசீதை உறுதிப்படுத்தவும்", mr: "लोड मिळाल्याची खात्री करा" },
+    "Produce Intake Payment Receipt": { te: "పంట కొనుగోలు చెల్లింపు రసీదు", hi: "अनाज आवक भुगतान रसीद", kn: "ಧಾನ್ಯ ಖರೀದಿ ರಸೀದಿ", ta: "கொள்முதல் ரசீது", mr: "खरेदी पावती" },
+    "Scan Gate QR": { te: "గేట్ క్యూఆర్ స్కాన్ చేయండి", hi: "गेट क्यूआर स्कैन करें", kn: "ಗೇಟ್ ಕ್ಯೂಆರ್ ಸ್ಕ್ಯಾನ್", ta: "கேட் QR ஸ்கேன்", mr: "गेट QR स्कॅन करा" }
 };
 Object.assign(STRING_MAP, EXTRA_PHRASES);
 
-
-// Build a bidirectional canonical map so any phrase in English, Telugu, Hindi, or Kannada can map to any other language
+// Build a bidirectional canonical map so any phrase in ANY language can map cleanly to any other language
 export const CANONICAL_MAP = {};
 
 Object.keys(TRANSLATIONS.en).forEach(key => {
-    ['en', 'te', 'hi', 'kn'].forEach(lang => {
+    Object.keys(TRANSLATIONS).forEach(lang => {
         const text = TRANSLATIONS[lang]?.[key];
         if (text && typeof text === 'string') {
             CANONICAL_MAP[text.trim()] = key;
@@ -768,7 +704,7 @@ Object.keys(TRANSLATIONS.en).forEach(key => {
 
 Object.keys(EXTRA_PHRASES).forEach(enText => {
     CANONICAL_MAP[enText.trim()] = enText.trim();
-    ['te', 'hi', 'kn'].forEach(lang => {
+    Object.keys(EXTRA_PHRASES[enText] || {}).forEach(lang => {
         const text = EXTRA_PHRASES[enText]?.[lang];
         if (text && typeof text === 'string') {
             CANONICAL_MAP[text.trim()] = enText.trim();
@@ -790,23 +726,33 @@ export function LanguageProvider({ children }) {
         try {
             localStorage.setItem('kisan_language', langCode);
 
-            // Sync with Google Translate engine
+            // Manage Google Translate cookies and triggers cleanly
             const domain = window.location.hostname;
-            document.cookie = `googtrans=/en/${langCode}; path=/;`;
-            if (domain && domain !== 'localhost' && !domain.includes('127.0.0.1')) {
-                document.cookie = `googtrans=/en/${langCode}; path=/; domain=.${domain};`;
+            if (langCode === 'en') {
+                document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+                if (domain && domain !== 'localhost' && !domain.includes('127.0.0.1')) {
+                    document.cookie = `googtrans=; path=/; domain=.${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+                    document.cookie = `googtrans=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+                }
+                document.cookie = 'googtrans=/en/en; path=/;';
+            } else {
+                document.cookie = `googtrans=/en/${langCode}; path=/;`;
+                if (domain && domain !== 'localhost' && !domain.includes('127.0.0.1')) {
+                    document.cookie = `googtrans=/en/${langCode}; path=/; domain=.${domain};`;
+                }
             }
 
             const triggerGoogleCombo = () => {
                 const combo = document.querySelector('.goog-te-combo');
                 if (combo) {
-                    combo.value = langCode;
+                    combo.value = langCode === 'en' ? 'en' : langCode;
                     combo.dispatchEvent(new Event('change'));
                 }
             };
             triggerGoogleCombo();
-            setTimeout(triggerGoogleCombo, 100);
-            setTimeout(triggerGoogleCombo, 350);
+            setTimeout(triggerGoogleCombo, 80);
+            setTimeout(triggerGoogleCombo, 250);
+            setTimeout(triggerGoogleCombo, 600);
 
             window.dispatchEvent(new CustomEvent('kisan_language_changed', { detail: langCode }));
         } catch (e) {
@@ -827,10 +773,10 @@ export function LanguageProvider({ children }) {
                     combo.value = saved;
                     combo.dispatchEvent(new Event('change'));
                     clearInterval(checkCombo);
-                } else if (attempts > 15) {
+                } else if (attempts > 20) {
                     clearInterval(checkCombo);
                 }
-            }, 250);
+            }, 200);
         }
     }, []);
 
@@ -858,9 +804,11 @@ export function LanguageProvider({ children }) {
         // 2. Canonical lookup from any language to target language
         const canonicalKey = CANONICAL_MAP[trimmed];
         if (canonicalKey) {
+            if (language === 'en') {
+                return TRANSLATIONS.en[canonicalKey] || canonicalKey;
+            }
             const translated = TRANSLATIONS[language]?.[canonicalKey] || EXTRA_PHRASES[canonicalKey]?.[language];
             if (translated) return translated;
-            if (language === 'en') return canonicalKey;
         }
 
         // 3. Check STRING_MAP
@@ -877,10 +825,8 @@ export function LanguageProvider({ children }) {
         return fallback || keyOrText;
     };
 
-    // Safe Bidirectional DOM Text & Placeholder Translator
+    // Safe Bidirectional DOM Text & Placeholder Translator (Works in all directions including returning to English)
     useEffect(() => {
-        if (language === 'en') return;
-
         const translateDom = () => {
             try {
                 // 1. Text nodes
@@ -908,12 +854,20 @@ export function LanguageProvider({ children }) {
                     const text = node.nodeValue.trim();
                     const key = CANONICAL_MAP[text];
                     if (key) {
-                        const targetText = TRANSLATIONS[language]?.[key] || EXTRA_PHRASES[key]?.[language] || (language === 'en' ? key : null);
+                        let targetText = null;
+                        if (language === 'en') {
+                            targetText = TRANSLATIONS.en[key] || EXTRA_PHRASES[key]?.['en'] || key;
+                        } else {
+                            targetText = TRANSLATIONS[language]?.[key] || EXTRA_PHRASES[key]?.[language] || STRING_MAP[key]?.[language];
+                        }
                         if (targetText && targetText !== text) {
                             node.nodeValue = node.nodeValue.replace(text, targetText);
                         }
-                    } else if (STRING_MAP[text] && STRING_MAP[text][language]) {
-                        node.nodeValue = node.nodeValue.replace(text, STRING_MAP[text][language]);
+                    } else if (STRING_MAP[text]) {
+                        const targetText = language === 'en' ? text : STRING_MAP[text][language];
+                        if (targetText && targetText !== text) {
+                            node.nodeValue = node.nodeValue.replace(text, targetText);
+                        }
                     }
                 });
 
@@ -922,7 +876,12 @@ export function LanguageProvider({ children }) {
                     const ph = el.placeholder.trim();
                     const key = CANONICAL_MAP[ph];
                     if (key) {
-                        const targetText = TRANSLATIONS[language]?.[key] || EXTRA_PHRASES[key]?.[language] || (language === 'en' ? key : null);
+                        let targetText = null;
+                        if (language === 'en') {
+                            targetText = TRANSLATIONS.en[key] || EXTRA_PHRASES[key]?.['en'] || key;
+                        } else {
+                            targetText = TRANSLATIONS[language]?.[key] || EXTRA_PHRASES[key]?.[language];
+                        }
                         if (targetText && targetText !== ph) {
                             el.placeholder = targetText;
                         }
@@ -933,15 +892,16 @@ export function LanguageProvider({ children }) {
             }
         };
 
-        // Run immediately, then at 50ms, 250ms, and keep active
         translateDom();
         const t1 = setTimeout(translateDom, 50);
-        const t2 = setTimeout(translateDom, 250);
+        const t2 = setTimeout(translateDom, 200);
+        const t3 = setTimeout(translateDom, 500);
         const interval = setInterval(translateDom, 800);
 
         return () => {
             clearTimeout(t1);
             clearTimeout(t2);
+            clearTimeout(t3);
             clearInterval(interval);
         };
     }, [language]);

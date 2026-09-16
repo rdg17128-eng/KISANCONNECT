@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { kisanService } from '../services/kisanService';
 import KisanLogo from './KisanLogo';
+import LanguageSelector from './LanguageSelector';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -17,10 +18,62 @@ L.Icon.Default.mergeOptions({
 });
 
 const FLEET_DRIVERS = [
-    { phone: '9876500001', name: 'Kisan Gati Logistics', vehicle_number: 'TS 09 EA 4421', vehicle_type: 'Truck', capacity: 15, price_per_km: 42, location: 'Warangal Agri Hub' },
-    { phone: '9876500002', name: 'Balaji Agro Freight', vehicle_number: 'TS 08 UB 7712', vehicle_type: 'Mini Truck', capacity: 5, price_per_km: 28, location: 'Karimnagar Bypass' },
-    { phone: '9876500003', name: 'Annapurna Heavy Haulers', vehicle_number: 'AP 16 TZ 9980', vehicle_type: 'Lorry', capacity: 25, price_per_km: 65, location: 'Khammam Mandi' },
-    { phone: '9876500004', name: 'Gramin Kisan Express', vehicle_number: 'TS 07 TC 1109', vehicle_type: 'Truck', capacity: 10, price_per_km: 35, location: 'Nizamabad Yard' }
+    { 
+        phone: '9876500001', 
+        name: 'Kisan Gati Logistics', 
+        driver_name: 'Ramesh Yadav',
+        vehicle_number: 'TS 09 EA 4421', 
+        vehicle_type: 'Standard Truck', 
+        capacity: 15, 
+        price_per_km: 42, 
+        location: 'Warangal Agri Hub',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
+        ]
+    },
+    { 
+        phone: '9876500002', 
+        name: 'Balaji Agro Freight', 
+        driver_name: 'Venkatesh Rao',
+        vehicle_number: 'TS 08 UB 7712', 
+        vehicle_type: 'Mini Truck', 
+        capacity: 5, 
+        price_per_km: 28, 
+        location: 'Karimnagar Bypass',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1559297434-fae8a1916a79?auto=format&fit=crop&w=800&q=80'
+        ]
+    },
+    { 
+        phone: '9876500003', 
+        name: 'Annapurna Heavy Haulers', 
+        driver_name: 'Suresh Goud',
+        vehicle_number: 'AP 16 TZ 9980', 
+        vehicle_type: 'Heavy Lorry', 
+        capacity: 25, 
+        price_per_km: 65, 
+        location: 'Khammam Mandi',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=800&q=80'
+        ]
+    },
+    { 
+        phone: '9876500004', 
+        name: 'Gramin Kisan Express', 
+        driver_name: 'Mahesh Reddy',
+        vehicle_number: 'TS 07 TC 1109', 
+        vehicle_type: 'Standard Truck', 
+        capacity: 10, 
+        price_per_km: 35, 
+        location: 'Nizamabad Yard',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
+        ]
+    }
 ];
 
 function TripRouteMap({ pickupLat, pickupLng, deliveryLat, deliveryLng, pickupAddress, deliveryAddress, millName }) {
@@ -117,18 +170,109 @@ export default function TransportPortal({ user: propUser, onLogout }) {
     const [quotePrice, setQuotePrice] = useState('');
     const [quoteTime, setQuoteTime] = useState('2.5 Hours');
     const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
+    const [lightboxImage, setLightboxImage] = useState(null);
+    const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+
     const [providerInfo, setProviderInfo] = useState(() => {
+        const initialPhone = user?.phone || '9876500001';
+        const saved = kisanService.getTransportProvider(initialPhone);
+        const seed = FLEET_DRIVERS.find(d => d.phone === initialPhone) || FLEET_DRIVERS[0];
         return {
-            name: user?.name || 'Kisan Gati Logistics',
-            phone: user?.phone || '9876500001',
-            vehicle_number: user?.vehicle_number || 'TS 09 EA 4421',
-            vehicle_type: user?.vehicle_type || 'Truck',
-            capacity: Number(user?.capacity) || 15,
-            price_per_km: Number(user?.price_per_km) || 40,
-            availability: 'AVAILABLE',
-            location: 'Warangal Agri Hub'
+            name: saved?.name || user?.name || seed.name,
+            driver_name: saved?.driver_name || user?.name || seed.driver_name || seed.name,
+            phone: saved?.phone || initialPhone,
+            vehicle_number: saved?.vehicle_number || user?.vehicle_number || seed.vehicle_number,
+            vehicle_type: saved?.vehicle_type || user?.vehicle_type || seed.vehicle_type,
+            capacity: Number(saved?.capacity || user?.capacity || seed.capacity),
+            price_per_km: Number(saved?.price_per_km || user?.price_per_km || seed.price_per_km),
+            availability: saved?.availability || 'AVAILABLE',
+            location: saved?.current_location_name || seed.location,
+            vehicle_images: saved?.vehicle_images && saved.vehicle_images.length > 0 
+                ? saved.vehicle_images 
+                : (seed.vehicle_images || [
+                    'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
+                ])
         };
     });
+
+    const handleSelectDriver = (driverPhone) => {
+        const saved = kisanService.getTransportProvider(driverPhone);
+        const seed = FLEET_DRIVERS.find(d => d.phone === driverPhone) || FLEET_DRIVERS[0];
+        const updated = {
+            name: saved?.name || seed.name,
+            driver_name: saved?.driver_name || seed.driver_name || seed.name,
+            phone: driverPhone,
+            vehicle_number: saved?.vehicle_number || seed.vehicle_number,
+            vehicle_type: saved?.vehicle_type || seed.vehicle_type,
+            capacity: Number(saved?.capacity || seed.capacity),
+            price_per_km: Number(saved?.price_per_km || seed.price_per_km),
+            availability: saved?.availability || 'AVAILABLE',
+            location: saved?.current_location_name || seed.location,
+            vehicle_images: saved?.vehicle_images && saved.vehicle_images.length > 0 
+                ? saved.vehicle_images 
+                : (seed.vehicle_images || [
+                    'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
+                ])
+        };
+        setProviderInfo(updated);
+        setSaveSuccessMsg('');
+    };
+
+    const handleVehicleImageUpload = (slotIndex, file) => {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            return alert('Please upload a valid image file (PNG, JPG, WEBP).');
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            return alert('Image file is too large. Please select an image under 10MB.');
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target.result;
+            const currentImages = [...(providerInfo.vehicle_images || ['', ''])];
+            while (currentImages.length < 2) currentImages.push('');
+            currentImages[slotIndex] = dataUrl;
+            
+            const updated = {
+                ...providerInfo,
+                vehicle_images: currentImages
+            };
+            setProviderInfo(updated);
+            kisanService.updateTransportProvider(providerInfo.phone, updated);
+            setSaveSuccessMsg('Photo uploaded and updated successfully!');
+            setTimeout(() => setSaveSuccessMsg(''), 4000);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleRemoveVehicleImage = (slotIndex) => {
+        const currentImages = [...(providerInfo.vehicle_images || ['', ''])];
+        currentImages[slotIndex] = '';
+        const updated = {
+            ...providerInfo,
+            vehicle_images: currentImages
+        };
+        setProviderInfo(updated);
+        kisanService.updateTransportProvider(providerInfo.phone, updated);
+        setSaveSuccessMsg('Photo removed.');
+        setTimeout(() => setSaveSuccessMsg(''), 3000);
+    };
+
+    const handleSaveVehicleProfile = (e) => {
+        if (e) e.preventDefault();
+        try {
+            kisanService.updateTransportProvider(providerInfo.phone, providerInfo);
+            setSaveSuccessMsg('✅ Vehicle profile & photos updated successfully! Available to farmers.');
+            setTimeout(() => setSaveSuccessMsg(''), 4000);
+            refreshData();
+        } catch (err) {
+            console.error("Error updating vehicle profile:", err);
+            alert("Failed to save vehicle profile.");
+        }
+    };
 
     const refreshData = () => {
         const allReqs = kisanService.getTransportRequests();
@@ -253,10 +397,7 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Fleet Driver</div>
                     <select
                         value={providerInfo.phone}
-                        onChange={(e) => {
-                            const chosen = FLEET_DRIVERS.find(d => d.phone === e.target.value);
-                            if (chosen) setProviderInfo(chosen);
-                        }}
+                        onChange={(e) => handleSelectDriver(e.target.value)}
                         style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', color: 'var(--accent-gold)', fontWeight: 700, padding: '0.4rem 0.5rem', borderRadius: '0.4rem', marginTop: '0.25rem', cursor: 'pointer' }}
                     >
                         {FLEET_DRIVERS.map(d => (
@@ -330,16 +471,17 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                         <button className="action-btn back-btn" onClick={handleBack} title="Back to Previous Page">
                             <i className="fa-solid fa-arrow-left"></i>
                         </button>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <span className="role-tag" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-gold)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.3rem 0.8rem', borderRadius: '1rem', fontSize: '0.8rem', fontWeight: 700 }}>
-                                <i className="fa-solid fa-truck-moving" style={{ marginRight: '0.4rem' }}></i>
-                                Transport Provider Portal
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                            <span className="role-tag" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-gold)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.25rem 0.65rem', borderRadius: '1rem', fontSize: '0.78rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <i className="fa-solid fa-truck-moving" style={{ marginRight: '0.35rem' }}></i>
+                                Transport Portal
                             </span>
                         </div>
                     </div>
 
-                    <div className="header-actions">
-                        <button className="action-btn back-btn" onClick={handleLogout} title="Sign Out">
+                    <div className="header-actions" style={{ alignItems: 'center', gap: '0.65rem' }}>
+                        <LanguageSelector />
+                        <button className="action-btn back-btn" onClick={handleLogout} title="Sign Out" style={{ display: 'flex' }}>
                             <i className="fa-solid fa-arrow-right-from-bracket"></i>
                         </button>
                     </div>
@@ -1095,40 +1237,287 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                     {/* TAB: VEHICLE & RATES */}
                     {/* ======================================================== */}
                     {activeTab === 'vehicle' && (
-                        <div className="bento-card" style={{ maxWidth: '600px' }}>
-                            <h3 style={{ margin: '0 0 1.25rem 0' }}>Vehicle Profile & Haulage Rates</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>Vehicle Registration</label>
-                                    <input 
-                                        type="text" 
-                                        value={providerInfo.vehicle_number} 
-                                        onChange={(e) => setProviderInfo({ ...providerInfo, vehicle_number: e.target.value })}
-                                        style={{ width: '100%', padding: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'inherit' }}
-                                    />
+                        <div style={{ maxWidth: '880px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            {/* Status Alert Banner */}
+                            {saveSuccessMsg && (
+                                <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid var(--primary)', borderRadius: '0.75rem', padding: '0.85rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--primary)', fontWeight: 700, fontSize: '0.9rem' }}>
+                                    <i className="fa-solid fa-circle-check fa-lg"></i>
+                                    <span>{saveSuccessMsg}</span>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            )}
+
+                            {/* Section 1: Vehicle Specs & Haulage Rates */}
+                            <div className="bento-card">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>Capacity (Tons)</label>
-                                        <input 
-                                            type="number" 
-                                            value={providerInfo.capacity} 
-                                            onChange={(e) => setProviderInfo({ ...providerInfo, capacity: Number(e.target.value) })}
-                                            style={{ width: '100%', padding: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'inherit' }}
-                                        />
+                                        <h3 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <i className="fa-solid fa-truck" style={{ color: 'var(--primary)' }}></i>
+                                            Vehicle Profile & Freight Rates
+                                        </h3>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                            Configure registration number, payload capacity, and per-km pricing for farmer matches.
+                                        </p>
                                     </div>
+                                    <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--primary)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.25rem 0.65rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 800 }}>
+                                        ACTIVE FLEET
+                                    </span>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>Rate (₹ / km)</label>
-                                        <input 
-                                            type="number" 
-                                            value={providerInfo.price_per_km} 
-                                            onChange={(e) => setProviderInfo({ ...providerInfo, price_per_km: Number(e.target.value) })}
-                                            style={{ width: '100%', padding: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'inherit' }}
-                                        />
+                                        <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.35rem', fontWeight: 600 }}>Vehicle Registration Number</label>
+                                        <div className="input-group">
+                                            <i className="fa-solid fa-id-card"></i>
+                                            <input 
+                                                type="text" 
+                                                value={providerInfo.vehicle_number} 
+                                                onChange={(e) => setProviderInfo({ ...providerInfo, vehicle_number: e.target.value.toUpperCase() })}
+                                                placeholder="e.g. TS 09 EA 4421"
+                                                style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.5px' }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.35rem', fontWeight: 600 }}>Vehicle Type / Category</label>
+                                        <div className="input-group">
+                                            <i className="fa-solid fa-truck-moving"></i>
+                                            <select
+                                                value={providerInfo.vehicle_type}
+                                                onChange={(e) => setProviderInfo({ ...providerInfo, vehicle_type: e.target.value })}
+                                                style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', outline: 'none', cursor: 'pointer' }}
+                                            >
+                                                <option value="Standard Truck" style={{ background: '#111', color: '#fff' }}>Standard Truck (10 - 20 Tons)</option>
+                                                <option value="Mini Truck" style={{ background: '#111', color: '#fff' }}>Mini Truck (3 - 6 Tons)</option>
+                                                <option value="Heavy Lorry" style={{ background: '#111', color: '#fff' }}>Heavy Lorry (20 - 30 Tons)</option>
+                                                <option value="Multi-Axle Trailer" style={{ background: '#111', color: '#fff' }}>Multi-Axle Trailer (25+ Tons)</option>
+                                                <option value="Tractor Hauler" style={{ background: '#111', color: '#fff' }}>Tractor Hauler / Trolley (5 - 10 Tons)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.35rem', fontWeight: 600 }}>Payload Capacity (Tons)</label>
+                                        <div className="input-group">
+                                            <i className="fa-solid fa-weight-hanging"></i>
+                                            <input 
+                                                type="number" 
+                                                value={providerInfo.capacity} 
+                                                onChange={(e) => setProviderInfo({ ...providerInfo, capacity: Number(e.target.value) })}
+                                                min="1"
+                                                max="60"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.35rem', fontWeight: 600 }}>Haulage Rate (₹ / km)</label>
+                                        <div className="input-group">
+                                            <i className="fa-solid fa-indian-rupee-sign"></i>
+                                            <input 
+                                                type="number" 
+                                                value={providerInfo.price_per_km} 
+                                                onChange={(e) => setProviderInfo({ ...providerInfo, price_per_km: Number(e.target.value) })}
+                                                min="5"
+                                                max="200"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <button className="primary-btn" onClick={() => alert("Vehicle profile updated successfully!")} style={{ marginTop: '1rem', justifyContent: 'center' }}>
-                                    Save Changes
+                            </div>
+
+                            {/* Section 2: Upload 2 Vehicle Images */}
+                            <div className="bento-card" style={{ border: '2px solid rgba(16, 185, 129, 0.35)', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, rgba(245, 158, 11, 0.04) 100%)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+                                    <div>
+                                        <h3 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <i className="fa-solid fa-camera" style={{ color: 'var(--accent-gold)' }}></i>
+                                            Vehicle Identification Images (2 Photos)
+                                        </h3>
+                                        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                            Upload 2 high-clarity photos of this vehicle. Farmers see these photos when choosing your truck for their harvest.
+                                        </p>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-gold)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.3rem 0.75rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 800 }}>
+                                        <i className="fa-solid fa-eye"></i> Visible to Farmers on Booking
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                                    {/* Slot 1: Front Exterior & Number Plate */}
+                                    {(() => {
+                                        const img1 = (providerInfo.vehicle_images && providerInfo.vehicle_images[0]) || '';
+                                        return (
+                                            <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '0.75rem', padding: '1rem', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                                                    <strong style={{ fontSize: '0.88rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                        <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--primary)', color: '#000', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>1</span>
+                                                        Front View & Number Plate
+                                                    </strong>
+                                                    {img1 && (
+                                                        <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700 }}>
+                                                            ✓ Photo Ready
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div style={{ width: '100%', height: '180px', borderRadius: '0.5rem', overflow: 'hidden', background: '#0a0a0a', border: '1px dashed rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', marginBottom: '0.75rem' }}>
+                                                    {img1 ? (
+                                                        <>
+                                                            <img 
+                                                                src={img1} 
+                                                                alt="Vehicle Front View" 
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
+                                                                onClick={() => setLightboxImage({ url: img1, title: `${providerInfo.vehicle_number} - Front View & Registration Plate` })}
+                                                                title="Click to view full size"
+                                                            />
+                                                            <button 
+                                                                onClick={() => setLightboxImage({ url: img1, title: `${providerInfo.vehicle_number} - Front View & Registration Plate` })}
+                                                                style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                                                title="Expand photo"
+                                                            >
+                                                                <i className="fa-solid fa-expand"></i>
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)' }}>
+                                                            <i className="fa-solid fa-truck fa-2x" style={{ marginBottom: '0.5rem', opacity: 0.5 }}></i>
+                                                            <div style={{ fontSize: '0.8rem' }}>No front photo uploaded</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <label 
+                                                        className="primary-btn" 
+                                                        style={{ flex: 1, justifyContent: 'center', padding: '0.55rem', fontSize: '0.8rem', cursor: 'pointer' }}
+                                                    >
+                                                        <i className="fa-solid fa-cloud-arrow-up"></i>
+                                                        <span>{img1 ? 'Change Photo' : 'Upload Front Photo'}</span>
+                                                        <input 
+                                                            type="file" 
+                                                            accept="image/*" 
+                                                            style={{ display: 'none' }} 
+                                                            onChange={(e) => {
+                                                                if (e.target.files && e.target.files[0]) {
+                                                                    handleVehicleImageUpload(0, e.target.files[0]);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </label>
+                                                    {img1 && (
+                                                        <button 
+                                                            className="action-btn text-btn" 
+                                                            onClick={() => handleRemoveVehicleImage(0)}
+                                                            title="Remove photo"
+                                                            style={{ color: 'var(--danger)', padding: '0.55rem 0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.5rem' }}
+                                                        >
+                                                            <i className="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.45rem' }}>
+                                                    Exterior view clearly showing cabin and number plate.
+                                                </span>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Slot 2: Cargo Bed & Container Loading Area */}
+                                    {(() => {
+                                        const img2 = (providerInfo.vehicle_images && providerInfo.vehicle_images[1]) || '';
+                                        return (
+                                            <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '0.75rem', padding: '1rem', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                                                    <strong style={{ fontSize: '0.88rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                        <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--accent-gold)', color: '#000', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>2</span>
+                                                        Cargo Bed & Loading Area
+                                                    </strong>
+                                                    {img2 && (
+                                                        <span style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', fontWeight: 700 }}>
+                                                            ✓ Photo Ready
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div style={{ width: '100%', height: '180px', borderRadius: '0.5rem', overflow: 'hidden', background: '#0a0a0a', border: '1px dashed rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', marginBottom: '0.75rem' }}>
+                                                    {img2 ? (
+                                                        <>
+                                                            <img 
+                                                                src={img2} 
+                                                                alt="Vehicle Cargo Bed View" 
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
+                                                                onClick={() => setLightboxImage({ url: img2, title: `${providerInfo.vehicle_number} - Cargo Bed & Loading Area` })}
+                                                                title="Click to view full size"
+                                                            />
+                                                            <button 
+                                                                onClick={() => setLightboxImage({ url: img2, title: `${providerInfo.vehicle_number} - Cargo Bed & Loading Area` })}
+                                                                style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                                                title="Expand photo"
+                                                            >
+                                                                <i className="fa-solid fa-expand"></i>
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)' }}>
+                                                            <i className="fa-solid fa-boxes-packing fa-2x" style={{ marginBottom: '0.5rem', opacity: 0.5 }}></i>
+                                                            <div style={{ fontSize: '0.8rem' }}>No cargo bed photo uploaded</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <label 
+                                                        className="primary-btn" 
+                                                        style={{ flex: 1, justifyContent: 'center', padding: '0.55rem', fontSize: '0.8rem', cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#000' }}
+                                                    >
+                                                        <i className="fa-solid fa-cloud-arrow-up"></i>
+                                                        <span>{img2 ? 'Change Photo' : 'Upload Cargo Photo'}</span>
+                                                        <input 
+                                                            type="file" 
+                                                            accept="image/*" 
+                                                            style={{ display: 'none' }} 
+                                                            onChange={(e) => {
+                                                                if (e.target.files && e.target.files[0]) {
+                                                                    handleVehicleImageUpload(1, e.target.files[0]);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </label>
+                                                    {img2 && (
+                                                        <button 
+                                                            className="action-btn text-btn" 
+                                                            onClick={() => handleRemoveVehicleImage(1)}
+                                                            title="Remove photo"
+                                                            style={{ color: 'var(--danger)', padding: '0.55rem 0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.5rem' }}
+                                                        >
+                                                            <i className="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.45rem' }}>
+                                                    Photo showing container volume, tarp, and clean bed for crops.
+                                                </span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '0.5rem', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                    <i className="fa-solid fa-circle-info" style={{ color: 'var(--primary)', fontSize: '1rem' }}></i>
+                                    <span>Farmers can inspect these photos during transport booking to ensure your truck matches their harvest volume.</span>
+                                </div>
+                            </div>
+
+                            {/* Save Actions */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                <button 
+                                    className="primary-btn" 
+                                    onClick={handleSaveVehicleProfile} 
+                                    style={{ padding: '0.85rem 1.75rem', fontSize: '0.95rem', fontWeight: 800 }}
+                                >
+                                    <i className="fa-solid fa-floppy-disk"></i>
+                                    Save Vehicle Profile & Photos
                                 </button>
                             </div>
                         </div>
@@ -1182,23 +1571,23 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Quote Price (₹)</label>
                                 <input 
-                                    type="number"
-                                    value={quotePrice}
-                                    onChange={(e) => setQuotePrice(e.target.value)}
-                                    placeholder="Enter quote amount"
-                                    required
-                                    style={{ width: '100%', padding: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'inherit', fontSize: '1.1rem', fontWeight: 700 }}
+                                    type="number" 
+                                    value={quotePrice} 
+                                    onChange={(e) => setQuotePrice(e.target.value)} 
+                                    placeholder="Enter quote amount" 
+                                    required 
+                                    style={{ width: '100%', padding: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'inherit', fontSize: '1.1rem', fontWeight: 700 }} 
                                 />
                             </div>
 
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Estimated Delivery Time</label>
                                 <input 
-                                    type="text"
-                                    value={quoteTime}
-                                    onChange={(e) => setQuoteTime(e.target.value)}
-                                    placeholder="e.g. 2.5 Hours"
-                                    style={{ width: '100%', padding: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'inherit' }}
+                                    type="text" 
+                                    value={quoteTime} 
+                                    onChange={(e) => setQuoteTime(e.target.value)} 
+                                    placeholder="e.g. 2.5 Hours" 
+                                    style={{ width: '100%', padding: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'inherit' }} 
                                 />
                             </div>
 
@@ -1211,6 +1600,42 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* LIGHTBOX PHOTO MODAL */}
+            {lightboxImage && (
+                <div 
+                    className="modal-overlay" 
+                    style={{ zIndex: 10000, background: 'rgba(0, 0, 0, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+                    onClick={() => setLightboxImage(null)}
+                >
+                    <div 
+                        className="bento-card" 
+                        style={{ maxWidth: '750px', width: '100%', padding: '1.5rem', position: 'relative', border: '1px solid rgba(255,255,255,0.2)' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h4 style={{ margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <i className="fa-solid fa-truck" style={{ color: 'var(--primary)' }}></i>
+                                {lightboxImage.title || 'Vehicle Photo Preview'}
+                            </h4>
+                            <button 
+                                className="action-btn text-btn" 
+                                onClick={() => setLightboxImage(null)}
+                                style={{ width: '32px', height: '32px', padding: 0 }}
+                            >
+                                <i className="fa-solid fa-xmark fa-lg"></i>
+                            </button>
+                        </div>
+                        <div style={{ maxHeight: '70vh', borderRadius: '0.5rem', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+                            <img 
+                                src={lightboxImage.url} 
+                                alt="Full Resolution View" 
+                                style={{ width: '100%', height: 'auto', maxHeight: '70vh', objectFit: 'contain' }} 
+                            />
+                        </div>
                     </div>
                 </div>
             )}

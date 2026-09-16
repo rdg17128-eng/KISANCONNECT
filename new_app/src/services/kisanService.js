@@ -24,7 +24,11 @@ const DEFAULT_PROVIDERS = [
         rating: 4.9,
         availability: 'AVAILABLE',
         current_location_name: 'Warangal Agri Hub',
-        service_area: 'Telangana & AP'
+        service_area: 'Telangana & AP',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500002',
@@ -38,7 +42,11 @@ const DEFAULT_PROVIDERS = [
         rating: 4.8,
         availability: 'AVAILABLE',
         current_location_name: 'Karimnagar Bypass',
-        service_area: 'North Telangana'
+        service_area: 'North Telangana',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1559297434-fae8a1916a79?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500003',
@@ -52,7 +60,11 @@ const DEFAULT_PROVIDERS = [
         rating: 5.0,
         availability: 'AVAILABLE',
         current_location_name: 'Khammam Mandi',
-        service_area: 'South India Express'
+        service_area: 'South India Express',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500004',
@@ -66,7 +78,11 @@ const DEFAULT_PROVIDERS = [
         rating: 4.7,
         availability: 'AVAILABLE',
         current_location_name: 'Nizamabad Yard',
-        service_area: 'Telangana State'
+        service_area: 'Telangana State',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500005',
@@ -80,7 +96,11 @@ const DEFAULT_PROVIDERS = [
         rating: 4.9,
         availability: 'AVAILABLE',
         current_location_name: 'Nalgonda Agri Zone',
-        service_area: 'Telangana & Coastal AP'
+        service_area: 'Telangana & Coastal AP',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500006',
@@ -94,7 +114,11 @@ const DEFAULT_PROVIDERS = [
         rating: 4.8,
         availability: 'AVAILABLE',
         current_location_name: 'Khammam Rural',
-        service_area: 'Central Telangana'
+        service_area: 'Central Telangana',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500007',
@@ -108,7 +132,11 @@ const DEFAULT_PROVIDERS = [
         rating: 4.95,
         availability: 'AVAILABLE',
         current_location_name: 'Bodulabanda Cross',
-        service_area: 'Telangana & Andhra Pradesh'
+        service_area: 'Telangana & Andhra Pradesh',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500008',
@@ -122,7 +150,11 @@ const DEFAULT_PROVIDERS = [
         rating: 4.85,
         availability: 'AVAILABLE',
         current_location_name: 'Kothagudem Hub',
-        service_area: 'Godavari Basin & Telangana'
+        service_area: 'Godavari Basin & Telangana',
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500009',
@@ -333,12 +365,21 @@ class KisanService {
                 ? (capacity >= Number(minCapacityTons) && capacity <= Number(maxCapacityTons))
                 : true;
 
+            const defaultImgs = [
+                'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
+                'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
+            ];
+            const vImages = (p.vehicle_images && Array.isArray(p.vehicle_images) && p.vehicle_images.length > 0)
+                ? p.vehicle_images
+                : defaultImgs;
+
             return {
                 ...p,
                 id: p.phone,
                 driver_name: p.driver_name || p.name,
                 vehicle_number: p.vehicle_number || 'TS 09 EA 4421',
                 vehicle_type: p.vehicle_type || 'Standard Truck',
+                vehicle_images: vImages,
                 capacity: capacity,
                 price_per_km: ratePerKm,
                 distance: distance,
@@ -1846,16 +1887,69 @@ class KisanService {
         return quotes.filter(q => q.transport_code === transportCodeOrId || q.transport_request_id === transportCodeOrId);
     }
 
+    getTransportProvider(phone) {
+        const providers = getLocal(STORAGE_KEYS.TRANSPORT_PROVIDERS, DEFAULT_PROVIDERS);
+        const p = providers.find(item => item.phone === phone);
+        if (p) return p;
+        return DEFAULT_PROVIDERS.find(item => item.phone === phone) || null;
+    }
+
+    updateTransportProvider(phone, updates) {
+        const providers = getLocal(STORAGE_KEYS.TRANSPORT_PROVIDERS, DEFAULT_PROVIDERS);
+        let found = false;
+        const updated = providers.map(p => {
+            if (p.phone === phone) {
+                found = true;
+                return { ...p, ...updates };
+            }
+            return p;
+        });
+        if (!found) {
+            updated.push({ phone, ...updates });
+        }
+        setLocal(STORAGE_KEYS.TRANSPORT_PROVIDERS, updated);
+
+        // Also update any quotes associated with this provider
+        if (updates.vehicle_images || updates.vehicle_number || updates.vehicle_type || updates.capacity) {
+            const quotes = getLocal(STORAGE_KEYS.TRANSPORT_QUOTES, []);
+            const updatedQuotes = quotes.map(q => {
+                if (q.provider_phone === phone || q.provider_id === phone) {
+                    return {
+                        ...q,
+                        vehicle_images: updates.vehicle_images || q.vehicle_images,
+                        vehicle_number: updates.vehicle_number || q.vehicle_number,
+                        vehicle_type: updates.vehicle_type || q.vehicle_type,
+                        vehicle_capacity: updates.capacity !== undefined ? updates.capacity : q.vehicle_capacity
+                    };
+                }
+                return q;
+            });
+            setLocal(STORAGE_KEYS.TRANSPORT_QUOTES, updatedQuotes);
+        }
+
+        this.notify('provider_updated', { phone, updates });
+        return updated.find(p => p.phone === phone);
+    }
+
     submitTransportQuote(transportCode, providerData, price, estimatedTime) {
+        const defaultImgs = [
+            'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
+        ];
+        const vImages = (providerData.vehicle_images && Array.isArray(providerData.vehicle_images) && providerData.vehicle_images.length > 0)
+            ? providerData.vehicle_images
+            : defaultImgs;
+
         const quote = {
             id: 'QT-' + Date.now(),
             transport_code: transportCode,
             provider_id: providerData.phone,
-            provider_name: providerData.name,
+            provider_name: providerData.name || providerData.driver_name,
             provider_phone: providerData.phone,
             vehicle_number: providerData.vehicle_number,
             vehicle_type: providerData.vehicle_type,
             vehicle_capacity: providerData.capacity,
+            vehicle_images: vImages,
             price: Number(price),
             estimated_time: estimatedTime || '2 Hours',
             status: 'PENDING',

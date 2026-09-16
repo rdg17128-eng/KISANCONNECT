@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import MapModal from './MapModal';
 import { getCurrentCoordinates, reverseGeocode, searchLocations } from '../services/locationService';
+import { compressImageFile } from '../utils/imageUtils';
 
 export default function AddCropModal({ onClose, onSaveCrop }) {
     const [crop, setCrop] = useState('');
@@ -8,6 +9,7 @@ export default function AddCropModal({ onClose, onSaveCrop }) {
     const [locationInput, setLocationInput] = useState('');
     const [coords, setCoords] = useState(null);
     const [acres, setAcres] = useState('');
+    const [cropImage, setCropImage] = useState('');
     const [isMapOpen, setIsMapOpen] = useState(false);
     const [isLocatingGps, setIsLocatingGps] = useState(false);
     const [accuracyText, setAccuracyText] = useState('');
@@ -34,6 +36,22 @@ export default function AddCropModal({ onClose, onSaveCrop }) {
             alert("Unable to access high-accuracy GPS. Please ensure location access is allowed in your browser settings, or click 'Pick on Map' to select your location.");
         } finally {
             setIsLocatingGps(false);
+        }
+    };
+
+    const handleImageUpload = async (file) => {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            return alert('Please select a valid image file (JPG, PNG, WEBP).');
+        }
+        try {
+            const compressed = await compressImageFile(file, 1000, 1000, 0.78);
+            setCropImage(compressed);
+        } catch (err) {
+            console.error("Image compression error:", err);
+            const reader = new FileReader();
+            reader.onload = (e) => setCropImage(e.target.result);
+            reader.readAsDataURL(file);
         }
     };
 
@@ -68,7 +86,8 @@ export default function AddCropModal({ onClose, onSaveCrop }) {
             locationName: finalLocation,
             latitude: finalCoords.lat,
             longitude: finalCoords.lng,
-            acres: parseFloat(acres)
+            acres: parseFloat(acres),
+            cropImage: cropImage || ''
         });
         setLoading(false);
         onClose();
@@ -209,6 +228,86 @@ export default function AddCropModal({ onClose, onSaveCrop }) {
                                     {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
                                 </span>
                             </div>
+                        )}
+                    </div>
+
+                    {/* Crop Image Upload Section */}
+                    <div style={{ marginBottom: '1.1rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px dashed var(--border-color)', borderRadius: '0.75rem', padding: '0.85rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                            <label style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <i className="fa-solid fa-camera" style={{ color: 'var(--primary)' }}></i>
+                                Crop / Farmland Photo (Optional)
+                            </label>
+                            {cropImage && (
+                                <button 
+                                    type="button" 
+                                    onClick={() => setCropImage('')}
+                                    style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                >
+                                    <i className="fa-solid fa-trash"></i> Remove
+                                </button>
+                            )}
+                        </div>
+
+                        {cropImage ? (
+                            <div style={{ position: 'relative', width: '100%', height: '130px', borderRadius: '0.6rem', overflow: 'hidden', border: '1.5px solid var(--primary)', background: '#000' }}>
+                                <img 
+                                    src={cropImage} 
+                                    alt="Crop Preview" 
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                                />
+                                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, transparent 50%, rgba(0,0,0,0.7) 100%)', pointerEvents: 'none' }} />
+                                
+                                <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', color: 'var(--primary)', fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '0.4rem', border: '1px solid rgba(16,185,129,0.3)' }}>
+                                    <i className="fa-solid fa-circle-check"></i> Photo Attached
+                                </div>
+
+                                <label style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.25)', color: 'var(--accent-gold)', padding: '0.22rem 0.55rem', borderRadius: '1rem', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                    <i className="fa-solid fa-camera"></i> Change
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        capture="environment"
+                                        style={{ display: 'none' }} 
+                                        onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                                handleImageUpload(e.target.files[0]);
+                                            }
+                                        }}
+                                    />
+                                </label>
+                            </div>
+                        ) : (
+                            <label 
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.35rem',
+                                    padding: '1rem',
+                                    background: 'rgba(255, 255, 255, 0.04)',
+                                    borderRadius: '0.6rem',
+                                    cursor: 'pointer',
+                                    border: '1px dashed rgba(255, 255, 255, 0.12)',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                <i className="fa-solid fa-cloud-arrow-up" style={{ color: 'var(--primary)', fontSize: '1.25rem' }}></i>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>Choose or Take Crop Photo</span>
+                                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>PNG, JPG or Camera Capture</span>
+                                <input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    capture="environment" 
+                                    style={{ display: 'none' }} 
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            handleImageUpload(e.target.files[0]);
+                                        }
+                                    }}
+                                />
+                            </label>
                         )}
                     </div>
 

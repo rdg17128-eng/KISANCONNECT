@@ -35,6 +35,7 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
     const [availableTransporters, setAvailableTransporters] = useState([]);
     const [loadingTransporters, setLoadingTransporters] = useState(false);
     const [selectedTransporter, setSelectedTransporter] = useState(null);
+    const [vehicleLightboxImage, setVehicleLightboxImage] = useState(null);
 
     // Transport Dates & Details
     const todayStr = new Date().toISOString().split('T')[0];
@@ -158,6 +159,7 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                 vehicle_number: withTransport ? selectedTransporter?.vehicle_number : null,
                 vehicle_type: withTransport ? (selectedTransporter?.vehicle_type || vehicleType) : null,
                 vehicle_capacity: withTransport ? `${selectedTransporter?.capacity || vehicleCapacity} Ton` : null,
+                vehicle_images: withTransport ? (selectedTransporter?.vehicle_images || []) : [],
                 transport_date: withTransport ? transportDate : null,
                 transport_distance: withTransport ? transportDistance : 0,
                 transport_rate_per_km: withTransport ? transportRate : 0,
@@ -320,6 +322,36 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                                     <div><span style={{ color: 'var(--text-muted)' }}>Transport Rate:</span> <strong>₹{selectedTransporter.price_per_km} / KM</strong></div>
                                     <div><span style={{ color: 'var(--text-muted)' }}>Driver Rating:</span> <strong>⭐ {selectedTransporter.rating || 4.8}</strong></div>
                                     
+                                    {/* Selected Vehicle 2 Photos Strip */}
+                                    {selectedTransporter.vehicle_images && selectedTransporter.vehicle_images.length > 0 && (
+                                        <div style={{ gridColumn: 'span 2', background: 'rgba(0,0,0,0.4)', padding: '0.65rem 0.85rem', borderRadius: '0.5rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span><i className="fa-solid fa-camera"></i> Verified Truck Photos (2 Angles)</span>
+                                                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Click photo to expand</span>
+                                            </div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                                {selectedTransporter.vehicle_images.slice(0, 2).map((imgUrl, i) => (
+                                                    <div 
+                                                        key={i}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setVehicleLightboxImage({
+                                                                url: imgUrl,
+                                                                title: `${selectedTransporter.vehicle_number} - ${i === 0 ? 'Front & Plate View' : 'Cargo Bed View'}`
+                                                            });
+                                                        }}
+                                                        style={{ height: '70px', borderRadius: '0.4rem', overflow: 'hidden', position: 'relative', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}
+                                                    >
+                                                        <img src={imgUrl} alt={`Truck Angle ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        <span style={{ position: 'absolute', bottom: '2px', left: '4px', background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: '0.2rem', fontWeight: 600 }}>
+                                                            {i === 0 ? 'Front' : 'Cargo Bed'}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {transportInstructions && (
                                         <div style={{ gridColumn: 'span 2', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                             <span>Transport Instructions:</span> <em style={{ color: '#fff' }}>"{transportInstructions}"</em>
@@ -691,6 +723,53 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                                                                 <div>Distance: <strong style={{ color: '#fff' }}>~{transporter.distance} KM</strong></div>
                                                                 <div>Est. Total: <strong style={{ color: 'var(--accent-gold)' }}>₹{transporter.estimated_cost?.toLocaleString()}</strong></div>
                                                             </div>
+
+                                                            {/* 2 Vehicle Images Preview Strip */}
+                                                            {transporter.vehicle_images && transporter.vehicle_images.length > 0 && (
+                                                                <div style={{ marginTop: '0.6rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                                                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                                            <i className="fa-solid fa-camera" style={{ color: 'var(--primary)' }}></i>
+                                                                            Vehicle Photos (2 Angles):
+                                                                        </span>
+                                                                        <span style={{ fontSize: '0.65rem', color: 'var(--accent-gold)' }}>
+                                                                            🔍 Tap to enlarge
+                                                                        </span>
+                                                                    </div>
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+                                                                        {transporter.vehicle_images.slice(0, 2).map((imgUrl, idx) => (
+                                                                            <div
+                                                                                key={idx}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setVehicleLightboxImage({
+                                                                                        url: imgUrl,
+                                                                                        title: `${transporter.vehicle_number} (${transporter.driver_name || transporter.name}) - ${idx === 0 ? 'Front & Plate' : 'Cargo Bed'}`
+                                                                                    });
+                                                                                }}
+                                                                                style={{
+                                                                                    height: '56px',
+                                                                                    borderRadius: '0.35rem',
+                                                                                    overflow: 'hidden',
+                                                                                    position: 'relative',
+                                                                                    background: '#111',
+                                                                                    border: '1px solid rgba(255,255,255,0.1)'
+                                                                                }}
+                                                                                title="Click to view full photo"
+                                                                            >
+                                                                                <img 
+                                                                                    src={imgUrl} 
+                                                                                    alt={`Vehicle Angle ${idx + 1}`} 
+                                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                                                />
+                                                                                <span style={{ position: 'absolute', bottom: '2px', left: '3px', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: '0.62rem', padding: '0.05rem 0.3rem', borderRadius: '0.2rem', fontWeight: 600 }}>
+                                                                                    {idx === 0 ? 'Front' : 'Cargo Bed'}
+                                                                                </span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     );
                                                 })}
@@ -729,6 +808,42 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                     </form>
                 )}
             </div>
+
+            {/* LIGHTBOX FOR VEHICLE PHOTOS */}
+            {vehicleLightboxImage && (
+                <div 
+                    className="modal-overlay" 
+                    style={{ zIndex: 10001, background: 'rgba(0, 0, 0, 0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+                    onClick={() => setVehicleLightboxImage(null)}
+                >
+                    <div 
+                        className="bento-card" 
+                        style={{ maxWidth: '650px', width: '100%', padding: '1.25rem', position: 'relative', border: '1px solid rgba(255,255,255,0.2)' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                            <h4 style={{ margin: 0, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <i className="fa-solid fa-truck" style={{ color: 'var(--primary)' }}></i>
+                                {vehicleLightboxImage.title}
+                            </h4>
+                            <button 
+                                className="action-btn text-btn" 
+                                onClick={() => setVehicleLightboxImage(null)}
+                                style={{ width: '28px', height: '28px', padding: 0 }}
+                            >
+                                <i className="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <div style={{ maxHeight: '65vh', borderRadius: '0.5rem', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+                            <img 
+                                src={vehicleLightboxImage.url} 
+                                alt="Vehicle Full View" 
+                                style={{ width: '100%', height: 'auto', maxHeight: '65vh', objectFit: 'contain' }} 
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
