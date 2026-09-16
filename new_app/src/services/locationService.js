@@ -131,3 +131,108 @@ export async function searchLocations(query) {
         return [];
     }
 }
+
+/**
+ * Calculate straight-line (geodesic Haversine) distance in kilometers between two coordinates.
+ * Strictly parses numbers and handles identical coordinates, zero distance, and edge cases.
+ */
+export function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+    if (lat1 === undefined || lat1 === null || lon1 === undefined || lon1 === null ||
+        lat2 === undefined || lat2 === null || lon2 === undefined || lon2 === null) {
+        return 0;
+    }
+
+    const pLat1 = Number(lat1);
+    const pLon1 = Number(lon1);
+    const pLat2 = Number(lat2);
+    const pLon2 = Number(lon2);
+
+    if (isNaN(pLat1) || isNaN(pLon1) || isNaN(pLat2) || isNaN(pLon2)) return 0;
+    if (pLat1 === 0 && pLon1 === 0 && pLat2 === 0 && pLon2 === 0) return 0;
+
+    // Identical coordinates (within ~1 meter)
+    if (Math.abs(pLat1 - pLat2) < 0.00001 && Math.abs(pLon1 - pLon2) < 0.00001) {
+        return 0;
+    }
+
+    const R = 6371; // Earth's mean radius in km
+    const dLat = (pLat2 - pLat1) * (Math.PI / 180);
+    const dLon = (pLon2 - pLon1) * (Math.PI / 180);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(pLat1 * (Math.PI / 180)) * Math.cos(pLat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+    const dist = R * c;
+    return Math.round(dist * 10) / 10;
+}
+
+/**
+ * Calculate accurate road driving distance in kilometers.
+ * Applies a calibrated road network factor (~1.25x for rural/mandi transit routes in India)
+ * so distance matches actual driving odometers rather than straight air line.
+ */
+export function calculateDistance(lat1, lon1, lat2, lon2) {
+    const straight = calculateHaversineDistance(lat1, lon1, lat2, lon2);
+    if (straight <= 0.05) return 0;
+    // Calibrated Indian road network route factor (straight line to actual road transit)
+    const roadDist = straight * 1.25;
+    return Math.round(roadDist * 10) / 10;
+}
+
+/**
+ * High-accuracy asynchronous road route distance using OpenStreetMap OSRM driving engine.
+ * Automatically caches results and seamlessly falls back to calibrated road calculation.
+ */
+const routeDistanceCache = new Map();
+export async function getRoadRouteDistance(lat1, lon1, lat2, lon2) {
+    const pLat1 = Number(lat1);
+    const pLon1 = Number(lon1);
+    const pLat2 = Number(lat2);
+    const pLon2 = Number(lon2);
+
+    if (isNaN(pLat1) || isNaN(pLon1) || isNaN(pLat2) || isNaN(pLon2)) {
+        return calculateDistance(lat1, lon1, lat2, lon2);
+    }
+    if (Math.abs(pLat1 - pLat2) < 0.00001 && Math.abs(pLon1 - pLon2) < 0.00001) {
+        return 0;
+    }
+
+    const cacheKey = `${pLat1.toFixed(4)},${pLon1.toFixed(4)}-${pLat2.toFixed(4)},${pLon2.toFixed(4)}`;
+    if (routeDistanceCache.has(cacheKey)) {
+        return routeDistanceCache.get(cacheKey);
+    }
+
+    try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${pLon1},${pLat1};${pLon2},${pLat2}?overview=false`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+            const data = await res.json();
+            if (data.code === 'Ok' && data.routes && data.routes[0]) {
+                const distanceKm = Math.round((data.routes[0].distance / 1000) * 10) / 10;
+                routeDistanceCache.set(cacheKey, distanceKm);
+                return distanceKm;
+            }
+        }
+    } catch (err) {
+        // Fallback to calibrated road distance
+    }
+
+    const fallback = calculateDistance(pLat1, pLon1, pLat2, pLon2);
+    routeDistanceCache.set(cacheKey, fallback);
+    return fallback;
+}
+
+/**
+ * Helper to display distance accurately in UI without false "35 KM" or "0 KM"
+ */
+export function formatDistance(km) {
+    const num = Number(km);
+    if (isNaN(num) || num <= 0.05) return 'Nearby (< 1 km)';
+    if (num < 1) return `~${num.toFixed(1)} km`;
+    return `~${num.toFixed(1)} km`;
+}

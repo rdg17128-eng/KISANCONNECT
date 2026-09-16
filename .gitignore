@@ -11,6 +11,19 @@ lerna-debug.log*
 node_modules/
 **/node_modules/
 
+# Python Virtual Environments & Cache
+venv/
+**/venv/
+.venv/
+**/.venv/
+env/
+**/env/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
 # Build outputs
 dist/
 **/dist/
@@ -20,11 +33,17 @@ dist-ssr/
 **/.next/
 out/
 build/
+.vercel
+.netlify
 
-# Local env files
+# Environment & Secrets (Never commit credentials or api keys)
 .env
-.env*.local
+.env*
+*.env
+*.env.*
 *.local
+!.env.example
+!*.env.example
 legacy/config.js
 
 # Editor directories and files

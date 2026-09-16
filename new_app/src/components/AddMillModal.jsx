@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../utils/supabase';
 import MapModal from './MapModal';
+import { searchLocations } from '../services/locationService';
 
 export default function AddMillModal({ user, onClose, onMillAdded }) {
     const [step, setStep] = useState(1);
@@ -59,9 +60,28 @@ export default function AddMillModal({ user, onClose, onMillAdded }) {
             return;
         }
 
-        const finalLat = location.lat || 17.1033;
-        const finalLng = location.lng || 80.0536;
-        const finalLocName = location.name || 'Khammam Agro Processing Gate';
+        setLoading(true);
+
+        let finalLat = location.lat;
+        let finalLng = location.lng;
+        let finalLocName = location.name?.trim() || 'Khammam Agro Processing Gate';
+
+        // If user entered or selected a location text without picking on map, geocode it
+        if ((!finalLat || !finalLng) && location.name && location.name.trim().length >= 3) {
+            try {
+                const results = await searchLocations(location.name.trim());
+                if (results && results.length > 0) {
+                    finalLat = results[0].lat;
+                    finalLng = results[0].lng;
+                    finalLocName = results[0].placeName || finalLocName;
+                }
+            } catch (e) {
+                console.warn("Geocoding failed for mill location:", e);
+            }
+        }
+
+        finalLat = finalLat || 17.1033;
+        finalLng = finalLng || 80.0536;
 
         setLoading(true);
         try {

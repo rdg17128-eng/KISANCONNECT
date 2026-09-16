@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import MapModal from './MapModal';
-import { getCurrentCoordinates, reverseGeocode } from '../services/locationService';
+import { getCurrentCoordinates, reverseGeocode, searchLocations } from '../services/locationService';
 
 export default function AddCropModal({ onClose, onSaveCrop }) {
     const [crop, setCrop] = useState('');
@@ -40,11 +40,29 @@ export default function AddCropModal({ onClose, onSaveCrop }) {
     const handleSave = async () => {
         const finalCrop = crop === 'Other' ? customCrop : crop;
         if (!finalCrop) return alert("Please select or enter a crop.");
-        const finalCoords = coords || { lat: 17.0916, lng: 80.0210 };
-        const finalLocation = locationInput || 'Khammam Farm Plot';
         if (!acres || isNaN(acres) || acres <= 0) return alert("Please enter valid acres.");
 
         setLoading(true);
+        let finalCoords = coords;
+        let finalLocation = locationInput?.trim() || 'Khammam Farm Plot';
+
+        // If user typed a location but didn't pick on map or GPS, resolve real coordinates
+        if (!finalCoords && locationInput && locationInput.trim().length >= 3) {
+            try {
+                const results = await searchLocations(locationInput.trim());
+                if (results && results.length > 0) {
+                    finalCoords = { lat: results[0].lat, lng: results[0].lng };
+                    finalLocation = results[0].placeName || finalLocation;
+                }
+            } catch (err) {
+                console.warn("Geocoding failed for typed crop location:", err);
+            }
+        }
+
+        if (!finalCoords) {
+            finalCoords = { lat: 17.0916, lng: 80.0210 };
+        }
+
         await onSaveCrop({
             cropName: finalCrop,
             locationName: finalLocation,

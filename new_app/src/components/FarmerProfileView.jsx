@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import LanguageSelector from './LanguageSelector';
+import PassbookOcrUploader from './PassbookOcrUploader';
+import SandboxPayoutModal from './SandboxPayoutModal';
 
 export default function FarmerProfileView({ 
     user = {}, 
@@ -26,7 +28,12 @@ export default function FarmerProfileView({
     const [accountHolder, setAccountHolder] = useState(user.name || '');
     const [accountNumber, setAccountNumber] = useState('');
     const [ifscCode, setIfscCode] = useState('SBIN0012345');
+    const [branchName, setBranchName] = useState('');
     const [upiId, setUpiId] = useState('');
+    const [ocrExtracted, setOcrExtracted] = useState(false);
+    const [detailsConfirmed, setDetailsConfirmed] = useState(false);
+    const [showSandboxModal, setShowSandboxModal] = useState(false);
+    const [sandboxTargetDetails, setSandboxTargetDetails] = useState(null);
 
     // Security PIN fields
     const [pin, setPin] = useState(user.pin || '');
@@ -60,7 +67,10 @@ export default function FarmerProfileView({
                 if (parsed.accountHolder) setAccountHolder(parsed.accountHolder);
                 if (parsed.accountNumber) setAccountNumber(parsed.accountNumber);
                 if (parsed.ifscCode) setIfscCode(parsed.ifscCode);
+                if (parsed.branchName) setBranchName(parsed.branchName);
                 if (parsed.upiId) setUpiId(parsed.upiId);
+                if (typeof parsed.ocrExtracted === 'boolean') setOcrExtracted(parsed.ocrExtracted);
+                if (typeof parsed.detailsConfirmed === 'boolean') setDetailsConfirmed(parsed.detailsConfirmed);
                 if (parsed.language) setLanguage(parsed.language);
                 if (typeof parsed.priceAlerts === 'boolean') setPriceAlerts(parsed.priceAlerts);
                 if (typeof parsed.orderSms === 'boolean') setOrderSms(parsed.orderSms);
@@ -544,122 +554,40 @@ export default function FarmerProfileView({
                 </div>
             )}
 
-            {/* TAB: DIRECT PAYOUT & BANKING */}
+            {/* TAB: DIRECT PAYOUT & BANKING (AI PASSBOOK OCR INTEGRATED) */}
             {subTab === 'payout' && (
-                <div className="bento-card" style={{ padding: '2rem' }}>
-                    <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Direct Bank Transfer & UPI Payout</h3>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>
-                                    Mill buyers deposit your crop payments directly into this account upon QR verification.
-                                </p>
-                            </div>
-                            <span className="badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                                <i className="fa-solid fa-bolt"></i>
-                                Instant DBT Enabled
-                            </span>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleSavePayout} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-                            
-                            <div className="form-group-modern">
-                                <label>
-                                    <i className="fa-solid fa-id-card" style={{ color: 'var(--primary)' }}></i>
-                                    Account Holder Name
-                                </label>
-                                <div className="input-with-icon">
-                                    <i className="fa-solid fa-user field-icon"></i>
-                                    <input 
-                                        type="text" 
-                                        value={accountHolder} 
-                                        onChange={e => setAccountHolder(e.target.value)} 
-                                        placeholder="As registered in passbook"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-group-modern">
-                                <label>
-                                    <i className="fa-solid fa-building-columns" style={{ color: 'var(--accent-gold)' }}></i>
-                                    Bank Name
-                                </label>
-                                <div className="input-with-icon">
-                                    <i className="fa-solid fa-building-columns field-icon"></i>
-                                    <input 
-                                        type="text" 
-                                        value={bankName} 
-                                        onChange={e => setBankName(e.target.value)} 
-                                        placeholder="e.g. State Bank of India"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-group-modern">
-                                <label>
-                                    <i className="fa-solid fa-hashtag" style={{ color: 'var(--primary)' }}></i>
-                                    Account Number
-                                </label>
-                                <div className="input-with-icon">
-                                    <i className="fa-solid fa-credit-card field-icon"></i>
-                                    <input 
-                                        type="text" 
-                                        value={accountNumber} 
-                                        onChange={e => setAccountNumber(e.target.value)} 
-                                        placeholder="Enter Bank Account Number"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-group-modern">
-                                <label>
-                                    <i className="fa-solid fa-code" style={{ color: 'var(--accent-gold)' }}></i>
-                                    IFSC Code
-                                </label>
-                                <div className="input-with-icon">
-                                    <i className="fa-solid fa-barcode field-icon"></i>
-                                    <input 
-                                        type="text" 
-                                        value={ifscCode} 
-                                        onChange={e => setIfscCode(e.target.value.toUpperCase())} 
-                                        placeholder="e.g. SBIN0012345"
-                                        maxLength="11"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-group-modern" style={{ gridColumn: '1 / -1' }}>
-                                <label>
-                                    <i className="fa-brands fa-google-pay" style={{ color: 'var(--primary-light)' }}></i>
-                                    UPI ID / VPA (Google Pay / PhonePe / Paytm)
-                                </label>
-                                <div className="input-with-icon">
-                                    <i className="fa-solid fa-qrcode field-icon"></i>
-                                    <input 
-                                        type="text" 
-                                        value={upiId} 
-                                        onChange={e => setUpiId(e.target.value)} 
-                                        placeholder="e.g. 9182017128@ybl or farmer@okaxis"
-                                    />
-                                </div>
-                            </div>
-
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
-                            <button 
-                                type="submit" 
-                                className="primary-btn" 
-                                disabled={isSaving}
-                                style={{ minWidth: '180px', justifyContent: 'center' }}
-                            >
-                                <i className="fa-solid fa-check"></i>
-                                {isSaving ? 'Saving...' : 'Save Payout Details'}
-                            </button>
-                        </div>
-                    </form>
+                <div>
+                    <PassbookOcrUploader
+                        farmerPhone={user.phone}
+                        initialDetails={{
+                            accountHolder,
+                            bankName,
+                            accountNumber,
+                            ifscCode,
+                            branchName,
+                            upiId,
+                            ocrExtracted,
+                            detailsConfirmed
+                        }}
+                        onDetailsSaved={(updated) => {
+                            if (updated) {
+                                setAccountHolder(updated.accountHolder);
+                                setBankName(updated.bankName);
+                                setAccountNumber(updated.accountNumber);
+                                setIfscCode(updated.ifscCode);
+                                setBranchName(updated.branchName || '');
+                                setUpiId(updated.upiId);
+                                setOcrExtracted(!!updated.ocrExtracted);
+                                setDetailsConfirmed(!!updated.detailsConfirmed);
+                                showToast('Bank details updated & confirmed! 💳');
+                            }
+                        }}
+                        onOpenSandboxPayout={(details) => {
+                            setSandboxTargetDetails(details);
+                            setShowSandboxModal(true);
+                        }}
+                        t={t}
+                    />
                 </div>
             )}
 
@@ -834,6 +762,20 @@ export default function FarmerProfileView({
                     </div>
                 </div>
             )}
+
+            {/* Sandbox Payout Testing Modal */}
+            <SandboxPayoutModal
+                isOpen={showSandboxModal}
+                onClose={() => setShowSandboxModal(false)}
+                farmerPhone={user.phone}
+                bankDetails={sandboxTargetDetails || {
+                    accountHolder,
+                    bankName,
+                    accountNumber,
+                    ifscCode,
+                    upiId
+                }}
+            />
 
         </div>
     );

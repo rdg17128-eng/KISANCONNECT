@@ -166,8 +166,8 @@ export default function LandingPage() {
                 margin: '0 auto',
                 padding: '2rem 1.25rem'
             }}>
-                {/* Language Switcher Bar */}
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                {/* Top Action Bar: Language Selector */}
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                     <LanguageSelector />
                 </div>
 

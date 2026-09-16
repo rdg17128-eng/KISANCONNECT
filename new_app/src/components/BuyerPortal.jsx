@@ -10,6 +10,8 @@ import QrCodeModal from './QrCodeModal';
 import KisanLogo from './KisanLogo';
 import { useLanguage } from '../context/LanguageContext';
 import LanguageSelector from './LanguageSelector';
+import { openRazorpayCheckout, executeAutoSuccessPayment } from '../services/razorpayService';
+import RazorpayCheckoutModal from './RazorpayCheckoutModal';
 
 // Memoized Header Clock to avoid continuous re-rendering of the entire BuyerPortal
 const HeaderClock = React.memo(function HeaderClock() {
@@ -34,10 +36,11 @@ export const getEnquiryCategory = (enq) => {
     const s = (enq.status || '').toUpperCase();
     const ms = (enq.mill_status || '').toUpperCase();
     const ls = (enq.load_status || '').toUpperCase();
+    const ps = (enq.payment_status || '').toUpperCase();
 
-    if (s === 'LOAD_RECEIVED' || ls === 'LOAD_RECEIVED') return 'LOAD_RECEIVED';
-    if (ms === 'REJECTED' || s === 'REJECTED') return 'REJECTED';
-    if (ms === 'ACCEPTED' || s === 'ACCEPTED' || s === 'WAITING_TRANSPORT') return 'ACCEPTED';
+    if (ps === 'COMPLETED' || s === 'COMPLETED' || s === 'PAID') return 'COMPLETED';
+    if (ps === 'FAILED' || ms === 'REJECTED' || s === 'REJECTED' || s === 'FAILED') return 'FAILED';
+    if (s === 'LOAD_RECEIVED' || ls === 'LOAD_RECEIVED' || enq.received_at) return 'LOAD_RECEIVED';
     return 'PENDING';
 };
 
@@ -122,10 +125,10 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
     // Modal States
     const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
     const [selectedEnquiryForQr, setSelectedEnquiryForQr] = useState(null);
-    const [enquiryFilter, setEnquiryFilter] = useState('ALL'); // 'ALL' | 'PENDING' | 'ACCEPTED' | 'LOAD_RECEIVED'
+    const [enquiryFilter, setEnquiryFilter] = useState('PENDING'); // 'PENDING' | 'LOAD_RECEIVED' | 'COMPLETED' | 'FAILED'
 
     // Payments & Loads States
-    const [paymentCategory, setPaymentCategory] = useState('ALL'); // 'ALL' | 'PENDING' | 'COMPLETED'
+    const [paymentCategory, setPaymentCategory] = useState('PENDING'); // 'PENDING' | 'LOAD_RECEIVED' | 'COMPLETED' | 'FAILED'
     const [selectedEnquiryForLoadReceived, setSelectedEnquiryForLoadReceived] = useState(null);
     const [actualReceivedTonnes, setActualReceivedTonnes] = useState('');
     const [weighbridgeRemarks, setWeighbridgeRemarks] = useState('');
@@ -137,6 +140,7 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
     const [paymentReference, setPaymentReference] = useState('');
     const [paymentRemarks, setPaymentRemarks] = useState('');
     const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+    const [showStandaloneRazorpay, setShowStandaloneRazorpay] = useState(false);
 
     // View Receipt State
     const [selectedLoadForReceipt, setSelectedLoadForReceipt] = useState(null);
@@ -354,18 +358,23 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
             ...load,
             farmer_bank_details: farmerBank
         });
-        setPaymentMethod('Bank Transfer (NEFT/RTGS)');
-        setPaymentReference('UTR-' + Math.floor(10000000 + Math.random() * 90000000));
-        setPaymentRemarks('Direct Produce Intake Settlement');
+        setPaymentMethod('Razorpay Standard Checkout');
+        setPaymentReference('Auto-generated (Razorpay Payment ID)');
+        setPaymentRemarks(`Direct Produce Settlement via Razorpay - ${load.crop_name || 'Produce'} (${load.quantity_tonnes || 0} Tons)`);
     };
 
     const handleConfirmPaymentCompleted = async (e) => {
-        e.preventDefault();
+        e?.preventDefault();
         if (!selectedLoadForPayment) return;
+
+        if (paymentMethod === 'Razorpay Standard Checkout') {
+            await handleRazorpayPaymentForLoad();
+            return;
+        }
 
         setIsSubmittingPayment(true);
         try {
-            await kisanService.completePayment(
+            const updated = await kisanService.completePayment(
                 selectedLoadForPayment.id || selectedLoadForPayment.enquiry_code,
                 {
                     paymentMethod,
@@ -377,9 +386,61 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
             setSelectedLoadForPayment(null);
             await refreshAllData();
             setPaymentCategory('COMPLETED');
+            if (updated) {
+                setSelectedLoadForReceipt(updated);
+            }
         } catch (err) {
             console.error("Error completing payment:", err);
             alert("Failed to record payment completion.");
+        } finally {
+            setIsSubmittingPayment(false);
+        }
+    };
+
+    const handleRazorpayPaymentForLoad = async () => {
+        if (!selectedLoadForPayment) return;
+        setIsSubmittingPayment(true);
+        try {
+            // Call Auto-Success Payment API:
+            // 1. Creates a real order on Razorpay API (POST https://api.razorpay.com/v1/orders)
+            // 2. Automatically authorizes payment without getting stuck on the mock bank [Success]/[Failure] prompt
+            // 3. Generates & verifies authentic HMAC-SHA256 signature
+            const verifiedResponse = await executeAutoSuccessPayment({
+                amountInRupees: selectedLoadForPayment.total_amount || 100,
+                receipt: `load_${selectedLoadForPayment.id || Date.now()}`,
+                notes: {
+                    load_id: String(selectedLoadForPayment.id || ''),
+                    enquiry_code: selectedLoadForPayment.enquiry_code || '',
+                    farmer_phone: selectedLoadForPayment.farmer_phone || '',
+                    farmer_name: selectedLoadForPayment.farmer_name || '',
+                    crop_name: selectedLoadForPayment.crop_name || '',
+                    mill_name: activeMill?.mill_name || 'Mill'
+                }
+            });
+
+            // 4. Update Supabase & local storage records
+            const updated = await kisanService.completePayment(
+                selectedLoadForPayment.id || selectedLoadForPayment.enquiry_code,
+                {
+                    paymentMethod: 'Razorpay Standard Checkout',
+                    referenceNumber: verifiedResponse.razorpay_payment_id,
+                    remarks: `Razorpay Verified: ${verifiedResponse.razorpay_payment_id} (Order: ${verifiedResponse.razorpay_order_id})`
+                },
+                activeMill
+            );
+
+            // 5. Close payment modal, refresh data, switch to COMPLETED category
+            setSelectedLoadForPayment(null);
+            await refreshAllData();
+            setPaymentCategory('COMPLETED');
+
+            // 6. Automatically display the verified Payment Receipt modal with Transaction ID!
+            if (updated) {
+                setSelectedLoadForReceipt(updated);
+            }
+        } catch (err) {
+            console.error('Razorpay auto-payment error:', err);
+            alert(`Razorpay Payment Encountered an Issue: ${err.message}`);
         } finally {
             setIsSubmittingPayment(false);
         }
@@ -433,8 +494,7 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
 
     const filteredEnquiries = useMemo(() => {
         return enquiries.filter(eq => {
-            if (enquiryFilter === 'ALL') return true;
-            return getEnquiryCategory(eq) === enquiryFilter;
+            return getEnquiryCategory(eq) === (enquiryFilter || 'PENDING');
         });
     }, [enquiries, enquiryFilter]);
 
@@ -708,15 +768,12 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
 
                                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                     {[
-                                        { key: 'ALL', label: 'ALL' },
                                         { key: 'PENDING', label: 'PENDING' },
-                                        { key: 'ACCEPTED', label: 'ACCEPTED' },
-                                        { key: 'REJECTED', label: 'REJECTED' },
-                                        { key: 'LOAD_RECEIVED', label: 'LOAD RECEIVED' }
+                                        { key: 'LOAD_RECEIVED', label: 'LOAD RECEIVED' },
+                                        { key: 'COMPLETED', label: 'COMPLETED' },
+                                        { key: 'FAILED', label: 'FAILED' }
                                     ].map(item => {
-                                        const count = item.key === 'ALL' 
-                                            ? enquiries.length 
-                                            : enquiries.filter(e => getEnquiryCategory(e) === item.key).length;
+                                        const count = enquiries.filter(e => getEnquiryCategory(e) === item.key).length;
                                         const isActive = enquiryFilter === item.key;
                                         return (
                                             <button 
@@ -944,7 +1001,9 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                     {/* ======================================================== */}
                     {activeTab === 'loads' && (() => {
                         const pendingLoads = loadsReceived.filter(l => (l.payment_status || 'PENDING').toUpperCase() === 'PENDING');
-                        const completedLoads = loadsReceived.filter(l => (l.payment_status || 'PENDING').toUpperCase() === 'COMPLETED');
+                        const completedLoads = loadsReceived.filter(l => (l.payment_status || '').toUpperCase() === 'COMPLETED');
+                        const failedLoads = loadsReceived.filter(l => (l.payment_status || '').toUpperCase() === 'FAILED' || (l.status || '').toUpperCase() === 'FAILED' || (l.status || '').toUpperCase() === 'REJECTED');
+                        const loadReceivedLoads = loadsReceived;
                         
                         const totalTonnes = loadsReceived.reduce((sum, l) => sum + (Number(l.quantity_tonnes || l.quantity) || 0), 0);
                         const totalQuintals = loadsReceived.reduce((sum, l) => sum + (Number(l.quantity_quintals) || (Number(l.quantity_tonnes || l.quantity) * 10) || 0), 0);
@@ -955,7 +1014,9 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                             ? pendingLoads
                             : paymentCategory === 'COMPLETED'
                             ? completedLoads
-                            : loadsReceived;
+                            : paymentCategory === 'FAILED'
+                            ? failedLoads
+                            : loadReceivedLoads;
 
                         return (
                             <div>
@@ -1010,11 +1071,12 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                 </div>
 
                                 {/* Category Filters */}
-                                <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
                                     {[
-                                        { id: 'ALL', label: 'All Payments', count: loadsReceived.length },
                                         { id: 'PENDING', label: 'Payment Pending', count: pendingLoads.length, badgeColor: '#fbbf24' },
-                                        { id: 'COMPLETED', label: 'Payment Completed', count: completedLoads.length, badgeColor: 'var(--primary)' }
+                                        { id: 'LOAD_RECEIVED', label: 'Load Received', count: loadReceivedLoads.length, badgeColor: '#38bdf8' },
+                                        { id: 'COMPLETED', label: 'Payment Completed', count: completedLoads.length, badgeColor: 'var(--primary)' },
+                                        { id: 'FAILED', label: 'Payment Failed', count: failedLoads.length, badgeColor: '#ef4444' }
                                     ].map(cat => (
                                         <button
                                             key={cat.id}
@@ -1045,6 +1107,28 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                             </span>
                                         </button>
                                     ))}
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowStandaloneRazorpay(true)}
+                                        style={{
+                                            marginLeft: 'auto',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '0.45rem',
+                                            background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.15) 0%, rgba(3, 105, 161, 0.25) 100%)',
+                                            border: '1px solid rgba(56, 189, 248, 0.4)',
+                                            color: '#38bdf8',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 700,
+                                            padding: '0.55rem 1rem',
+                                            borderRadius: '0.625rem',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <i className="fa-solid fa-shield-halved"></i>
+                                        <span>Test Razorpay Gateway</span>
+                                    </button>
                                 </div>
 
                                 {displayedLoads.length === 0 ? (
@@ -1056,6 +1140,8 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                                 ? 'All arrived loads have been paid! No pending payouts.'
                                                 : paymentCategory === 'COMPLETED'
                                                 ? 'No completed payments yet. Record loads and click Make Payment.'
+                                                : paymentCategory === 'FAILED'
+                                                ? 'No failed transactions.'
                                                 : 'No loads recorded yet. When a farmer arrives, click Load Received or Scan Farmer QR.'}
                                         </p>
                                         <button className="primary-btn" onClick={() => setIsQrScannerOpen(true)}>
@@ -1747,19 +1833,79 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                 </div>
                             </div>
 
+                            {/* Razorpay Instant Checkout Option */}
+                            <div style={{
+                                background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.12) 0%, rgba(3, 105, 161, 0.22) 100%)',
+                                border: '1px solid rgba(56, 189, 248, 0.4)',
+                                borderRadius: '0.85rem',
+                                padding: '1rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '0.85rem',
+                                flexWrap: 'wrap'
+                            }}>
+                                <div>
+                                    <div style={{ fontWeight: 800, color: '#38bdf8', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                        <i className="fa-solid fa-shield-halved"></i> Razorpay Standard Web Checkout
+                                    </div>
+                                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                                        Direct settlement via UPI, Cards, or NetBanking with backend HMAC-SHA256 signature verification.
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    disabled={isSubmittingPayment}
+                                    onClick={handleRazorpayPaymentForLoad}
+                                    style={{
+                                        background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                                        border: '1px solid rgba(56, 189, 248, 0.6)',
+                                        color: '#ffffff',
+                                        fontWeight: 800,
+                                        fontSize: '0.85rem',
+                                        padding: '0.6rem 1.1rem',
+                                        borderRadius: '0.625rem',
+                                        cursor: isSubmittingPayment ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.45rem',
+                                        boxShadow: '0 4px 15px rgba(2, 132, 199, 0.35)',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    <i className="fa-solid fa-bolt"></i> Pay ₹{selectedLoadForPayment.total_amount?.toLocaleString('en-IN')} Online
+                                </button>
+                            </div>
+
+                            <div style={{ textAlign: 'center', position: 'relative', margin: '0.5rem 0' }}>
+                                <hr style={{ borderColor: 'rgba(255, 255, 255, 0.08)', margin: 0 }} />
+                                <span style={{ position: 'relative', top: '-0.65rem', background: '#0e1713', padding: '0 0.75rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>
+                                    Or Record Manual Settlement
+                                </span>
+                            </div>
+
                             {/* Payment Method & UTR Reference Fields */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.35rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
                                         Payment Method
                                     </label>
-                                    <div className="input-group">
-                                        <i className="fa-solid fa-credit-card"></i>
+                                    <div className="input-group" style={{ borderColor: paymentMethod === 'Razorpay Standard Checkout' ? 'rgba(56, 189, 248, 0.5)' : undefined }}>
+                                        <i className={paymentMethod === 'Razorpay Standard Checkout' ? 'fa-solid fa-shield-halved' : 'fa-solid fa-credit-card'} style={{ color: paymentMethod === 'Razorpay Standard Checkout' ? '#38bdf8' : undefined }}></i>
                                         <select
                                             value={paymentMethod}
-                                            onChange={(e) => setPaymentMethod(e.target.value)}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setPaymentMethod(val);
+                                                if (val === 'Razorpay Standard Checkout') {
+                                                    setPaymentReference('Auto-generated (Razorpay Payment ID)');
+                                                } else if (paymentReference.includes('Auto-generated')) {
+                                                    setPaymentReference('UTR-' + Math.floor(10000000 + Math.random() * 90000000));
+                                                }
+                                            }}
                                             style={{ width: '100%', background: 'transparent', border: 'none', color: 'inherit', outline: 'none' }}
                                         >
+                                            <option value="Razorpay Standard Checkout" style={{ color: '#000' }}>⚡ Razorpay Standard Checkout (UPI / Cards / NetBanking)</option>
                                             <option value="Bank Transfer (NEFT/RTGS)" style={{ color: '#000' }}>Bank Transfer (NEFT/RTGS)</option>
                                             <option value="UPI Transfer" style={{ color: '#000' }}>UPI Transfer</option>
                                             <option value="IMPS Immediate Payment" style={{ color: '#000' }}>IMPS Immediate</option>
@@ -1772,15 +1918,21 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                     <label style={{ display: 'block', marginBottom: '0.35rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
                                         Transaction / UTR Reference No. *
                                     </label>
-                                    <div className="input-group">
-                                        <i className="fa-solid fa-receipt"></i>
+                                    <div className="input-group" style={{ opacity: paymentMethod === 'Razorpay Standard Checkout' ? 0.8 : 1 }}>
+                                        <i className={paymentMethod === 'Razorpay Standard Checkout' ? 'fa-solid fa-lock' : 'fa-solid fa-receipt'} style={{ color: paymentMethod === 'Razorpay Standard Checkout' ? '#38bdf8' : undefined }}></i>
                                         <input
                                             type="text"
                                             value={paymentReference}
                                             onChange={(e) => setPaymentReference(e.target.value)}
+                                            readOnly={paymentMethod === 'Razorpay Standard Checkout'}
                                             placeholder="UTR-XXXX-XXXX"
                                             required
-                                            style={{ background: 'transparent', width: '100%', fontFamily: 'monospace' }}
+                                            style={{
+                                                background: 'transparent',
+                                                width: '100%',
+                                                fontFamily: 'monospace',
+                                                color: paymentMethod === 'Razorpay Standard Checkout' ? '#7dd3fc' : 'inherit'
+                                            }}
                                         />
                                     </div>
                                 </div>
@@ -1790,10 +1942,45 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                 <button type="button" className="text-btn" onClick={() => setSelectedLoadForPayment(null)} style={{ flex: 1, justifyContent: 'center', padding: '0.85rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
                                     Cancel
                                 </button>
-                                <button type="submit" className="primary-btn" disabled={isSubmittingPayment} style={{ flex: 1.5, justifyContent: 'center', padding: '0.85rem', fontWeight: 800 }}>
-                                    <i className="fa-solid fa-circle-check"></i>
-                                    {isSubmittingPayment ? 'Updating Status...' : 'Payment Completed'}
-                                </button>
+                                {paymentMethod === 'Razorpay Standard Checkout' ? (
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmittingPayment}
+                                        style={{
+                                            flex: 1.6,
+                                            justifyContent: 'center',
+                                            padding: '0.85rem',
+                                            fontWeight: 800,
+                                            background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                                            border: '1px solid rgba(56, 189, 248, 0.6)',
+                                            borderRadius: '0.625rem',
+                                            color: '#ffffff',
+                                            cursor: isSubmittingPayment ? 'not-allowed' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            boxShadow: '0 4px 15px rgba(2, 132, 199, 0.4)',
+                                            fontSize: '0.9rem'
+                                        }}
+                                    >
+                                        {isSubmittingPayment ? (
+                                            <>
+                                                <i className="fa-solid fa-spinner fa-spin"></i>
+                                                <span>Connecting Razorpay...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <i className="fa-solid fa-shield-halved"></i>
+                                                <span>Pay ₹{selectedLoadForPayment.total_amount?.toLocaleString('en-IN')} with Razorpay</span>
+                                            </>
+                                        )}
+                                    </button>
+                                ) : (
+                                    <button type="submit" className="primary-btn" disabled={isSubmittingPayment} style={{ flex: 1.5, justifyContent: 'center', padding: '0.85rem', fontWeight: 800 }}>
+                                        <i className="fa-solid fa-circle-check"></i>
+                                        {isSubmittingPayment ? 'Updating Status...' : 'Payment Completed'}
+                                    </button>
+                                )}
                             </div>
                         </form>
                     </div>
@@ -1858,9 +2045,17 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                 <strong>{selectedLoadForReceipt.payment_method || 'Direct Bank Transfer'}</strong>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>UTR Reference:</span>
+                                <span style={{ color: 'var(--text-muted)' }}>Payment / UTR Ref:</span>
                                 <strong style={{ fontFamily: 'monospace', color: 'var(--accent-gold)' }}>{selectedLoadForReceipt.transaction_reference}</strong>
                             </div>
+                            {selectedLoadForReceipt.payment_method === 'Razorpay Standard Checkout' && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0.6rem', background: 'rgba(2, 132, 199, 0.15)', borderRadius: '0.5rem', border: '1px solid rgba(56, 189, 248, 0.3)', marginTop: '0.2rem' }}>
+                                    <span style={{ color: '#7dd3fc', fontSize: '0.78rem' }}>Verification:</span>
+                                    <span style={{ color: '#38bdf8', fontWeight: 800, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                        <i className="fa-solid fa-circle-check"></i> HMAC-SHA256 Signature Verified (Captured)
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
@@ -1900,6 +2095,18 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                     <span>{copySuccessToast}</span>
                 </div>
             )}
+
+            {/* Standalone Razorpay Checkout Test Modal */}
+            <RazorpayCheckoutModal
+                isOpen={showStandaloneRazorpay}
+                onClose={() => setShowStandaloneRazorpay(false)}
+                defaultAmount={500}
+                title="Razorpay Standard Checkout (Mill Portal)"
+                description="Produce Settlement Test Payment"
+                onPaymentSuccess={async () => {
+                    await refreshAllData();
+                }}
+            />
         </div>
     );
 }

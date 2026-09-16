@@ -171,19 +171,8 @@ function setLocal(key, value) {
     }
 }
 
-// Haversine Distance in Kilometers
-export function calculateDistance(lat1, lon1, lat2, lon2) {
-    if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
-    const R = 6371; // km
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return Math.round(R * c * 10) / 10;
-}
+// Distance calculations re-exported from locationService
+export { calculateDistance, calculateHaversineDistance, getRoadRouteDistance, formatDistance } from './locationService';
 
 // Calculate truck capacity range based on selected capacity (e.g. 20 Tons -> 18 to 25 Tons)
 export function getCapacityRange(selectedCapacityTons) {
@@ -333,7 +322,7 @@ class KisanService {
         let mapped = combined.map(p => {
             const pLat = Number(p.current_lat) || 17.1000 + (Math.random() * 0.05);
             const pLng = Number(p.current_lng) || 80.0200 + (Math.random() * 0.05);
-            const distance = calculateDistance(fLat, fLng, pLat, pLng) || Math.round(15 + Math.random() * 25);
+            const distance = calculateDistance(fLat, fLng, pLat, pLng);
             const ratePerKm = Number(p.price_per_km) || 35;
             const estimatedCost = Math.round(distance * ratePerKm);
             const capacity = Number(p.capacity) || 10;
@@ -411,7 +400,7 @@ class KisanService {
             vehicle_type: enquiryData.vehicle_type || 'Truck',
             vehicle_capacity: enquiryData.vehicle_capacity || '10 Ton',
             transport_date: enquiryData.transport_date || enquiryData.pickup_date || null,
-            transport_distance: Number(enquiryData.transport_distance || enquiryData.distance || 0),
+            transport_distance: Number(enquiryData.transport_distance !== undefined && enquiryData.transport_distance !== null ? enquiryData.transport_distance : (enquiryData.distance || 0)),
             transport_rate_per_km: Number(enquiryData.transport_rate_per_km || 35),
             estimated_transport_cost: Number(enquiryData.estimated_transport_cost || 0),
             farmer_message: enquiryData.farmer_message || enquiryData.message || '',
@@ -423,7 +412,7 @@ class KisanService {
             mill_lat: enquiryData.mill_lat || 17.1033,
             mill_lng: enquiryData.mill_lng || 80.0536,
             mill_location_name: enquiryData.mill_location_name || enquiryData.mill_name || '',
-            distance: Number(enquiryData.distance || enquiryData.transport_distance || 35),
+            distance: Number(enquiryData.distance !== undefined && enquiryData.distance !== null && !isNaN(Number(enquiryData.distance)) ? enquiryData.distance : (enquiryData.transport_distance || 0)),
 
             // Dual Status Tracking: Initial state waiting for Mill review
             mill_status: 'PENDING',
@@ -1099,7 +1088,13 @@ class KisanService {
                     bankName: parsed.bankName || 'State Bank of India',
                     accountNumber: parsed.accountNumber && !parsed.accountNumber.includes('XXXX') ? parsed.accountNumber : '308912445892',
                     ifscCode: parsed.ifscCode || 'SBIN0004521',
-                    upiId: parsed.upiId || `${farmerPhone}@upi`
+                    branchName: parsed.branchName || 'Suryapet Main Branch',
+                    upiId: parsed.upiId || `${farmerPhone}@upi`,
+                    ocrExtracted: !!parsed.ocrExtracted,
+                    detailsConfirmed: !!parsed.detailsConfirmed,
+                    ownershipVerified: !!parsed.ownershipVerified,
+                    verifiedAt: parsed.verifiedAt || null,
+                    ocrConfidence: parsed.ocrConfidence || null
                 };
             }
         } catch {}
@@ -1109,7 +1104,13 @@ class KisanService {
             bankName: 'State Bank of India',
             accountNumber: '308912445892',
             ifscCode: 'SBIN0004521',
-            upiId: `${farmerPhone}@upi`
+            branchName: 'Suryapet Main Branch',
+            upiId: `${farmerPhone}@upi`,
+            ocrExtracted: false,
+            detailsConfirmed: false,
+            ownershipVerified: false,
+            verifiedAt: null,
+            ocrConfidence: null
         };
     }
 
@@ -1122,8 +1123,112 @@ class KisanService {
         } catch {}
         const merged = { ...current, ...bankDetails };
         localStorage.setItem(key, JSON.stringify(merged));
+
+        // Sync with Supabase farmer_bank_accounts if possible (optional table)
+        try {
+            supabase.from('farmer_bank_accounts').upsert([{
+                farmer_phone: farmerPhone,
+                account_holder: merged.accountHolder,
+                bank_name: merged.bankName,
+                account_number: merged.accountNumber,
+                ifsc_code: merged.ifscCode,
+                branch_name: merged.branchName,
+                upi_id: merged.upiId,
+                ocr_extracted: merged.ocrExtracted || false,
+                details_confirmed: merged.detailsConfirmed || false,
+                updated_at: new Date().toISOString()
+            }], { onConflict: 'farmer_phone' }).then(() => {}).catch(() => {});
+        } catch {}
+
         this.notify('bank_details_updated', { farmerPhone, bankDetails: merged });
         return merged;
+    }
+
+    // AI-Based Bank Passbook Detail Extraction (PaddleOCR Backend)
+    async extractPassbookDetails(file) {
+        if (!file) {
+            throw new Error('No passbook image file provided.');
+        }
+
+        const formData = new FormData();
+        formData.append('passbook', file);
+
+        try {
+            const response = await fetch('/api/ocr/passbook', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.detail || `OCR processing failed with status ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('OCR Extraction API call failed:', error);
+            throw error;
+        }
+    }
+
+    // Demo / Sandbox Payment Flow (Simulated Instant DBT / UPI Transfer)
+    createSandboxPayout({ farmerPhone, amount = 25000, paymentMethod = 'Direct Bank Transfer (NEFT/RTGS)', bankDetails = {}, loadId = null, enquiryCode = null }) {
+        const isUpi = paymentMethod.toLowerCase().includes('upi');
+        const prefix = isUpi ? 'UPI-DEMO' : 'DBT-DEMO';
+        const txnId = `${prefix}-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const timestamp = new Date().toISOString();
+
+        const sandboxReceipt = {
+            id: 'SB-' + Date.now(),
+            transactionId: txnId,
+            farmerPhone,
+            farmerName: bankDetails.accountHolder || 'Farmer',
+            bankName: bankDetails.bankName || 'State Bank of India',
+            accountNumberMasked: bankDetails.accountNumber ? `••••••••${bankDetails.accountNumber.slice(-4)}` : '••••••••4589',
+            ifscCode: bankDetails.ifscCode || 'SBIN0004521',
+            upiId: bankDetails.upiId || `${farmerPhone}@upi`,
+            amount: Number(amount),
+            paymentMethod,
+            status: 'SUCCESS',
+            isSandbox: true,
+            environment: 'DEMO / SANDBOX',
+            timestamp,
+            loadId: loadId || 'LOAD-DEMO-01',
+            enquiryCode: enquiryCode || 'ENQ-DEMO-01',
+            settlementNote: 'Simulated Sandbox payout demonstration. No real money was debited or credited.'
+        };
+
+        // Persist in local storage
+        const key = `kisan_sandbox_payouts_${farmerPhone || 'all'}`;
+        let existing = [];
+        try {
+            existing = JSON.parse(localStorage.getItem(key) || '[]');
+        } catch {}
+        existing.unshift(sandboxReceipt);
+        localStorage.setItem(key, JSON.stringify(existing.slice(0, 50)));
+
+        // Send local notification
+        this.addNotification(
+            farmerPhone,
+            'farmers',
+            '💳 Demo DBT Payout Successful! (Sandbox)',
+            `[Demo Mode] Simulated transfer of ₹${Number(amount).toLocaleString('en-IN')} via ${paymentMethod} to account ${sandboxReceipt.accountNumberMasked} (${sandboxReceipt.bankName}). Txn ID: ${txnId}`,
+            'success',
+            { transactionId: txnId, isSandbox: true }
+        );
+
+        this.notify('sandbox_payout_completed', sandboxReceipt);
+        return sandboxReceipt;
+    }
+
+    getSandboxPayouts(farmerPhone) {
+        const key = `kisan_sandbox_payouts_${farmerPhone || 'all'}`;
+        try {
+            return JSON.parse(localStorage.getItem(key) || '[]');
+        } catch {
+            return [];
+        }
     }
 
     async acceptLoad(enquiryCode, loggedInMill = {}, actualTonnesParam = null, notes = '') {
@@ -1335,6 +1440,28 @@ class KisanService {
         });
         setLocal(STORAGE_KEYS.ENQUIRIES, updatedEnqs);
 
+        // Sync directly to Supabase so Farmer Portal reflects Payment Completed in real time
+        try {
+            if (supabase) {
+                const targetCode = updatedLoad?.enquiry_code || loadIdOrCode;
+                supabase
+                    .from('enquiries')
+                    .update({
+                        payment_status: 'COMPLETED',
+                        paid_at: paidAt,
+                        payment_method: paymentMethod,
+                        transaction_reference: refNo,
+                        payment_remarks: remarks
+                    })
+                    .or(`id.eq.${targetCode},enquiry_code.eq.${targetCode}`)
+                    .then(({ error }) => {
+                        if (error) console.warn('[kisanService] Supabase enquiry update notice:', error.message);
+                    });
+            }
+        } catch (e) {
+            console.warn('[kisanService] Supabase sync catch:', e);
+        }
+
         // Notify farmer
         if (updatedLoad) {
             const farmerTargetPhone = updatedLoad.farmer_phone || updatedLoad.farmer_id;
@@ -1531,12 +1658,14 @@ class KisanService {
         }
 
         // 3. Calculate route distance and agreed haulage price
-        const dist = Number(enquiry.distance) || calculateDistance(
-            enquiry.farmer_lat || 17.0916, 
-            enquiry.farmer_lng || 80.0210, 
-            enquiry.mill_lat || 17.1033, 
-            enquiry.mill_lng || 80.0536
-        ) || 38.5;
+        const dist = (enquiry.distance !== undefined && enquiry.distance !== null && !isNaN(Number(enquiry.distance)))
+            ? Number(enquiry.distance)
+            : calculateDistance(
+                enquiry.farmer_lat || 17.0916, 
+                enquiry.farmer_lng || 80.0210, 
+                enquiry.mill_lat || 17.1033, 
+                enquiry.mill_lng || 80.0536
+            );
         const agreedPrice = Number(enquiry.estimated_transport_cost) || Math.round(dist * (assignedDriver.price_per_km || 35));
 
         const req = {
@@ -1627,7 +1756,9 @@ class KisanService {
         const quotes = getLocal(STORAGE_KEYS.TRANSPORT_QUOTES, []);
 
         providers.slice(0, 3).forEach((prov, idx) => {
-            const distance = transportReq.distance || 40;
+            const distance = (transportReq.distance !== undefined && transportReq.distance !== null && !isNaN(Number(transportReq.distance)))
+                ? Number(transportReq.distance)
+                : 10;
             const baseCost = Math.round(distance * prov.price_per_km);
             const quotePrice = baseCost + (idx * 250); // slight competitive variance
 
@@ -2118,4 +2249,5 @@ class KisanService {
 }
 
 export const kisanService = new KisanService();
+export default kisanService;
 

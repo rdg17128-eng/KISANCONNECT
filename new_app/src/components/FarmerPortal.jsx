@@ -5,12 +5,16 @@ import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../utils/supabase';
 import { kisanService } from '../services/kisanService';
 import { fetchWeatherByCoords, fetchWeatherByCity, getWeatherIcon } from '../services/weather';
+import { calculateDistance, formatDistance } from '../services/locationService';
 import AddCropModal from './AddCropModal';
 import SendEnquiryModal from './SendEnquiryModal';
 import QrCodeModal from './QrCodeModal';
 import KisanLogo from './KisanLogo';
 import FarmerProfileView from './FarmerProfileView';
 import LanguageSelector from './LanguageSelector';
+import PassbookOcrUploader from './PassbookOcrUploader';
+import SandboxPayoutModal from './SandboxPayoutModal';
+import RazorpayCheckoutModal from './RazorpayCheckoutModal';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -137,7 +141,11 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
         bankName: 'State Bank of India',
         accountNumber: '308912445892',
         ifscCode: 'SBIN0004521',
-        upiId: `${user.phone || '9876543210'}@upi`
+        branchName: 'Suryapet Main Branch',
+        upiId: `${user.phone || '9876543210'}@upi`,
+        ocrExtracted: false,
+        detailsConfirmed: false,
+        ownershipVerified: false
     });
     const [isEditBankModalOpen, setIsEditBankModalOpen] = useState(false);
     const [editBankHolder, setEditBankHolder] = useState('');
@@ -146,6 +154,12 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
     const [editBankIfsc, setEditBankIfsc] = useState('');
     const [editBankUpi, setEditBankUpi] = useState('');
     const [isSavingBank, setIsSavingBank] = useState(false);
+
+    // AI Passbook OCR & Sandbox Testing States
+    const [showPassbookScanner, setShowPassbookScanner] = useState(false);
+    const [showSandboxPayoutModal, setShowSandboxPayoutModal] = useState(false);
+    const [showRazorpayModal, setShowRazorpayModal] = useState(false);
+    const [showAccountDigits, setShowAccountDigits] = useState(false);
 
     // Watch for location changes and update weather
     useEffect(() => {
@@ -370,6 +384,8 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
 
             setCrops(prev => [...prev, mappedNewCrop]);
             setSelectedWeatherLocation(mappedNewCrop);
+            setSelectedCropForSearch(mappedNewCrop);
+            handleSearchMills(mappedNewCrop);
             alert(`Successfully saved crop: ${cropData.cropName} at ${cropData.locationName}`);
         } catch (error) {
             console.error(error);
@@ -391,17 +407,6 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
             console.error(error);
             alert("Error deleting crop");
         }
-    };
-
-    const calculateDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371; // km
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
     };
 
     const handleSearchMills = async (crop) => {
@@ -433,10 +438,15 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                 addedAt: m.created_at
             }));
 
-            const withDistance = mappedMills.map(mill => ({
-                ...mill,
-                distance: calculateDistance(crop.latitude, crop.longitude, mill.latitude, mill.longitude)
-            })).sort((a, b) => a.distance - b.distance);
+            const withDistance = mappedMills.map(mill => {
+                const dist = (crop?.latitude && mill?.latitude)
+                    ? calculateDistance(crop.latitude, crop.longitude, mill.latitude, mill.longitude)
+                    : 0;
+                return {
+                    ...mill,
+                    distance: dist
+                };
+            }).sort((a, b) => (a.distance ?? 999) - (b.distance ?? 999));
 
             setNearbyMills(withDistance);
         } catch (error) {
@@ -480,6 +490,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
 
         return targetCropsForRates.map(cropName => {
             const farmerCropObj = crops.find(c => c.cropName === cropName);
+            const referenceCrop = farmerCropObj || selectedCropForSearch || crops[0];
             const suitableMills = allVerifiedMills.filter(m => 
                 Array.isArray(m.selectedCrops) && m.selectedCrops.includes(cropName)
             );
@@ -492,9 +503,9 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                     cropName === 'Maize' ? 2100 :
                     cropName === 'Red Gram' ? 6800 : 2500
                 );
-                const dist = (farmerCropObj?.latitude && mill.latitude)
-                    ? calculateDistance(farmerCropObj.latitude, farmerCropObj.longitude, mill.latitude, mill.longitude)
-                    : 38.5;
+                const dist = (referenceCrop?.latitude && mill.latitude)
+                    ? calculateDistance(referenceCrop.latitude, referenceCrop.longitude, mill.latitude, mill.longitude)
+                    : 0;
 
                 return {
                     mill,
@@ -502,7 +513,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                     price,
                     isCustomRate: Boolean(rawPrice),
                     distance: dist,
-                    farmerCrop: farmerCropObj || { cropName }
+                    farmerCrop: referenceCrop || { cropName }
                 };
             });
 
@@ -511,7 +522,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
 
             return {
                 cropName,
-                farmerCrop: farmerCropObj,
+                farmerCrop: referenceCrop,
                 highestPrice: offers[0]?.price || 0,
                 offers
             };
@@ -925,7 +936,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                                             <button
                                                                                 className="primary-btn"
                                                                                 onClick={() => {
-                                                                                    setSelectedMillForEnquiry(offer.mill);
+                                                                                    setSelectedMillForEnquiry({ ...offer.mill, distance: offer.distance });
                                                                                     setSelectedCropForSearch(offer.farmerCrop);
                                                                                 }}
                                                                                 style={{ 
@@ -2144,7 +2155,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                         <button
                                                             className="primary-btn"
                                                             onClick={() => {
-                                                                setSelectedMillForEnquiry(offer.mill);
+                                                                setSelectedMillForEnquiry({ ...offer.mill, distance: offer.distance });
                                                                 setSelectedCropForSearch(offer.farmerCrop);
                                                             }}
                                                             style={{ 
@@ -2419,40 +2430,170 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                     </div>
                                 </div>
 
-                                {/* My Registered Bank Account Banner */}
-                                <div className="bento-card" style={{ background: 'rgba(0, 0, 0, 0.35)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '1.25rem', marginBottom: '1.75rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <i className="fa-solid fa-building-columns" style={{ color: 'var(--primary)', fontSize: '1.2rem' }}></i>
-                                            <h4 style={{ margin: 0, fontSize: '0.95rem' }}>My Registered Bank Account for Mill Direct Payouts</h4>
+                                {/* My Registered Bank Account Banner & AI Passbook OCR Section */}
+                                <div style={{ marginBottom: '1.75rem' }}>
+                                    {showPassbookScanner ? (
+                                        <div style={{ position: 'relative' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+                                                <button 
+                                                    className="action-btn"
+                                                    onClick={() => setShowPassbookScanner(false)}
+                                                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem' }}
+                                                >
+                                                    <i className="fa-solid fa-xmark"></i> Close Passbook Scanner
+                                                </button>
+                                            </div>
+                                            <PassbookOcrUploader
+                                                farmerPhone={user.phone}
+                                                initialDetails={farmerBankDetails}
+                                                onDetailsSaved={(updated) => {
+                                                    setFarmerBankDetails(updated);
+                                                    setShowPassbookScanner(false);
+                                                }}
+                                                onOpenSandboxPayout={() => setShowSandboxPayoutModal(true)}
+                                            />
                                         </div>
-                                        <span className="status-badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--primary)', padding: '0.2rem 0.6rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700 }}>
-                                            <i className="fa-solid fa-circle-check" style={{ marginRight: '0.3rem' }}></i> Verified for Direct Transfer
-                                        </span>
-                                    </div>
+                                    ) : (
+                                        <div className="bento-card" style={{ background: 'rgba(0, 0, 0, 0.35)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '1.25rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.9rem', flexWrap: 'wrap', gap: '0.6rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <i className="fa-solid fa-building-columns" style={{ color: 'var(--primary)', fontSize: '1.2rem' }}></i>
+                                                    <h4 style={{ margin: 0, fontSize: '0.95rem' }}>My Registered Bank Account for Mill Direct Payouts</h4>
+                                                </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', fontSize: '0.85rem' }}>
-                                        <div>
-                                            <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>Account Holder</span>
-                                            <strong>{farmerBankDetails.accountHolder || profileName || 'Ramesh Reddy'}</strong>
+                                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                    <button
+                                                        className="action-btn"
+                                                        onClick={() => setShowPassbookScanner(true)}
+                                                        style={{
+                                                            padding: '0.35rem 0.75rem',
+                                                            fontSize: '0.76rem',
+                                                            background: 'rgba(16, 185, 129, 0.15)',
+                                                            color: 'var(--primary)',
+                                                            borderColor: 'rgba(16, 185, 129, 0.35)',
+                                                            fontWeight: 700
+                                                        }}
+                                                    >
+                                                        <i className="fa-solid fa-camera"></i> Scan Passbook (AI OCR)
+                                                    </button>
+                                                    <button
+                                                        className="action-btn"
+                                                        onClick={() => setShowSandboxPayoutModal(true)}
+                                                        style={{
+                                                            padding: '0.35rem 0.75rem',
+                                                            fontSize: '0.76rem',
+                                                            background: 'rgba(245, 158, 11, 0.15)',
+                                                            color: 'var(--accent-gold)',
+                                                            borderColor: 'rgba(245, 158, 11, 0.35)',
+                                                            fontWeight: 700
+                                                        }}
+                                                    >
+                                                        <i className="fa-solid fa-vial-circle-check"></i> Test Demo Payout
+                                                    </button>
+                                                    <button
+                                                        className="action-btn"
+                                                        onClick={() => setShowRazorpayModal(true)}
+                                                        style={{
+                                                            padding: '0.35rem 0.75rem',
+                                                            fontSize: '0.76rem',
+                                                            background: 'rgba(2, 132, 199, 0.18)',
+                                                            color: '#38bdf8',
+                                                            borderColor: 'rgba(56, 189, 248, 0.4)',
+                                                            fontWeight: 700
+                                                        }}
+                                                    >
+                                                        <i className="fa-solid fa-shield-halved"></i> Test Razorpay Checkout
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Verification Pipeline Badges */}
+                                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.9rem' }}>
+                                                <span style={{
+                                                    background: farmerBankDetails.ocrExtracted ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                                                    color: farmerBankDetails.ocrExtracted ? 'var(--primary)' : 'var(--text-muted)',
+                                                    border: `1px solid ${farmerBankDetails.ocrExtracted ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
+                                                    padding: '0.2rem 0.6rem',
+                                                    borderRadius: '1rem',
+                                                    fontSize: '0.72rem',
+                                                    fontWeight: 700,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.3rem'
+                                                }}>
+                                                    <i className={farmerBankDetails.ocrExtracted ? "fa-solid fa-circle-check" : "fa-regular fa-circle"}></i>
+                                                    OCR Extracted {farmerBankDetails.ocrExtracted ? '✓' : ''}
+                                                </span>
+
+                                                <span style={{
+                                                    background: farmerBankDetails.detailsConfirmed ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                                                    color: farmerBankDetails.detailsConfirmed ? 'var(--accent-gold)' : 'var(--text-muted)',
+                                                    border: `1px solid ${farmerBankDetails.detailsConfirmed ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
+                                                    padding: '0.2rem 0.6rem',
+                                                    borderRadius: '1rem',
+                                                    fontSize: '0.72rem',
+                                                    fontWeight: 700,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.3rem'
+                                                }}>
+                                                    <i className={farmerBankDetails.detailsConfirmed ? "fa-solid fa-user-check" : "fa-regular fa-circle"}></i>
+                                                    Bank Details Confirmed {farmerBankDetails.detailsConfirmed ? '✓' : ''}
+                                                </span>
+
+                                                <span style={{
+                                                    background: 'rgba(59, 130, 246, 0.08)',
+                                                    color: '#93c5fd',
+                                                    border: '1px dashed rgba(59, 130, 246, 0.3)',
+                                                    padding: '0.2rem 0.6rem',
+                                                    borderRadius: '1rem',
+                                                    fontSize: '0.72rem',
+                                                    fontWeight: 600,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.3rem'
+                                                }} title="PaddleOCR reads the passbook text. Official bank account ownership verification is scheduled via banking network penny-drop.">
+                                                    <i className="fa-solid fa-lock"></i> Bank Ownership: Pending Verification
+                                                </span>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', fontSize: '0.85rem' }}>
+                                                <div>
+                                                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>Account Holder</span>
+                                                    <strong>{farmerBankDetails.accountHolder || profileName || 'Ramesh Reddy'}</strong>
+                                                </div>
+                                                <div>
+                                                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>Bank Name</span>
+                                                    <strong>{farmerBankDetails.bankName || 'State Bank of India'}</strong>
+                                                </div>
+                                                <div>
+                                                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>
+                                                        Account Number
+                                                        <button 
+                                                            onClick={() => setShowAccountDigits(!showAccountDigits)}
+                                                            style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer', marginLeft: '0.4rem', fontSize: '0.75rem' }}
+                                                            title={showAccountDigits ? "Hide Digits" : "Reveal Digits"}
+                                                        >
+                                                            <i className={`fa-solid ${showAccountDigits ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                                        </button>
+                                                    </span>
+                                                    <strong style={{ fontFamily: 'monospace', color: '#fff', letterSpacing: showAccountDigits ? '0.02em' : '0.12em' }}>
+                                                        {showAccountDigits
+                                                            ? (farmerBankDetails.accountNumber || '308912445892')
+                                                            : (farmerBankDetails.accountNumber ? `••••••••${farmerBankDetails.accountNumber.slice(-4)}` : '••••••••4589')}
+                                                    </strong>
+                                                </div>
+                                                <div>
+                                                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>IFSC Code</span>
+                                                    <strong style={{ fontFamily: 'monospace', color: '#fff' }}>{farmerBankDetails.ifscCode || 'SBIN0004521'}</strong>
+                                                </div>
+                                                <div>
+                                                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>UPI ID</span>
+                                                    <strong style={{ fontFamily: 'monospace', color: 'var(--accent-gold)' }}>{farmerBankDetails.upiId || `${user.phone}@upi`}</strong>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>Bank Name</span>
-                                            <strong>{farmerBankDetails.bankName || 'State Bank of India'}</strong>
-                                        </div>
-                                        <div>
-                                            <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>Account Number</span>
-                                            <strong style={{ fontFamily: 'monospace', color: '#fff' }}>{farmerBankDetails.accountNumber || '308912445892'}</strong>
-                                        </div>
-                                        <div>
-                                            <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>IFSC Code</span>
-                                            <strong style={{ fontFamily: 'monospace', color: '#fff' }}>{farmerBankDetails.ifscCode || 'SBIN0004521'}</strong>
-                                        </div>
-                                        <div>
-                                            <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>UPI ID</span>
-                                            <strong style={{ fontFamily: 'monospace', color: 'var(--accent-gold)' }}>{farmerBankDetails.upiId || `${user.phone}@upi`}</strong>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
 
                                 {/* Category Filter Pills */}
@@ -2887,6 +3028,32 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                     </div>
                 </div>
             )}
+
+            {/* Sandbox / Demo Payout Modal */}
+            <SandboxPayoutModal
+                isOpen={showSandboxPayoutModal}
+                onClose={() => setShowSandboxPayoutModal(false)}
+                farmerPhone={user.phone}
+                bankDetails={farmerBankDetails}
+                onPaymentSuccess={() => {
+                    fetchPaymentsData();
+                }}
+            />
+
+            {/* Razorpay Standard Checkout Modal */}
+            <RazorpayCheckoutModal
+                isOpen={showRazorpayModal}
+                onClose={() => setShowRazorpayModal(false)}
+                defaultAmount={500}
+                title="Razorpay Standard Web Checkout"
+                description="Direct Farmer Payout / Settlement"
+                recipientName={user?.name || 'Farmer'}
+                recipientPhone={user?.phone || ''}
+                onPaymentSuccess={() => {
+                    fetchPaymentsData();
+                }}
+            />
+
         </div>
     );
 }

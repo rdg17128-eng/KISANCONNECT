@@ -49,11 +49,13 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [createdEnquiry, setCreatedEnquiry] = useState(null);
 
-    // Formatted mill distance
-    const rawDist = Number(mill?.distance || calculateDistance(
-        crop?.latitude || 17.0916, crop?.longitude || 80.0210, 
-        mill?.latitude || 17.1033, mill?.longitude || 80.0536
-    ) || 35);
+    // Formatted mill distance with accurate coordinate resolution
+    const calcDist = (crop?.latitude && mill?.latitude)
+        ? calculateDistance(crop.latitude, crop.longitude, mill.latitude, mill.longitude)
+        : null;
+    const rawDist = (mill?.distance !== undefined && mill?.distance !== null && !isNaN(Number(mill.distance)))
+        ? Number(mill.distance)
+        : (calcDist !== null ? calcDist : calculateDistance(crop?.latitude || 17.0916, crop?.longitude || 80.0210, mill?.latitude || 17.1033, mill?.longitude || 80.0536));
     const distanceKm = Math.round(rawDist * 10) / 10;
 
     // Load available transport providers on mount or when filters change
@@ -127,10 +129,10 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
     const handleFinalSubmit = async () => {
         setIsSubmitting(true);
         try {
-            const transportDistance = selectedTransporter?.distance || distanceKm || 35;
+            const transportDistance = distanceKm;
             const transportRate = selectedTransporter?.price_per_km || 45;
             const transportCost = withTransport && selectedTransporter 
-                ? (selectedTransporter.estimated_cost || Math.round(transportDistance * transportRate))
+                ? Math.round(transportDistance * transportRate)
                 : 0;
 
             const enquiryPayload = {

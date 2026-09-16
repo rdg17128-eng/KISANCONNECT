@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "npm --prefix new_app run dev",
     "build": "npm --prefix new_app install --include=dev && npm --prefix new_app run build"
+  },
+  "dependencies": {
+    "razorpay": "^2.9.8"
   }
 }
-
