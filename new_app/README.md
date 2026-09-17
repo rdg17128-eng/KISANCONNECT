@@ -1,14 +1,14 @@
-# KisanConnect Frontend App
+# KisanConnect Frontend App 🌾
 
-This is the React + Vite frontend application for **KisanConnect**.
+This is the React 19 + Vite frontend application for **KisanConnect**.
 
-For full project details, architecture, QR verification flow, transport matching workflow, and overall repository setup, please refer to the primary repository documentation:
+For full project architecture, Razorpay payment flows, QR verification mechanics, transporter matching algorithms, and deployment details, please refer to the primary repository documentation:
 
 👉 **[Primary Repository README.md](../README.md)**
 
 ---
 
-## Quick Start (Frontend App)
+## Quick Start (Frontend Application)
 
 From this directory (`new_app`):
 
@@ -16,11 +16,23 @@ From this directory (`new_app`):
    ```bash
    npm install
    ```
-2. **Start development server:**
+
+2. **Start the development server:**
    ```bash
    npm run dev
    ```
-3. **Build for production:**
+
+3. **Run the Razorpay integration tests:**
+   ```bash
+   npm test
+   ```
+
+4. **Build for production:**
    ```bash
    npm run build
+   ```
+
+5. **Start the standalone Node.js API server (Optional):**
+   ```bash
+   npm run server
    ```
