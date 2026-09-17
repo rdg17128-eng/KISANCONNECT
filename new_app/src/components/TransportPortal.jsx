@@ -582,7 +582,7 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--primary)', fontWeight: 800, fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                         <i className="fa-solid fa-bell"></i> Assigned to You ({assignedRequests.length})
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '1.25rem' }}>
                                         {assignedRequests.map(req => (
                                             <div key={req.id || req.transport_code} className="bento-card" style={{ border: '2px solid rgba(16, 185, 129, 0.4)', display: 'flex', flexDirection: 'column', background: 'rgba(16, 185, 129, 0.04)' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
@@ -663,7 +663,7 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                                     </p>
                                 </div>
                             ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '1.25rem' }}>
                                     {suitableRequests.map(req => {
                                         const alreadyQuoted = myQuotes.some(q => q.transport_code === req.transport_code);
                                         const estPrice = Math.round((req.distance || 40) * providerInfo.price_per_km);

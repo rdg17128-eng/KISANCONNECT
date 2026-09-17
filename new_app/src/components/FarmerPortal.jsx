@@ -44,6 +44,76 @@ const HeaderClock = React.memo(function HeaderClock() {
     );
 });
 
+// Date format helper utilities
+const formatCropDate = (dateVal) => {
+    if (!dateVal) return 'Recently';
+    try {
+        const d = new Date(dateVal);
+        if (isNaN(d.getTime())) return 'Recently';
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+        return 'Recently';
+    }
+};
+
+const formatCropDateTime = (dateVal) => {
+    if (!dateVal) return 'Recently';
+    try {
+        const d = new Date(dateVal);
+        if (isNaN(d.getTime())) return 'Recently';
+        return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch {
+        return 'Recently';
+    }
+};
+
+const DEFAULT_CROP_IMAGES = {
+    'maize': 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=600&q=80',
+    'corn': 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=600&q=80',
+    'paddy': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80',
+    'paddy (rice)': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80',
+    'rice': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80',
+    'sunflower': 'https://images.unsplash.com/photo-1597848212624-a19eb35e2651?auto=format&fit=crop&w=600&q=80',
+    'cotton': 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?auto=format&fit=crop&w=600&q=80',
+    'wheat': 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=600&q=80',
+    'chilli': 'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?auto=format&fit=crop&w=600&q=80',
+    'red gram': 'https://images.unsplash.com/photo-1515543237350-b3eea1ec8082?auto=format&fit=crop&w=600&q=80',
+    'soybean': 'https://images.unsplash.com/photo-1599420186946-7b6fb4e297f0?auto=format&fit=crop&w=600&q=80'
+};
+
+const resolveCropImage = (cropName, customImage, cropId, cropsList = []) => {
+    if (customImage && typeof customImage === 'string' && customImage.trim().length > 5) {
+        return customImage;
+    }
+    if (cropId && cropsList && cropsList.length > 0) {
+        const match = cropsList.find(c => String(c.id) === String(cropId));
+        if (match?.cropImage) return match.cropImage;
+    }
+    if (cropName && cropsList && cropsList.length > 0) {
+        const match = cropsList.find(c => c.cropName?.toLowerCase() === cropName?.toLowerCase() && c.cropImage);
+        if (match?.cropImage) return match.cropImage;
+    }
+    try {
+        const localCropImages = JSON.parse(localStorage.getItem('kisan_farmer_crop_images') || '{}');
+        if (cropId && localCropImages[cropId]) return localCropImages[cropId];
+        if (cropName) {
+            const key = Object.keys(localCropImages).find(k => k.toLowerCase().includes(cropName.toLowerCase()));
+            if (key && localCropImages[key]) return localCropImages[key];
+        }
+    } catch {
+        // ignore
+    }
+    if (cropName) {
+        const lower = cropName.toLowerCase();
+        for (const [k, url] of Object.entries(DEFAULT_CROP_IMAGES)) {
+            if (lower.includes(k) || k.includes(lower)) {
+                return url;
+            }
+        }
+    }
+    return DEFAULT_CROP_IMAGES['paddy'];
+};
+
 export default function FarmerPortal({ user: propUser, onLogout }) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -129,6 +199,8 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
     const [transportRequests, setTransportRequests] = useState([]);
     const [selectedEnquiryForQr, setSelectedEnquiryForQr] = useState(null);
     const [loadingEnquiries, setLoadingEnquiries] = useState(false);
+    const [enquiryToDelete, setEnquiryToDelete] = useState(null);
+    const [deletingEnquiryId, setDeletingEnquiryId] = useState(null);
     const [historyList, setHistoryList] = useState([]);
     const [historyFilter, setHistoryFilter] = useState('ALL');
     const [cropLightboxImage, setCropLightboxImage] = useState(null);
@@ -195,16 +267,37 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
 
             if (fetchedCrops && fetchedCrops.length > 0) {
                 const localCropImages = JSON.parse(localStorage.getItem('kisan_farmer_crop_images') || '{}');
-                const mappedCrops = fetchedCrops.map(c => ({
-                    id: c.id,
-                    cropName: c.crop_name,
-                    locationName: c.location_name,
-                    latitude: c.latitude,
-                    longitude: c.longitude,
-                    acres: c.acres,
-                    cropImage: c.crop_image || localCropImages[c.id] || localCropImages[`${c.crop_name}_${c.location_name}`] || '',
-                    addedAt: c.added_at
-                }));
+                const localCropAddedDates = JSON.parse(localStorage.getItem('kisan_farmer_crop_added_dates') || '{}');
+                let datesUpdated = false;
+
+                const mappedCrops = fetchedCrops.map(c => {
+                    let addedDate = c.added_at || c.created_at || c.createdAt || localCropAddedDates[c.id] || localCropAddedDates[`${c.crop_name}_${c.location_name}`];
+                    if (!addedDate) {
+                        addedDate = new Date().toISOString();
+                        localCropAddedDates[c.id] = addedDate;
+                        localCropAddedDates[`${c.crop_name}_${c.location_name}`] = addedDate;
+                        datesUpdated = true;
+                    }
+                    return {
+                        id: c.id,
+                        cropName: c.crop_name,
+                        locationName: c.location_name,
+                        latitude: c.latitude,
+                        longitude: c.longitude,
+                        acres: c.acres,
+                        cropImage: c.crop_image || localCropImages[c.id] || localCropImages[`${c.crop_name}_${c.location_name}`] || '',
+                        addedAt: addedDate
+                    };
+                });
+
+                if (datesUpdated) {
+                    try {
+                        localStorage.setItem('kisan_farmer_crop_added_dates', JSON.stringify(localCropAddedDates));
+                    } catch (e) {
+                        console.warn("Storage warning for crop dates:", e);
+                    }
+                }
+
                 setCrops(mappedCrops);
                 setSelectedCropForSearch(prev => {
                     const valid = prev && mappedCrops.some(mc => mc.id === prev.id);
@@ -241,6 +334,21 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
             console.error("Error fetching farmer enquiries & history:", e);
         } finally {
             setLoadingEnquiries(false);
+        }
+    };
+
+    const handleDeleteEnquiry = async (enquiry) => {
+        if (!enquiry) return;
+        const targetId = enquiry.id || enquiry.enquiry_code;
+        setDeletingEnquiryId(targetId);
+        try {
+            await kisanService.deleteEnquiry(targetId);
+            await fetchEnquiriesData();
+            setEnquiryToDelete(null);
+        } catch (err) {
+            console.error("Error deleting enquiry:", err);
+        } finally {
+            setDeletingEnquiryId(null);
         }
     };
 
@@ -286,6 +394,66 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
             setLoadingPayments(false);
         }
     };
+
+    const cropsAndCutoutList = useMemo(() => {
+        // 1. Map active crops to their enquiry cutout records
+        const activePlots = crops.map(c => {
+            const matchedEnquiries = enquiries.filter(e => 
+                (e.crop_id && String(e.crop_id) === String(c.id)) ||
+                (e.crop_name && c.cropName && e.crop_name.toLowerCase() === c.cropName.toLowerCase() && 
+                 (!e.farmer_location_name || e.farmer_location_name === c.locationName || e.pickup_location === c.locationName || e.pickup_location?.includes(c.locationName) || c.locationName?.includes(e.pickup_location)))
+            );
+
+            matchedEnquiries.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            const latestEnquiry = matchedEnquiries[0] || null;
+            const cutoutDate = latestEnquiry?.created_at || null;
+            const totalCutoutTons = matchedEnquiries.reduce((sum, eq) => sum + (Number(eq.quantity) || 0), 0);
+
+            return {
+                id: `crop-${c.id}`,
+                cropId: c.id,
+                cropName: c.cropName,
+                locationName: c.locationName,
+                acres: c.acres,
+                cropImage: c.cropImage,
+                addedAt: c.addedAt,
+                isStanding: matchedEnquiries.length === 0,
+                hasCutout: matchedEnquiries.length > 0,
+                cutoutDate: cutoutDate,
+                cutoutCount: matchedEnquiries.length,
+                totalCutoutTons: totalCutoutTons,
+                latestEnquiry: latestEnquiry,
+                enquiries: matchedEnquiries,
+                rawCrop: c
+            };
+        });
+
+        // 2. Also check if there are standalone enquiries for prior crops not currently in active list
+        const activeCropIds = new Set(crops.map(c => String(c.id)));
+        const activeCropNames = new Set(crops.map(c => c.cropName.toLowerCase()));
+
+        const pastCutouts = enquiries
+            .filter(e => (!e.crop_id || !activeCropIds.has(String(e.crop_id))) && (!e.crop_name || !activeCropNames.has(e.crop_name.toLowerCase())))
+            .map(e => ({
+                id: `past-cutout-${e.id || e.enquiry_code}`,
+                cropId: e.crop_id || null,
+                cropName: e.crop_name || 'Crop Produce',
+                locationName: e.pickup_location || e.farmer_location_name || 'Farm Plot',
+                acres: e.acres || (Number(e.quantity) / 2) || 2,
+                cropImage: '',
+                addedAt: e.crop_added_at || (e.created_at ? new Date(new Date(e.created_at).getTime() - 86400000 * 14).toISOString() : null),
+                isStanding: false,
+                hasCutout: true,
+                cutoutDate: e.created_at,
+                cutoutCount: 1,
+                totalCutoutTons: Number(e.quantity) || 0,
+                latestEnquiry: e,
+                enquiries: [e],
+                rawCrop: null
+            }));
+
+        return [...activePlots, ...pastCutouts];
+    }, [crops, enquiries]);
 
     const handleOpenEditBankModal = () => {
         setEditBankHolder(farmerBankDetails.accountHolder || profileName || user.name || '');
@@ -388,6 +556,15 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                 }
             }
 
+            try {
+                const localCropAddedDates = JSON.parse(localStorage.getItem('kisan_farmer_crop_added_dates') || '{}');
+                localCropAddedDates[data.id] = data.added_at || dataToSave.added_at;
+                localCropAddedDates[`${data.crop_name}_${data.location_name}`] = data.added_at || dataToSave.added_at;
+                localStorage.setItem('kisan_farmer_crop_added_dates', JSON.stringify(localCropAddedDates));
+            } catch (storageErr) {
+                console.warn("LocalStorage quota warning on save crop date:", storageErr);
+            }
+
             const mappedNewCrop = {
                 id: data.id,
                 cropName: data.crop_name,
@@ -396,7 +573,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                 longitude: data.longitude,
                 acres: data.acres,
                 cropImage: cropData.cropImage || '',
-                addedAt: data.added_at
+                addedAt: data.added_at || dataToSave.added_at
             };
 
             setCrops(prev => [...prev, mappedNewCrop]);
@@ -718,10 +895,10 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                             <button 
                                 className="primary-btn" 
                                 onClick={() => setActiveTab('qrcodes')}
-                                style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', borderRadius: '0.75rem' }}
+                                style={{ padding: '0.5rem 0.85rem', fontSize: '0.8rem', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}
                             >
                                 <i className="fa-solid fa-qrcode"></i>
-                                {t('viewQr')} ({acceptedEnquiries.length})
+                                <span className="header-qr-text">{t('viewQr')}</span> <span>({acceptedEnquiries.length})</span>
                             </button>
                         )}
 
@@ -819,14 +996,14 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                             {/* Weather & Live Prices Grid */}
                             <div className="bento-grid">
                                 <div className="bento-card weather-card">
-                                    <div className="card-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '1rem' }}>
-                                        <h3 style={{ marginBottom: '-0.5rem' }}>Farm Weather</h3>
-                                        <div className="location-selector" style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.5rem 1rem', borderRadius: '0.5rem' }}>
-                                            <i className="fa-solid fa-location-dot" style={{ color: 'var(--primary)' }}></i>
+                                    <div className="card-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.6rem', marginBottom: '0.85rem' }}>
+                                        <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Farm Weather</h3>
+                                        <div className="location-selector" style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', boxSizing: 'border-box' }}>
+                                            <i className="fa-solid fa-location-dot" style={{ color: 'var(--primary)', flexShrink: 0 }}></i>
                                             <select
                                                 value={selectedWeatherLocation?.id || ''}
                                                 onChange={(e) => setSelectedWeatherLocation(crops.find(c => c.id === e.target.value))}
-                                                style={{ border: 'none', background: 'transparent', outline: 'none', fontFamily: 'inherit', color: 'var(--text)', flex: 1, cursor: 'pointer', fontSize: '0.95rem' }}
+                                                style={{ border: 'none', background: 'transparent', outline: 'none', fontFamily: 'inherit', color: 'var(--text-main)', flex: 1, cursor: 'pointer', fontSize: '0.88rem', minWidth: 0, textOverflow: 'ellipsis' }}
                                             >
                                                 {crops.length === 0 ? (
                                                     <option value="" disabled style={{ color: '#000', background: '#fff' }}>Hyderabad (Default)</option>
@@ -839,7 +1016,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                         </div>
                                     </div>
                                     <div className="current-weather">
-                                        <i className={`fa-solid ${getWeatherIcon(weather?.weather[0]?.id || 800)}`} style={{ fontSize: '3rem', color: '#ffb300' }}></i>
+                                        <i className={`fa-solid ${getWeatherIcon(weather?.weather[0]?.id || 800)}`} style={{ fontSize: '2.8rem', color: '#ffb300' }}></i>
                                         <div className="temp">
                                             <h2>{weather ? `${Math.round(weather.main.temp)}°C` : '--'}</h2>
                                             <p>{weather?.weather[0]?.main || '--'}</p>
@@ -858,20 +1035,20 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                 </span>
                                             </div>
                                             <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0.2rem 0 0 0' }}>
-                                                {farmerCropNames.length > 0 ? 'Mills matched to your crops, ranked by highest offer' : 'Verified mill prices ranked by highest rate'}
+                                                Mills matched to your crops, ranked by highest offer
                                             </p>
                                         </div>
 
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.06)', borderRadius: '0.5rem', padding: '0.15rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', background: 'rgba(0,0,0,0.35)', padding: '0.2rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
                                                 <button 
                                                     onClick={() => setMarketRateMode('MILL_RATES')}
                                                     style={{ 
                                                         background: marketRateMode === 'MILL_RATES' ? 'var(--primary)' : 'transparent', 
-                                                        color: marketRateMode === 'MILL_RATES' ? '#000' : 'var(--text-muted)',
+                                                        color: marketRateMode === 'MILL_RATES' ? '#000' : 'var(--text-muted)', 
                                                         border: 'none', 
+                                                        borderRadius: '0.35rem', 
                                                         padding: '0.3rem 0.65rem', 
-                                                        borderRadius: '0.4rem', 
                                                         fontSize: '0.75rem', 
                                                         fontWeight: 700, 
                                                         cursor: 'pointer' 
@@ -880,13 +1057,13 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                     <i className="fa-solid fa-industry"></i> Mill Rates
                                                 </button>
                                                 <button 
-                                                    onClick={() => setMarketRateMode('APMC')}
+                                                    onClick={() => setMarketRateMode('APMC_RATES')}
                                                     style={{ 
-                                                        background: marketRateMode === 'APMC' ? 'var(--primary)' : 'transparent', 
-                                                        color: marketRateMode === 'APMC' ? '#000' : 'var(--text-muted)',
+                                                        background: marketRateMode === 'APMC_RATES' ? 'var(--primary)' : 'transparent', 
+                                                        color: marketRateMode === 'APMC_RATES' ? '#000' : 'var(--text-muted)', 
                                                         border: 'none', 
+                                                        borderRadius: '0.35rem', 
                                                         padding: '0.3rem 0.65rem', 
-                                                        borderRadius: '0.4rem', 
                                                         fontSize: '0.75rem', 
                                                         fontWeight: 700, 
                                                         cursor: 'pointer' 
@@ -903,10 +1080,20 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
 
                                     {/* Filter by Farmer's Crops (if farmer has multiple crops) */}
                                     {marketRateMode === 'MILL_RATES' && farmerCropNames.length > 1 && (
-                                        <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: '0.4rem', marginBottom: '0.5rem' }}>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            gap: '0.45rem', 
+                                            overflowX: 'auto', 
+                                            paddingBottom: '0.4rem', 
+                                            marginBottom: '0.6rem',
+                                            WebkitOverflowScrolling: 'touch',
+                                            scrollbarWidth: 'none',
+                                            msOverflowStyle: 'none'
+                                        }}>
                                             <button
                                                 onClick={() => setSelectedRateCrop('ALL')}
                                                 style={{
+                                                    flexShrink: 0,
                                                     padding: '0.25rem 0.65rem',
                                                     fontSize: '0.75rem',
                                                     borderRadius: '1rem',
@@ -925,6 +1112,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                     key={cName}
                                                     onClick={() => setSelectedRateCrop(cName)}
                                                     style={{
+                                                        flexShrink: 0,
                                                         padding: '0.25rem 0.65rem',
                                                         fontSize: '0.75rem',
                                                         borderRadius: '1rem',
@@ -957,14 +1145,14 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                 millOffersByCrop.map(group => (
                                                     <div key={group.cropName} style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.75rem', padding: '0.85rem' }}>
                                                         {/* Crop Title with Highest Rate Highlight */}
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', marginBottom: '0.65rem' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                                <span style={{ fontSize: '1.05rem' }}>🌾</span>
-                                                                <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{group.cropName}</strong>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', marginBottom: '0.65rem' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
+                                                                <span style={{ fontSize: '1.05rem', flexShrink: 0 }}>🌾</span>
+                                                                <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{group.cropName}</strong>
                                                             </div>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0, marginLeft: 'auto' }}>
                                                                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Top Offer:</span>
-                                                                <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.95rem' }}>
+                                                                <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
                                                                     ₹{group.highestPrice.toLocaleString('en-IN')}/Qtl
                                                                 </span>
                                                             </div>
@@ -981,35 +1169,38 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                                             display: 'flex', 
                                                                             justifyContent: 'space-between', 
                                                                             alignItems: 'center', 
-                                                                            padding: '0.6rem 0.75rem', 
+                                                                            flexWrap: 'wrap',
+                                                                            gap: '0.6rem',
+                                                                            padding: '0.65rem 0.75rem', 
                                                                             borderRadius: '0.5rem', 
                                                                             background: isTop ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255,255,255,0.03)',
                                                                             border: isTop ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(255,255,255,0.04)',
-                                                                            boxShadow: isTop ? '0 0 12px rgba(16, 185, 129, 0.1)' : 'none'
+                                                                            boxShadow: isTop ? '0 0 12px rgba(16, 185, 129, 0.1)' : 'none',
+                                                                            boxSizing: 'border-box'
                                                                         }}
                                                                     >
-                                                                        <div style={{ flex: 1, minWidth: 0, marginRight: '0.5rem' }}>
+                                                                        <div style={{ flex: '1 1 130px', minWidth: '120px' }}>
                                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                                                                                 <strong style={{ fontSize: '0.88rem', color: 'var(--text-main)' }}>
                                                                                     {offer.mill.millName}
                                                                                 </strong>
                                                                                 {isTop && (
-                                                                                    <span style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '0.3rem', fontWeight: 800, letterSpacing: '0.3px' }}>
+                                                                                    <span style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '0.3rem', fontWeight: 800, letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
                                                                                         👑 HIGHEST PRICE
                                                                                     </span>
                                                                                 )}
                                                                             </div>
-                                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem', wordBreak: 'break-word' }}>
                                                                                 <i className="fa-solid fa-location-dot"></i> {offer.mill.locationName || 'Nearby Mill'} • ~{offer.distance.toFixed(1)} km
                                                                             </div>
                                                                         </div>
 
-                                                                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                                                            <div>
-                                                                                <div style={{ fontWeight: 800, fontSize: '1rem', color: isTop ? 'var(--primary)' : 'var(--accent-gold)' }}>
+                                                                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.65rem', flex: '1 1 auto', marginLeft: 'auto' }}>
+                                                                            <div style={{ textAlign: 'left', minWidth: '55px' }}>
+                                                                                <div style={{ fontWeight: 800, fontSize: '1rem', color: isTop ? 'var(--primary)' : 'var(--accent-gold)', whiteSpace: 'nowrap' }}>
                                                                                     ₹{offer.price.toLocaleString('en-IN')}
                                                                                 </div>
-                                                                                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>per quintal</div>
+                                                                                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>per quintal</div>
                                                                             </div>
 
                                                                             <button
@@ -1019,12 +1210,15 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                                                     setSelectedCropForSearch(offer.farmerCrop);
                                                                                 }}
                                                                                 style={{ 
-                                                                                    padding: '0.4rem 0.75rem', 
+                                                                                    padding: '0.45rem 0.85rem', 
                                                                                     fontSize: '0.75rem', 
                                                                                     fontWeight: 700,
                                                                                     background: isTop ? 'var(--primary)' : 'rgba(255,255,255,0.08)',
                                                                                     color: isTop ? '#000' : 'var(--text-main)',
-                                                                                    border: isTop ? 'none' : '1px solid rgba(255,255,255,0.1)'
+                                                                                    border: isTop ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                                                                                    whiteSpace: 'nowrap',
+                                                                                    flexShrink: 0,
+                                                                                    borderRadius: '0.5rem'
                                                                                 }}
                                                                             >
                                                                                 Send Enquiry
@@ -1405,12 +1599,53 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                                     )}
                                                                 </div>
 
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '0.75rem' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '0.45rem' }}>
                                                                     <i className="fa-solid fa-location-dot" style={{ color: 'var(--primary)', fontSize: '0.78rem' }}></i>
                                                                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.locationName}</span>
                                                                     <span style={{ opacity: 0.35 }}>•</span>
                                                                     <span style={{ flexShrink: 0, fontWeight: 600, color: 'var(--text-main)' }}>~{estYield.toFixed(0)} Qtl</span>
                                                                 </div>
+
+                                                                {/* Crop Added Date & Cutout Badge */}
+                                                                {(() => {
+                                                                    const matchingCutout = enquiries.find(e => 
+                                                                        (e.crop_id && String(e.crop_id) === String(c.id)) ||
+                                                                        (e.crop_name && c.cropName && e.crop_name.toLowerCase() === c.cropName.toLowerCase() && 
+                                                                         (!e.farmer_location_name || e.farmer_location_name === c.locationName || e.pickup_location === c.locationName || e.pickup_location?.includes(c.locationName) || c.locationName?.includes(e.pickup_location)))
+                                                                    );
+                                                                    return (
+                                                                        <div style={{ 
+                                                                            display: 'flex', 
+                                                                            alignItems: 'center', 
+                                                                            justifyContent: 'space-between', 
+                                                                            gap: '0.35rem', 
+                                                                            fontSize: '0.74rem', 
+                                                                            color: 'var(--text-muted)', 
+                                                                            background: 'rgba(255, 255, 255, 0.03)', 
+                                                                            border: '1px solid rgba(255, 255, 255, 0.06)', 
+                                                                            borderRadius: '0.45rem', 
+                                                                            padding: '0.28rem 0.55rem', 
+                                                                            marginBottom: '0.65rem' 
+                                                                        }}>
+                                                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }} title={`Registered on: ${formatCropDateTime(c.addedAt)}`}>
+                                                                                <i className="fa-regular fa-calendar-plus" style={{ color: 'var(--primary)', fontSize: '0.75rem' }}></i>
+                                                                                <span>Added: <strong style={{ color: 'var(--text-main)', fontWeight: 600 }}>{formatCropDate(c.addedAt)}</strong></span>
+                                                                            </span>
+                                                                            {matchingCutout ? (
+                                                                                <span 
+                                                                                    style={{ color: 'var(--accent-gold)', fontWeight: 700, fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} 
+                                                                                    title={`Cutted / Enquiry Dispatched: ${formatCropDateTime(matchingCutout.created_at)} to ${matchingCutout.mill_name || 'Mill'}`}
+                                                                                >
+                                                                                    <i className="fa-solid fa-scissors" style={{ fontSize: '0.65rem' }}></i> Cutout: {formatCropDate(matchingCutout.created_at)}
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span style={{ color: 'rgba(16, 185, 129, 0.85)', fontSize: '0.7rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                                                    <i className="fa-solid fa-seedling" style={{ fontSize: '0.65rem' }}></i> In Field
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })()}
                                                             </div>
 
                                                             {/* Footer Status & Delete */}
@@ -1620,7 +1855,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                     </button>
                                 </div>
                             ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '1.25rem' }}>
                                     {enquiries.map(enq => {
                                         const millAccepted = (enq.mill_status || enq.status || '').toUpperCase() === 'ACCEPTED' || (enq.status || '').toUpperCase() === 'LOAD_RECEIVED';
                                         const millPending = !millAccepted && (enq.mill_status || enq.status || '').toUpperCase() !== 'REJECTED';
@@ -1632,37 +1867,98 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                         const transportRejected = (enq.transport_status || '').toUpperCase() === 'REJECTED';
 
                                         const isOverallConfirmed = enq.overall_status === 'CONFIRMED' || (!hasTransport && millAccepted) || (hasTransport && millAccepted && transportAccepted) || (enq.status || '').toUpperCase() === 'LOAD_RECEIVED';
+                                        const cropImg = resolveCropImage(enq.crop_name, enq.crop_image, enq.crop_id, crops);
 
                                         return (
-                                            <div key={enq.id} className="bento-card" style={{ border: isOverallConfirmed ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column' }}>
-                                                {/* Header */}
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-                                                    <div>
-                                                        <span style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--accent-gold)', fontSize: '1rem' }}>
-                                                            {enq.enquiry_code}
-                                                        </span>
-                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                                            {new Date(enq.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            <div key={enq.id} className="bento-card" style={{ border: isOverallConfirmed ? '1px solid rgba(16, 185, 129, 0.45)' : '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
+                                                {/* Crop Photo Banner */}
+                                                <div style={{ position: 'relative', width: '100%', height: '145px', overflow: 'hidden', background: '#0a1a12' }}>
+                                                    <img 
+                                                        src={cropImg} 
+                                                        alt={enq.crop_name} 
+                                                        style={{ 
+                                                            width: '100%', 
+                                                            height: '100%', 
+                                                            objectFit: 'cover', 
+                                                            display: 'block',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        onClick={() => setCropLightboxImage({ url: cropImg, title: `${enq.crop_name} - Enquiry ${enq.enquiry_code}`, cropId: enq.crop_id })}
+                                                        title="Click to view crop photo"
+                                                    />
+                                                    {/* Dark Gradient Overlay */}
+                                                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.1) 45%, rgba(0,0,0,0.85) 100%)', pointerEvents: 'none' }} />
+
+                                                    {/* Top Badges & Actions */}
+                                                    <div style={{ position: 'absolute', top: '10px', left: '10px', right: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(6px)', padding: '0.22rem 0.6rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', gap: '0.4rem', pointerEvents: 'none' }}>
+                                                            <span style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--accent-gold)', fontSize: '0.85rem' }}>
+                                                                {enq.enquiry_code}
+                                                            </span>
+                                                            <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.75)' }}>
+                                                                • {new Date(enq.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                            </span>
+                                                        </div>
+
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                            <span className="status-badge" style={{
+                                                                background: isOverallConfirmed ? 'rgba(16, 185, 129, 0.9)' : millRejected || transportRejected ? 'rgba(239, 68, 68, 0.9)' : 'rgba(234, 179, 8, 0.9)',
+                                                                color: isOverallConfirmed ? '#fff' : millRejected || transportRejected ? '#fff' : '#000',
+                                                                backdropFilter: 'blur(6px)',
+                                                                textTransform: 'uppercase',
+                                                                padding: '0.25rem 0.65rem',
+                                                                borderRadius: '0.5rem',
+                                                                fontWeight: 800,
+                                                                fontSize: '0.72rem',
+                                                                boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                                                                pointerEvents: 'none'
+                                                            }}>
+                                                                {isOverallConfirmed ? '🟢 CONFIRMED' : millRejected || transportRejected ? '🔴 REJECTED' : '🟡 IN PROGRESS'}
+                                                            </span>
+
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setEnquiryToDelete(enq);
+                                                                }}
+                                                                title="Delete / Retract Enquiry"
+                                                                style={{
+                                                                    background: 'rgba(239, 68, 68, 0.88)',
+                                                                    color: '#fff',
+                                                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                                                    borderRadius: '0.5rem',
+                                                                    width: '28px',
+                                                                    height: '28px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '0.78rem',
+                                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                                                                    transition: 'all 0.2s ease',
+                                                                    flexShrink: 0
+                                                                }}
+                                                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
+                                                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                            >
+                                                                <i className="fa-solid fa-trash-can"></i>
+                                                            </button>
                                                         </div>
                                                     </div>
 
-                                                    <span className="status-badge" style={{
-                                                        background: isOverallConfirmed ? 'rgba(16, 185, 129, 0.2)' : millRejected || transportRejected ? 'rgba(239, 68, 68, 0.15)' : 'rgba(234, 179, 8, 0.15)',
-                                                        color: isOverallConfirmed ? 'var(--primary)' : millRejected || transportRejected ? '#ef4444' : '#fbbf24',
-                                                        textTransform: 'uppercase',
-                                                        padding: '0.25rem 0.65rem',
-                                                        borderRadius: '0.5rem',
-                                                        fontWeight: 700,
-                                                        fontSize: '0.75rem'
-                                                    }}>
-                                                        {isOverallConfirmed ? '🟢 CONFIRMED' : millRejected || transportRejected ? '🔴 REJECTED' : '🟡 IN PROGRESS'}
-                                                    </span>
+                                                    {/* Bottom Crop Name & Quantity Chip on Image */}
+                                                    <div style={{ position: 'absolute', bottom: '8px', left: '10px', right: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', pointerEvents: 'none' }}>
+                                                        <span style={{ background: 'rgba(16, 185, 129, 0.92)', color: '#fff', fontSize: '0.82rem', fontWeight: 800, padding: '0.2rem 0.65rem', borderRadius: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}>
+                                                            <i className="fa-solid fa-wheat-awn" style={{ fontSize: '0.75rem' }}></i> {enq.crop_name}
+                                                        </span>
+                                                        <span style={{ background: 'rgba(0,0,0,0.78)', color: '#fff', fontSize: '0.74rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '0.4rem', border: '1px solid rgba(255,255,255,0.2)' }}>
+                                                            {enq.quantity || (enq.acres * 2)} Tons ({enq.acres} Ac)
+                                                        </span>
+                                                    </div>
                                                 </div>
 
                                                 {/* Body */}
-                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.85rem' }}>
-                                                    <div><span style={{ color: 'var(--text-muted)' }}>Crop:</span> <strong style={{ color: 'var(--primary)' }}>{enq.crop_name}</strong></div>
-                                                    <div><span style={{ color: 'var(--text-muted)' }}>Quantity:</span> <strong>{enq.quantity || (enq.acres * 2)} Tons ({enq.acres} Acres)</strong></div>
+                                                <div style={{ flex: 1, padding: '1.1rem 1.1rem 0.85rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.85rem' }}>
                                                     <div><span style={{ color: 'var(--text-muted)' }}>Target Mill:</span> <strong>{enq.mill_name}</strong> (~{Number(enq.distance || 35).toFixed(1)} km)</div>
                                                     <div><span style={{ color: 'var(--text-muted)' }}>Expected Price:</span> <strong style={{ color: 'var(--accent-gold)' }}>₹{enq.expected_price || 'Market'} / Quintal</strong></div>
                                                     
@@ -1709,25 +2005,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                 </div>
 
                                                 {/* Footer Action */}
-                                                <div style={{ marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
-                                                    {isOverallConfirmed ? (
-                                                        <button 
-                                                            className="primary-btn" 
-                                                            onClick={() => setSelectedEnquiryForQr(enq)}
-                                                            style={{ width: '100%', justifyContent: 'center', padding: '0.65rem', fontWeight: 800 }}
-                                                        >
-                                                            <i className="fa-solid fa-qrcode"></i>
-                                                            View Verification QR
-                                                        </button>
-                                                    ) : millRejected || transportRejected ? (
-                                                        <div style={{ textAlign: 'center', color: '#ef4444', fontSize: '0.82rem', fontWeight: 600, padding: '0.35rem 0' }}>
-                                                            <i className="fa-solid fa-circle-xmark"></i> {millRejected ? 'Declined by Mill' : 'Declined by Driver'}
-                                                        </div>
-                                                    ) : (
-                                                        <div style={{ textAlign: 'center', color: '#fbbf24', fontSize: '0.8rem', padding: '0.35rem 0', fontWeight: 600, background: 'rgba(234, 179, 8, 0.08)', borderRadius: '0.4rem' }}>
-                                                            <i className="fa-solid fa-hourglass-half"></i> {millAccepted ? 'Mill Accepted • Waiting for Driver' : 'Awaiting Mill Review'}
-                                                        </div>
-                                                    )}
+                                                <div style={{ padding: '0.75rem 1.1rem 1.1rem 1.1rem', borderTop: '1px solid var(--border-color)', marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
                                                 </div>
                                             </div>
                                         );
@@ -1761,38 +2039,71 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                     </button>
                                 </div>
                             ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                                    {acceptedEnquiries.map(enq => (
-                                        <div key={enq.id} className="bento-card" style={{ textAlign: 'center', border: '1px solid rgba(16, 185, 129, 0.35)', padding: '1.75rem 1.5rem' }}>
-                                            <div style={{ display: 'inline-block', padding: '0.3rem 0.8rem', borderRadius: '1rem', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.75rem' }}>
-                                                {enq.load_status === 'LOAD_RECEIVED' ? '✓ LOAD RECEIVED AT MILL' : 'READY FOR GATE SCAN'}
-                                            </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
+                                    {acceptedEnquiries.map(enq => {
+                                        const cropImg = resolveCropImage(enq.crop_name, enq.crop_image, enq.crop_id, crops);
+                                        return (
+                                            <div key={enq.id} className="bento-card" style={{ textAlign: 'center', border: '1px solid rgba(16, 185, 129, 0.35)', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                                {/* Top Crop Photo Banner */}
+                                                <div style={{ position: 'relative', width: '100%', height: '135px', overflow: 'hidden', background: '#0a1a12' }}>
+                                                    <img 
+                                                        src={cropImg} 
+                                                        alt={enq.crop_name} 
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: 'pointer' }}
+                                                        onClick={() => setCropLightboxImage({ url: cropImg, title: `${enq.crop_name} - QR Verification Photo`, cropId: enq.crop_id })}
+                                                        title="Click to view crop photo"
+                                                    />
+                                                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.85) 100%)', pointerEvents: 'none' }} />
+                                                    
+                                                    {/* Status chip & code */}
+                                                    <div style={{ position: 'absolute', top: '8px', left: '8px', right: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none' }}>
+                                                        <span style={{ background: 'rgba(16, 185, 129, 0.9)', color: '#fff', fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '1rem', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}>
+                                                            {enq.load_status === 'LOAD_RECEIVED' ? '✓ RECEIVED AT MILL' : 'READY FOR GATE SCAN'}
+                                                        </span>
+                                                        <span style={{ background: 'rgba(0,0,0,0.78)', color: 'var(--accent-gold)', fontFamily: 'monospace', fontWeight: 800, fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '0.4rem', border: '1px solid rgba(255,255,255,0.2)' }}>
+                                                            {enq.enquiry_code}
+                                                        </span>
+                                                    </div>
 
-                                            <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.2rem' }}>{enq.crop_name}</h3>
-                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 1rem 0' }}>
-                                                {enq.quantity || (enq.acres * 2)} Tons to {enq.mill_name}
-                                            </p>
+                                                    {/* Bottom Crop Name & Quantity on Image */}
+                                                    <div style={{ position: 'absolute', bottom: '8px', left: '10px', right: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none' }}>
+                                                        <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem', textShadow: '0 2px 4px rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                            <i className="fa-solid fa-wheat-awn" style={{ color: 'var(--primary)' }}></i> {enq.crop_name}
+                                                        </span>
+                                                        <span style={{ background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: '0.75rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '0.4rem', border: '1px solid rgba(255,255,255,0.2)' }}>
+                                                            {enq.quantity || (enq.acres * 2)} Tons
+                                                        </span>
+                                                    </div>
+                                                </div>
 
-                                            <div style={{ background: '#fff', padding: '0.75rem', borderRadius: '1rem', display: 'inline-block', marginBottom: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.3)' }}>
-                                                <div style={{ width: '160px', height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#022c22', fontWeight: 700 }}>
-                                                    <i className="fa-solid fa-qrcode fa-5x"></i>
+                                                {/* Inner Content */}
+                                                <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 1rem 0' }}>
+                                                        Destination Mill: <strong style={{ color: '#fff' }}>{enq.mill_name}</strong>
+                                                    </p>
+
+                                                    <div style={{ background: '#fff', padding: '0.75rem', borderRadius: '1rem', display: 'inline-block', marginBottom: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.3)' }}>
+                                                        <div style={{ width: '150px', height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#022c22', fontWeight: 700 }}>
+                                                            <i className="fa-solid fa-qrcode fa-5x"></i>
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--accent-gold)', fontSize: '1.05rem', marginBottom: '1rem' }}>
+                                                        {enq.enquiry_code}
+                                                    </div>
+
+                                                    <button 
+                                                        className="primary-btn"
+                                                        onClick={() => setSelectedEnquiryForQr(enq)}
+                                                        style={{ width: '100%', justifyContent: 'center', padding: '0.75rem', marginTop: 'auto' }}
+                                                    >
+                                                        <i className="fa-solid fa-expand"></i>
+                                                        Open Full QR & Share
+                                                    </button>
                                                 </div>
                                             </div>
-
-                                            <div style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--accent-gold)', fontSize: '1.05rem', marginBottom: '1rem' }}>
-                                                {enq.enquiry_code}
-                                            </div>
-
-                                            <button 
-                                                className="primary-btn"
-                                                onClick={() => setSelectedEnquiryForQr(enq)}
-                                                style={{ width: '100%', justifyContent: 'center', padding: '0.75rem' }}
-                                            >
-                                                <i className="fa-solid fa-expand"></i>
-                                                Open Full QR & Share
-                                            </button>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -2574,31 +2885,42 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                         <i className="fa-solid fa-wheat-awn"></i>
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Lifetime Tonnage</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Registered Farmlands</div>
                                         <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                                            {historyList.reduce((acc, h) => acc + (Number(h.quantity) || 0), 0)} Tons
+                                            {crops.length} {crops.length === 1 ? 'Farmland' : 'Farmlands'}
                                         </div>
                                     </div>
                                 </div>
                                 <div className="history-stat-card">
                                     <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                                        <i className="fa-solid fa-truck-ramp-box"></i>
+                                        <i className="fa-solid fa-scissors"></i>
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Verified Loads</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Crops Cutout (Enquiries)</div>
                                         <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent-gold)' }}>
-                                            {historyList.filter(h => h.category === 'LOAD_RECEIVED').length} Delivered
+                                            {cropsAndCutoutList.filter(c => c.hasCutout).length} Cutout Lots
                                         </div>
                                     </div>
                                 </div>
                                 <div className="history-stat-card">
                                     <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                                        <i className="fa-solid fa-receipt"></i>
+                                        <i className="fa-solid fa-seedling"></i>
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Entries</div>
-                                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                                            {historyList.length} Logged
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Standing in Field</div>
+                                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#38bdf8' }}>
+                                            {cropsAndCutoutList.filter(c => c.isStanding).length} Standing Plots
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="history-stat-card">
+                                    <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                                        <i className="fa-solid fa-truck-ramp-box"></i>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Verified Loads</div>
+                                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#a855f7' }}>
+                                            {historyList.filter(h => h.category === 'LOAD_RECEIVED').length} Delivered
                                         </div>
                                     </div>
                                 </div>
@@ -2608,6 +2930,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                             <div className="history-filters">
                                 {[
                                     { label: 'All History', val: 'ALL' },
+                                    { label: '🌾 Your Crops & Cutout', val: 'CROPS_CUTOUT' },
                                     { label: 'Loads Received', val: 'LOAD_RECEIVED' },
                                     { label: 'Enquiries', val: 'ENQUIRY' },
                                     { label: 'Transport', val: 'TRANSPORT' }
@@ -2622,67 +2945,244 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                 ))}
                             </div>
 
-                            {/* History List */}
-                            {historyList.filter(h => historyFilter === 'ALL' || h.category === historyFilter).length === 0 ? (
-                                <div className="bento-card" style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
-                                    <i className="fa-solid fa-clock-rotate-left fa-3x" style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}></i>
-                                    <h3>No Records Found</h3>
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No ledger history found under the "{historyFilter}" filter.</p>
+                            {/* SECTION: YOUR CROPS & CUTOUT (Visible under ALL and CROPS_CUTOUT) */}
+                            {(historyFilter === 'ALL' || historyFilter === 'CROPS_CUTOUT') && (
+                                <div className="crop-cutout-section">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.1rem', flexWrap: 'wrap', gap: '0.6rem' }}>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <i className="fa-solid fa-wheat-awn" style={{ color: 'var(--primary)' }}></i>
+                                                <span>Your Crops & Cutout History</span>
+                                            </h3>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '0.2rem 0 0 0' }}>
+                                                Detailed audit of crop registration dates and harvest cutout dates (recorded when you send an enquiry to a mill).
+                                            </p>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '0.3rem 0.75rem', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                                Total Entries: <strong style={{ color: 'var(--text-main)' }}>{cropsAndCutoutList.length}</strong>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {cropsAndCutoutList.length === 0 ? (
+                                        <div className="bento-card" style={{ textAlign: 'center', padding: '2.5rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '0.85rem' }}>
+                                            <i className="fa-solid fa-seedling fa-2x" style={{ color: 'var(--primary)', marginBottom: '0.6rem', opacity: 0.8 }}></i>
+                                            <h4 style={{ margin: '0 0 0.35rem 0' }}>No Farmland Crops Registered Yet</h4>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 1rem 0' }}>
+                                                Register your crops in the farmlands section to track added dates and harvest cutout enquiries.
+                                            </p>
+                                            <button className="primary-btn" onClick={() => setIsAddCropOpen(true)} style={{ fontSize: '0.85rem', padding: '0.5rem 1.1rem' }}>
+                                                <i className="fa-solid fa-plus"></i> Add First Crop
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="crop-cutout-grid">
+                                            {cropsAndCutoutList.map(item => {
+                                                const estYield = (parseFloat(item.acres) || 0) * 20;
+                                                return (
+                                                    <div key={item.id} className={`crop-cutout-card ${item.hasCutout ? 'has-cutout' : 'is-standing'}`}>
+                                                        {/* Card Header */}
+                                                        <div className="crop-cutout-header">
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                                {item.cropImage ? (
+                                                                    <img 
+                                                                        src={item.cropImage} 
+                                                                        alt={item.cropName} 
+                                                                        style={{ width: '48px', height: '48px', borderRadius: '0.75rem', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)', cursor: 'pointer' }}
+                                                                        onClick={() => setCropLightboxImage({ url: item.cropImage, title: `${item.cropName} (${item.locationName}) - Plot Photo`, cropId: item.cropId })}
+                                                                        title="Click to view full photo"
+                                                                    />
+                                                                ) : (
+                                                                    <div style={{ width: '48px', height: '48px', borderRadius: '0.75rem', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.35rem', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                                                                        <i className="fa-solid fa-seedling"></i>
+                                                                    </div>
+                                                                )}
+                                                                <div>
+                                                                    <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                                                                        {item.cropName}
+                                                                    </h4>
+                                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
+                                                                        <i className="fa-solid fa-location-dot" style={{ color: 'var(--primary)', fontSize: '0.75rem' }}></i>
+                                                                        <span>{item.locationName}</span>
+                                                                        <span style={{ opacity: 0.35 }}>•</span>
+                                                                        <strong style={{ color: 'var(--accent-gold)' }}>{item.acres} Acres</strong>
+                                                                        <span style={{ opacity: 0.35 }}>•</span>
+                                                                        <span>~{estYield.toFixed(0)} Qtl</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <span className={item.hasCutout ? 'badge-gold' : 'badge-green'} style={{ flexShrink: 0 }}>
+                                                                {item.hasCutout ? `✂️ Cutout (${item.cutoutCount})` : '🌱 Standing Crop'}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Timeline */}
+                                                        <div className="crop-cutout-timeline">
+                                                            {/* 1. Date Crop Added */}
+                                                            <div className="crop-cutout-step">
+                                                                <div className="crop-cutout-step-icon added" title="Date Crop was Added">
+                                                                    <i className="fa-regular fa-calendar-plus"></i>
+                                                                </div>
+                                                                <div className="crop-cutout-step-content">
+                                                                    <div className="crop-cutout-step-title">🌱 Crop Added Date</div>
+                                                                    <div className="crop-cutout-step-date">
+                                                                        {formatCropDateTime(item.addedAt)}
+                                                                    </div>
+                                                                    <div className="crop-cutout-step-desc">
+                                                                        Registered plot in farmer farmlands ({item.acres} Acres)
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '0.1rem 0' }}></div>
+
+                                                            {/* 2. Crop Cutted Date */}
+                                                            <div className="crop-cutout-step">
+                                                                <div className={`crop-cutout-step-icon ${item.hasCutout ? 'cutout' : 'standing'}`} title="Cutted Date (when enquiry sent)">
+                                                                    <i className={`fa-solid ${item.hasCutout ? 'fa-scissors' : 'fa-clock'}`}></i>
+                                                                </div>
+                                                                <div className="crop-cutout-step-content">
+                                                                    <div className="crop-cutout-step-title">
+                                                                        {item.hasCutout ? '✂️ Crop Cutted Date (Enquiry Sent)' : '✂️ Crop Cutout Status'}
+                                                                    </div>
+
+                                                                    {item.hasCutout ? (
+                                                                        <div>
+                                                                            <div className="crop-cutout-step-date" style={{ color: 'var(--accent-gold)' }}>
+                                                                                {formatCropDateTime(item.cutoutDate)}
+                                                                            </div>
+                                                                            <div className="crop-cutout-step-desc" style={{ marginTop: '0.25rem' }}>
+                                                                                <div>
+                                                                                    Dispatched to <strong>{item.latestEnquiry?.mill_name || 'Verified Processing Mill'}</strong> ({item.latestEnquiry?.enquiry_code})
+                                                                                </div>
+                                                                                <div style={{ marginTop: '0.2rem', color: 'var(--text-main)', fontSize: '0.76rem' }}>
+                                                                                    Load: <strong>{item.latestEnquiry?.quantity || (item.acres * 2)} Tons</strong> • Quoted: <strong>₹{item.latestEnquiry?.expected_price || '2,450'}/Qtl</strong> • Status: <span style={{ color: item.latestEnquiry?.status === 'ACCEPTED' ? 'var(--primary)' : 'var(--accent-gold)', fontWeight: 700 }}>{item.latestEnquiry?.status || 'PENDING'}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div>
+                                                                            <div className="crop-cutout-step-date" style={{ color: 'var(--text-muted)' }}>
+                                                                                Standing in Field (Not Cutout Yet)
+                                                                            </div>
+                                                                            <div className="crop-cutout-step-desc" style={{ marginTop: '0.2rem' }}>
+                                                                                Sending an enquiry to a mill marks this crop's harvest cutout date.
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Card Footer */}
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                                            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                                                                {item.hasCutout ? (
+                                                                    <span>Total Cutout: <strong style={{ color: 'var(--text-main)' }}>{item.totalCutoutTons} Tons</strong></span>
+                                                                ) : (
+                                                                    <span>Est. Yield: <strong style={{ color: 'var(--primary)' }}>~{estYield.toFixed(0)} Qtl</strong></span>
+                                                                )}
+                                                            </div>
+
+                                                            {item.rawCrop ? (
+                                                                <button 
+                                                                    className="primary-btn" 
+                                                                    onClick={() => {
+                                                                        setActiveTab('crops');
+                                                                        handleSearchMills(item.rawCrop);
+                                                                    }}
+                                                                    style={{ padding: '0.35rem 0.85rem', fontSize: '0.78rem' }}
+                                                                >
+                                                                    {item.hasCutout ? <><i className="fa-solid fa-paper-plane"></i> Send Another Load</> : <><i className="fa-solid fa-scissors"></i> Cutout & Match Mills</>}
+                                                                </button>
+                                                            ) : (
+                                                                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                                                    Ledger Cutout Record
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="history-feed">
-                                    {historyList
-                                        .filter(h => historyFilter === 'ALL' || h.category === historyFilter)
-                                        .map(item => (
-                                            <div key={item.id} className={`history-card ${item.category === 'LOAD_RECEIVED' ? '' : 'gold-border'}`}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: '220px' }}>
-                                                    <div style={{
-                                                        width: '42px',
-                                                        height: '42px',
-                                                        borderRadius: '50%',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        background: item.category === 'LOAD_RECEIVED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                                        color: item.category === 'LOAD_RECEIVED' ? 'var(--primary)' : 'var(--accent-gold)'
-                                                    }}>
-                                                        <i className={`fa-solid ${item.category === 'LOAD_RECEIVED' ? 'fa-circle-check' : item.category === 'TRANSPORT' ? 'fa-truck-moving' : 'fa-file-lines'}`}></i>
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--accent-gold)', fontSize: '0.95rem' }}>
-                                                            {item.enquiry_code}
-                                                        </div>
-                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                            {new Date(item.date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
-                                                        </div>
-                                                    </div>
-                                                </div>
+                            )}
 
-                                                <div style={{ flex: 1, minWidth: '220px' }}>
-                                                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '0.2rem' }}>
-                                                        {item.title}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                                                        <strong style={{ color: 'var(--primary)' }}>{item.crop_name}</strong> • {item.quantity} Tons {item.acres ? `(${item.acres} Acres)` : ''} • Partner: <strong>{item.partner}</strong>
-                                                    </div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', fontStyle: 'italic' }}>
-                                                        {item.details}
-                                                    </div>
-                                                </div>
+                            {/* SECTION: GENERAL TRANSACTIONS LEDGER (Shown when not exclusively filtered to CROPS_CUTOUT) */}
+                            {historyFilter !== 'CROPS_CUTOUT' && (
+                                <div>
+                                    {historyFilter === 'ALL' && (
+                                        <h3 style={{ margin: '1.75rem 0 1rem 0', fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <i className="fa-solid fa-receipt" style={{ color: 'var(--accent-gold)' }}></i>
+                                            <span>Chronological Transaction Ledger</span>
+                                        </h3>
+                                    )}
 
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                    {item.value && (
-                                                        <div style={{ textAlign: 'right' }}>
-                                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Value</div>
-                                                            <div style={{ fontWeight: 800, color: 'var(--accent-gold)', fontSize: '0.95rem' }}>{item.value}</div>
+                                    {historyList.filter(h => historyFilter === 'ALL' || h.category === historyFilter).length === 0 ? (
+                                        <div className="bento-card" style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
+                                            <i className="fa-solid fa-clock-rotate-left fa-3x" style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}></i>
+                                            <h3>No Records Found</h3>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No ledger history found under the "{historyFilter}" filter.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="history-feed">
+                                            {historyList
+                                                .filter(h => historyFilter === 'ALL' || h.category === historyFilter)
+                                                .map(item => (
+                                                    <div key={item.id} className={`history-card ${item.category === 'LOAD_RECEIVED' ? '' : 'gold-border'}`}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: '220px' }}>
+                                                            <div style={{
+                                                                width: '42px',
+                                                                height: '42px',
+                                                                borderRadius: '50%',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                background: item.category === 'LOAD_RECEIVED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                                                color: item.category === 'LOAD_RECEIVED' ? 'var(--primary)' : 'var(--accent-gold)'
+                                                            }}>
+                                                                <i className={`fa-solid ${item.category === 'LOAD_RECEIVED' ? 'fa-circle-check' : item.category === 'TRANSPORT' ? 'fa-truck-moving' : 'fa-file-lines'}`}></i>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--accent-gold)', fontSize: '0.95rem' }}>
+                                                                    {item.enquiry_code}
+                                                                </div>
+                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                                    {new Date(item.date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                    )}
-                                                    <span className={item.category === 'LOAD_RECEIVED' ? 'badge-green' : 'badge-gold'}>
-                                                        {item.status}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
+
+                                                        <div style={{ flex: 1, minWidth: '220px' }}>
+                                                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '0.2rem' }}>
+                                                                {item.title}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                                                <strong style={{ color: 'var(--primary)' }}>{item.crop_name}</strong> • {item.quantity} Tons {item.acres ? `(${item.acres} Acres)` : ''} • Partner: <strong>{item.partner}</strong>
+                                                            </div>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', fontStyle: 'italic' }}>
+                                                                {item.details}
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                            {item.value && (
+                                                                <div style={{ textAlign: 'right' }}>
+                                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Value</div>
+                                                                    <div style={{ fontWeight: 800, color: 'var(--accent-gold)', fontSize: '0.95rem' }}>{item.value}</div>
+                                                                </div>
+                                                            )}
+                                                            <span className={item.category === 'LOAD_RECEIVED' ? 'badge-green' : 'badge-gold'}>
+                                                                {item.status}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -3464,6 +3964,70 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                 </button>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* CONFIRM DELETE ENQUIRY MODAL */}
+            {enquiryToDelete && (
+                <div 
+                    className="modal-overlay" 
+                    style={{ zIndex: 100002, background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+                    onClick={() => {
+                        if (deletingEnquiryId === null) setEnquiryToDelete(null);
+                    }}
+                >
+                    <div 
+                        className="bento-card" 
+                        style={{ maxWidth: '440px', width: '100%', padding: '1.75rem 1.5rem', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.35)', background: '#0a140e' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', margin: '0 auto 1rem', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                            <i className="fa-solid fa-trash-can"></i>
+                        </div>
+                        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', color: '#fff' }}>Delete Enquiry?</h3>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0 0 1.25rem 0', lineHeight: 1.5 }}>
+                            Are you sure you want to delete enquiry <strong style={{ color: 'var(--accent-gold)' }}>{enquiryToDelete.enquiry_code}</strong> for <strong style={{ color: '#fff' }}>{enquiryToDelete.crop_name}</strong> sent to <strong style={{ color: '#fff' }}>{enquiryToDelete.mill_name}</strong>?
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                            <button 
+                                className="action-btn" 
+                                onClick={() => setEnquiryToDelete(null)}
+                                style={{ flex: 1, padding: '0.65rem', borderRadius: '0.6rem', background: 'rgba(255,255,255,0.08)', color: 'var(--text-main)', border: '1px solid rgba(255,255,255,0.15)', fontWeight: 600, cursor: 'pointer' }}
+                                disabled={deletingEnquiryId !== null}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={() => handleDeleteEnquiry(enquiryToDelete)}
+                                style={{ 
+                                    flex: 1, 
+                                    padding: '0.65rem', 
+                                    borderRadius: '0.6rem', 
+                                    background: '#ef4444', 
+                                    color: '#fff', 
+                                    border: 'none', 
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.4rem',
+                                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)'
+                                }}
+                                disabled={deletingEnquiryId !== null}
+                            >
+                                {deletingEnquiryId ? (
+                                    <>
+                                        <i className="fa-solid fa-spinner fa-spin"></i> Deleting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="fa-solid fa-trash-can"></i> Yes, Delete
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

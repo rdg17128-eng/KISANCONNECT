@@ -426,6 +426,8 @@ class KisanService {
             farmer_name: enquiryData.farmer_name || 'Farmer',
             crop_id: enquiryData.crop_id ? String(enquiryData.crop_id) : null,
             crop_name: enquiryData.crop_name || 'Paddy (Rice)',
+            crop_image: enquiryData.crop_image || null,
+            crop_added_at: enquiryData.crop_added_at || null,
             acres: Number(enquiryData.acres) || 0,
             quantity: Number(enquiryData.quantity) || Number(enquiryData.acres) * 2 || 10,
             expected_price: Number(enquiryData.expected_price || enquiryData.offered_price) || 2450,
@@ -620,6 +622,51 @@ class KisanService {
         });
 
         return Array.from(map.values()).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    }
+
+    // ==========================================
+    // DELETE / CANCEL ENQUIRY
+    // ==========================================
+    async deleteEnquiry(enquiryIdOrCode) {
+        if (!enquiryIdOrCode) return false;
+        
+        // 1. Remove from local storage
+        const localList = getLocal(STORAGE_KEYS.ENQUIRIES, []);
+        const targetEnquiry = localList.find(eq => eq.id === enquiryIdOrCode || eq.enquiry_code === enquiryIdOrCode);
+        const updatedLocal = localList.filter(eq => eq.id !== enquiryIdOrCode && eq.enquiry_code !== enquiryIdOrCode);
+        setLocal(STORAGE_KEYS.ENQUIRIES, updatedLocal);
+
+        // Also clean up any associated transport requests
+        const localReqs = getLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, []);
+        const updatedReqs = localReqs.filter(r => r.enquiry_id !== enquiryIdOrCode && r.enquiry_code !== enquiryIdOrCode && r.id !== enquiryIdOrCode);
+        setLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, updatedReqs);
+
+        // 2. Remove from Supabase database if connected
+        try {
+            const isCode = String(enquiryIdOrCode).startsWith('KC-') || String(enquiryIdOrCode).startsWith('ENQ-');
+            if (isCode) {
+                await supabase.from('enquiries').delete().eq('enquiry_code', enquiryIdOrCode);
+            } else {
+                await supabase.from('enquiries').delete().eq('id', enquiryIdOrCode);
+            }
+        } catch (e) {
+            console.warn("Supabase delete enquiry error:", e);
+        }
+
+        // 3. Notify Mill that enquiry was retracted/cancelled if target existed
+        if (targetEnquiry && targetEnquiry.buyer_phone) {
+            this.addNotification(
+                targetEnquiry.buyer_phone,
+                'buyers',
+                'Enquiry Retracted by Farmer',
+                `Farmer ${targetEnquiry.farmer_name || 'Farmer'} has cancelled enquiry ${targetEnquiry.enquiry_code || enquiryIdOrCode} for ${targetEnquiry.crop_name}.`,
+                'info',
+                { enquiryCode: targetEnquiry.enquiry_code }
+            );
+        }
+
+        this.notify('enquiries_changed', { deletedId: enquiryIdOrCode });
+        return true;
     }
 
     // ==========================================
@@ -2125,6 +2172,8 @@ class KisanService {
                 acres: eq.acres,
                 partner: eq.mill_name,
                 date: eq.accepted_at || eq.created_at,
+                cutout_date: eq.created_at,
+                crop_added_at: eq.crop_added_at || null,
                 status: eq.status,
                 statusColor: eq.status === 'ACCEPTED' ? 'var(--primary)' : eq.status === 'REJECTED' ? 'var(--danger)' : 'var(--accent-gold)',
                 details: eq.status === 'ACCEPTED' ? 'Crop verification QR generated • Ready for gate delivery' : `Expected rate: ₹${eq.expected_price || 'Market'}`,

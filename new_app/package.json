@@ -7,6 +7,8 @@
     "dev": "vite --host",
     "build": "vite build",
     "server": "node server/standaloneServer.js",
+    "test": "node server/test_razorpay.js",
+    "test:razorpay": "node server/test_razorpay.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

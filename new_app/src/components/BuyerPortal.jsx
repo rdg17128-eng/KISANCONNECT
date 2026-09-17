@@ -818,7 +818,7 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                     <p style={{ color: 'var(--text-muted)' }}>No farmer enquiries matching the selected filter ({enquiryFilter}).</p>
                                 </div>
                             ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.25rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '1.25rem' }}>
                                     {filteredEnquiries.map(enq => {
                                         const millAccepted = (enq.mill_status || '').toUpperCase() === 'ACCEPTED' || 
                                                              (enq.status || '').toUpperCase() === 'ACCEPTED' || 
@@ -1283,7 +1283,7 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                     <p style={{ color: 'var(--text-muted)' }}>When accepted farmer enquiries have transport enabled, vehicle tracking will show here.</p>
                                 </div>
                             ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '1.25rem' }}>
                                     {transportRequests.map(tr => (
                                         <div key={tr.id} className="bento-card">
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>

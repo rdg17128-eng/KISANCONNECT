@@ -7,6 +7,8 @@
   ],
   "scripts": {
     "dev": "npm --prefix new_app run dev",
+    "test": "npm --prefix new_app test",
+    "test:razorpay": "npm --prefix new_app run test:razorpay",
     "build": "npm --prefix new_app install --include=dev && npm --prefix new_app run build"
   },
   "dependencies": {

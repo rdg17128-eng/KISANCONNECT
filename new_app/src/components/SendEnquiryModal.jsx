@@ -145,6 +145,8 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                 farmer_name: user.name || `Farmer (${user.phone})`,
                 crop_id: crop?.id || null,
                 crop_name: crop?.cropName || 'Paddy (Rice)',
+                crop_image: crop?.cropImage || '',
+                crop_added_at: crop?.addedAt || null,
                 acres: Number(acres),
                 quantity: Number(quantityTons),
                 expected_price: Number(expectedPrice),

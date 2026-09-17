@@ -893,16 +893,12 @@ export function LanguageProvider({ children }) {
         };
 
         translateDom();
-        const t1 = setTimeout(translateDom, 50);
-        const t2 = setTimeout(translateDom, 200);
-        const t3 = setTimeout(translateDom, 500);
-        const interval = setInterval(translateDom, 800);
+        const t1 = setTimeout(translateDom, 60);
+        const t2 = setTimeout(translateDom, 250);
 
         return () => {
             clearTimeout(t1);
             clearTimeout(t2);
-            clearTimeout(t3);
-            clearInterval(interval);
         };
     }, [language]);
 

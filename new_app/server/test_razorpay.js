@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
-import { handleCreateOrderRequest, handleVerifyPaymentRequest } from './razorpayHandler.js';
+import { handleCreateOrderRequest, handleVerifyPaymentRequest, handleAutoSuccessPaymentRequest } from './razorpayHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -110,6 +110,38 @@ async function runTests() {
         }
     } catch (e) {
         console.error('❌ Test 5 Exception:', e);
+        failed++;
+    }
+
+    // Test 6: Auto-Success Payment Flow (Instant Demo Settlement)
+    try {
+        const res = await handleAutoSuccessPaymentRequest({
+            amount: 25000, // 25,000 paise = ₹250
+            currency: 'INR',
+            receipt: `rcpt_auto_${Date.now()}`
+        });
+
+        if (res.status === 200 && res.data.success && res.data.razorpay_order_id && res.data.razorpay_signature) {
+            // Verify the signature that was generated
+            const verifyRes = await handleVerifyPaymentRequest({
+                razorpay_order_id: res.data.razorpay_order_id,
+                razorpay_payment_id: res.data.razorpay_payment_id,
+                razorpay_signature: res.data.razorpay_signature
+            });
+
+            if (verifyRes.status === 200 && verifyRes.data.success) {
+                console.log(`✅ Test 6: Auto-Success Payment created & HMAC verified! Order ID: ${res.data.razorpay_order_id}, Payment ID: ${res.data.razorpay_payment_id}`);
+                passed++;
+            } else {
+                console.error('❌ Test 6 Failed on signature verification:', verifyRes);
+                failed++;
+            }
+        } else {
+            console.error('❌ Test 6 Failed: Auto-success returned:', res);
+            failed++;
+        }
+    } catch (e) {
+        console.error('❌ Test 6 Exception:', e);
         failed++;
     }
 

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../utils/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import LanguageSelector from './LanguageSelector';
 import PassbookOcrUploader from './PassbookOcrUploader';
 import SandboxPayoutModal from './SandboxPayoutModal';
+import indiaStatesDistricts from '../data/india_all_states_all_districts.json';
 
 export default function FarmerProfileView({ 
     user = {}, 
@@ -20,8 +21,29 @@ export default function FarmerProfileView({
     const [altPhone, setAltPhone] = useState(user.altPhone || '');
     const [email, setEmail] = useState(user.email || '');
     const [village, setVillage] = useState('');
-    const [district, setDistrict] = useState('Warangal, Telangana');
+    
+    // State & District selection from India database
+    const allStates = useMemo(() => Object.keys(indiaStatesDistricts).sort(), []);
+    const [selectedState, setSelectedState] = useState('Telangana');
+    const [selectedDistrict, setSelectedDistrict] = useState('Warangal');
     const [farmingType, setFarmingType] = useState('Natural / Organic Farming');
+
+    // Available districts for the currently selected state
+    const availableDistricts = useMemo(() => {
+        return selectedState && indiaStatesDistricts[selectedState] ? indiaStatesDistricts[selectedState] : [];
+    }, [selectedState]);
+
+    const handleStateChange = (newState) => {
+        setSelectedState(newState);
+        const dists = indiaStatesDistricts[newState] || [];
+        if (dists.length > 0) {
+            if (!dists.includes(selectedDistrict)) {
+                setSelectedDistrict(dists[0]);
+            }
+        } else {
+            setSelectedDistrict('');
+        }
+    };
 
     // Bank & Payout fields
     const [bankName, setBankName] = useState('State Bank of India');
@@ -61,7 +83,36 @@ export default function FarmerProfileView({
             if (saved) {
                 const parsed = JSON.parse(saved);
                 if (parsed.village) setVillage(parsed.village);
-                if (parsed.district) setDistrict(parsed.district);
+                
+                // Parse state and district
+                if (parsed.state && indiaStatesDistricts[parsed.state]) {
+                    setSelectedState(parsed.state);
+                    if (parsed.district) setSelectedDistrict(parsed.district);
+                } else if (parsed.district) {
+                    // Try to parse compound string or lookup state
+                    let fState = null;
+                    let fDist = null;
+                    if (parsed.district.includes(',')) {
+                        const parts = parsed.district.split(',').map(s => s.trim());
+                        if (parts[1] && indiaStatesDistricts[parts[1]]) {
+                            fState = parts[1];
+                            fDist = parts[0];
+                        }
+                    }
+                    if (!fState) {
+                        for (const [stName, dList] of Object.entries(indiaStatesDistricts)) {
+                            const found = dList.find(d => d.toLowerCase() === parsed.district.toLowerCase());
+                            if (found) {
+                                fState = stName;
+                                fDist = found;
+                                break;
+                            }
+                        }
+                    }
+                    if (fState) setSelectedState(fState);
+                    if (fDist) setSelectedDistrict(fDist);
+                }
+
                 if (parsed.farmingType) setFarmingType(parsed.farmingType);
                 if (parsed.bankName) setBankName(parsed.bankName);
                 if (parsed.accountHolder) setAccountHolder(parsed.accountHolder);
@@ -101,17 +152,24 @@ export default function FarmerProfileView({
         try {
             // Update Supabase
             if (user.phone) {
-                await supabase
-                    .from('farmers')
-                    .update({ name, altPhone })
-                    .eq('phone', user.phone);
+                try {
+                    await supabase
+                        .from('farmers')
+                        .update({ name, altPhone })
+                        .eq('phone', user.phone);
+                } catch (dbErr) {
+                    console.warn('Supabase profile update notice:', dbErr);
+                }
             }
 
             // Save extended details to localStorage
             const storageKey = `kisan_farmer_ext_${user.phone || 'default'}`;
+            const combinedDistrict = selectedDistrict && selectedState ? `${selectedDistrict}, ${selectedState}` : selectedDistrict || selectedState;
             const currentExt = {
                 village,
-                district,
+                state: selectedState,
+                district: selectedDistrict,
+                districtFull: combinedDistrict,
                 farmingType,
                 bankName,
                 accountHolder,
@@ -126,9 +184,15 @@ export default function FarmerProfileView({
             localStorage.setItem(storageKey, JSON.stringify(currentExt));
 
             if (onProfileUpdated) {
-                onProfileUpdated({ name, altPhone });
+                onProfileUpdated({ 
+                    name, 
+                    altPhone, 
+                    state: selectedState, 
+                    district: selectedDistrict,
+                    districtFull: combinedDistrict 
+                });
             }
-            showToast('Personal & Farm Profile updated! 🌿');
+            showToast('Personal & Farm Location updated! 🌿');
         } catch (err) {
             console.error('Error saving profile:', err);
             showToast('Failed to save profile. Please retry.');
@@ -271,7 +335,7 @@ export default function FarmerProfileView({
                                 </span>
                                 <span style={{ background: 'rgba(255, 255, 255, 0.06)', padding: '0.2rem 0.6rem', borderRadius: '0.5rem', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
                                     <i className="fa-solid fa-location-dot" style={{ marginRight: '0.35rem', color: 'var(--accent-gold)' }}></i>
-                                    {district}
+                                    {selectedDistrict && selectedState ? `${selectedDistrict}, ${selectedState}` : selectedState || selectedDistrict || 'Warangal, Telangana'}
                                 </span>
                                 <span style={{ background: 'rgba(255, 255, 255, 0.06)', padding: '0.2rem 0.6rem', borderRadius: '0.5rem', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
                                     <i className="fa-solid fa-seedling" style={{ marginRight: '0.35rem', color: 'var(--primary-light)' }}></i>
@@ -504,17 +568,48 @@ export default function FarmerProfileView({
 
                             <div className="form-group-modern">
                                 <label>
-                                    <i className="fa-solid fa-map" style={{ color: 'var(--accent-gold)' }}></i>
-                                    District & State
+                                    <i className="fa-solid fa-map-location-dot" style={{ color: 'var(--accent-gold)' }}></i>
+                                    State / Union Territory
                                 </label>
                                 <div className="input-with-icon">
-                                    <i className="fa-solid fa-building field-icon"></i>
-                                    <input 
-                                        type="text" 
-                                        value={district} 
-                                        onChange={e => setDistrict(e.target.value)} 
-                                        placeholder="e.g. Warangal Rural, Telangana"
-                                    />
+                                    <i className="fa-solid fa-earth-asia field-icon"></i>
+                                    <select 
+                                        value={selectedState} 
+                                        onChange={e => handleStateChange(e.target.value)}
+                                        required
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <option value="" disabled>-- Select State --</option>
+                                        {allStates.map(st => (
+                                            <option key={st} value={st} style={{ background: '#0a1a12', color: '#fff' }}>
+                                                {st}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="form-group-modern">
+                                <label>
+                                    <i className="fa-solid fa-building-flag" style={{ color: 'var(--primary)' }}></i>
+                                    District {selectedState ? `(${selectedState})` : ''}
+                                </label>
+                                <div className="input-with-icon">
+                                    <i className="fa-solid fa-map-pin field-icon"></i>
+                                    <select 
+                                        value={selectedDistrict} 
+                                        onChange={e => setSelectedDistrict(e.target.value)}
+                                        disabled={!selectedState || availableDistricts.length === 0}
+                                        required
+                                        style={{ cursor: selectedState ? 'pointer' : 'not-allowed' }}
+                                    >
+                                        <option value="" disabled>-- Select District --</option>
+                                        {availableDistricts.map(dist => (
+                                            <option key={dist} value={dist} style={{ background: '#0a1a12', color: '#fff' }}>
+                                                {dist}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
 

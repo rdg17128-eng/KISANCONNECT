@@ -2,7 +2,7 @@ import http from 'http';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { handleCreateOrderRequest, handleVerifyPaymentRequest } from './razorpayHandler.js';
+import { handleCreateOrderRequest, handleVerifyPaymentRequest, handleAutoSuccessPaymentRequest } from './razorpayHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +51,23 @@ const server = http.createServer(async (req, res) => {
             try {
                 const parsed = body ? JSON.parse(body) : {};
                 const result = await handleVerifyPaymentRequest(parsed);
+                res.writeHead(result.status, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(result.data));
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+        return;
+    }
+
+    if (url.pathname === '/api/auto-success-payment' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', async () => {
+            try {
+                const parsed = body ? JSON.parse(body) : {};
+                const result = await handleAutoSuccessPaymentRequest(parsed);
                 res.writeHead(result.status, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify(result.data));
             } catch (e) {
