@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { kisanService } from '../services/kisanService';
 import KisanLogo from './KisanLogo';
+import { normalizeTelPhone, formatDisplayPhone } from '../utils/phoneUtils';
 
 export default function QrScannerModal({ loggedInMill, onClose, onVerificationSuccess }) {
     const [scanState, setScanState] = useState('scanning'); // 'scanning' | 'verifying' | 'result'
@@ -355,10 +356,21 @@ export default function QrScannerModal({ loggedInMill, onClose, onVerificationSu
                                                 <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Farmer Name</span>
                                                 <strong>{eq?.farmer_name}</strong>
                                             </div>
-                                            <div>
-                                                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Farmer Contact</span>
-                                                <span>{eq?.farmer_phone}</span>
-                                            </div>
+                                             <div>
+                                                 <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Farmer Contact</span>
+                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.15rem' }}>
+                                                     <span style={{ fontFamily: 'monospace', fontSize: '0.82rem' }}>{formatDisplayPhone(eq?.farmer_phone)}</span>
+                                                     {eq?.farmer_phone && (
+                                                         <a
+                                                             href={`tel:${normalizeTelPhone(eq.farmer_phone)}`}
+                                                             className="mill-call-farmer-btn-sm"
+                                                             title="Calling is available when using a device with phone-call support."
+                                                         >
+                                                             <i className="fa-solid fa-phone"></i> Call
+                                                         </a>
+                                                     )}
+                                                 </div>
+                                             </div>
                                             <div>
                                                 <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Crop Type</span>
                                                 <strong>{eq?.crop_name}</strong>

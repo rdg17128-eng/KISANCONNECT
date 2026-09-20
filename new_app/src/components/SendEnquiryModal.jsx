@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { kisanService, calculateDistance, getCapacityRange } from '../services/kisanService';
+import { kisanService, calculateDistance, getCapacityRange, DEFAULT_PROVIDERS } from '../services/kisanService';
 
 export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryCreated }) {
     const [step, setStep] = useState('form'); // 'form' | 'summary' | 'success'
@@ -26,15 +26,14 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
 
     // Transport Logistics Configuration
     const [vehicleCapacity, setVehicleCapacity] = useState(() => getInitialCapacityTier(crop?.quantity || 10));
-    const [vehicleType, setVehicleType] = useState('ALL');
     const [pickupAddress, setPickupAddress] = useState(crop?.locationName || 'Bodulabanda Farm Plot');
     const [deliveryAddress, setDeliveryAddress] = useState(mill?.locationName || mill?.millName || 'Nela Kondapalli Processing Gate');
     const [transportInstructions, setTransportInstructions] = useState('');
 
-    // Available Transport Providers
-    const [availableTransporters, setAvailableTransporters] = useState([]);
+    // Available Transport Providers (initialized with default providers for instant responsiveness)
+    const [availableTransporters, setAvailableTransporters] = useState(() => (Array.isArray(DEFAULT_PROVIDERS) ? DEFAULT_PROVIDERS : []));
     const [loadingTransporters, setLoadingTransporters] = useState(false);
-    const [selectedTransporter, setSelectedTransporter] = useState(null);
+    const [selectedTransporter, setSelectedTransporter] = useState(() => (Array.isArray(DEFAULT_PROVIDERS) && DEFAULT_PROVIDERS.length > 0 ? DEFAULT_PROVIDERS[0] : null));
     const [vehicleLightboxImage, setVehicleLightboxImage] = useState(null);
 
     // Transport Dates & Details
@@ -59,40 +58,69 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
         : (calcDist !== null ? calcDist : calculateDistance(crop?.latitude || 17.0916, crop?.longitude || 80.0210, mill?.latitude || 17.1033, mill?.longitude || 80.0536));
     const distanceKm = Math.round(rawDist * 10) / 10;
 
-    // Load available transport providers on mount or when filters change
+    // Load available transport providers on mount or when load capacity selection changes
     useEffect(() => {
+        let isMounted = true;
         const fetchTransporters = async () => {
             setLoadingTransporters(true);
             try {
                 const range = vehicleCapacity === 'ALL' ? null : getCapacityRange(vehicleCapacity);
-                const list = await kisanService.getAvailableTransporters({
+                let list = await kisanService.getAvailableTransporters({
                     farmerLat: crop?.latitude || 17.0916,
                     farmerLng: crop?.longitude || 80.0210,
                     requiredCapacityTons: Number(quantityTons) || 10,
                     minCapacityTons: range ? range.min : undefined,
-                    maxCapacityTons: range ? range.max : undefined,
-                    vehicleType: vehicleType
+                    maxCapacityTons: range ? range.max : undefined
                 });
-                setAvailableTransporters(list);
+                
+                if (!list || list.length === 0) {
+                    // Fallback to all transporters without capacity restriction
+                    list = await kisanService.getAvailableTransporters({
+                        farmerLat: crop?.latitude || 17.0916,
+                        farmerLng: crop?.longitude || 80.0210,
+                        requiredCapacityTons: Number(quantityTons) || 10
+                    });
+                }
 
-                // Intelligently select best transporter
-                if (list.length > 0) {
-                    const match = list.find(t => t.phone === selectedTransporter?.phone && (t.is_within_range ?? true))
-                        || list.find(t => (t.is_within_range ?? true) && t.is_capacity_sufficient)
-                        || list.find(t => t.is_within_range)
-                        || list.find(t => t.is_capacity_sufficient)
-                        || list[0];
-                    setSelectedTransporter(match);
+                if (isMounted) {
+                    const finalList = (list && list.length > 0) ? list : DEFAULT_PROVIDERS;
+                    setAvailableTransporters(finalList);
+
+                    // Intelligently select best transporter
+                    if (finalList.length > 0) {
+                        const match = finalList.find(t => t.phone === selectedTransporter?.phone && (t.is_within_range ?? true))
+                            || finalList.find(t => (t.is_within_range ?? true) && t.is_capacity_sufficient)
+                            || finalList.find(t => t.is_within_range)
+                            || finalList.find(t => t.is_capacity_sufficient)
+                            || finalList[0];
+                        setSelectedTransporter(match);
+                    }
                 }
             } catch (err) {
                 console.error("Error loading transporters:", err);
+                if (isMounted) {
+                    setAvailableTransporters(DEFAULT_PROVIDERS);
+                }
             } finally {
-                setLoadingTransporters(false);
+                if (isMounted) {
+                    setLoadingTransporters(false);
+                }
             }
         };
 
         fetchTransporters();
-    }, [quantityTons, vehicleCapacity, vehicleType, crop?.latitude, crop?.longitude]);
+
+        const unsubscribe = kisanService.subscribe((event) => {
+            if (event === 'provider_updated' || event === 'transport_changed') {
+                fetchTransporters();
+            }
+        });
+
+        return () => { 
+            isMounted = false; 
+            unsubscribe();
+        };
+    }, [quantityTons, vehicleCapacity, crop?.latitude, crop?.longitude]);
 
     // Handle Transporter selection
     const handleSelectTransporter = (transporter) => {
@@ -158,8 +186,9 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                 transport_provider_id: withTransport ? selectedTransporter?.phone : null,
                 driver_name: withTransport ? (selectedTransporter?.driver_name || selectedTransporter?.name) : null,
                 driver_phone: withTransport ? selectedTransporter?.phone : null,
+                vehicle_name: withTransport ? (selectedTransporter?.vehicle_name || selectedTransporter?.vehicle_type || 'Standard Truck') : null,
                 vehicle_number: withTransport ? selectedTransporter?.vehicle_number : null,
-                vehicle_type: withTransport ? (selectedTransporter?.vehicle_type || vehicleType) : null,
+                vehicle_type: withTransport ? (selectedTransporter?.vehicle_type || 'Standard Truck') : null,
                 vehicle_capacity: withTransport ? `${selectedTransporter?.capacity || vehicleCapacity} Ton` : null,
                 vehicle_images: withTransport ? (selectedTransporter?.vehicle_images || []) : [],
                 transport_date: withTransport ? transportDate : null,
@@ -315,42 +344,49 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
 
                             {withTransport && selectedTransporter && (
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', fontSize: '0.85rem' }}>
-                                    <div><span style={{ color: 'var(--text-muted)' }}>Driver Name:</span> <strong>{selectedTransporter.driver_name || selectedTransporter.name}</strong></div>
+                                    <div><span style={{ color: 'var(--text-muted)' }}>Truck Model:</span> <strong style={{ color: 'var(--primary)' }}>{selectedTransporter.vehicle_name || selectedTransporter.vehicle_type || 'Standard Truck'}</strong></div>
                                     <div><span style={{ color: 'var(--text-muted)' }}>Truck Number:</span> <strong style={{ fontFamily: 'monospace' }}>{selectedTransporter.vehicle_number}</strong></div>
-                                    <div><span style={{ color: 'var(--text-muted)' }}>Vehicle Capacity:</span> <strong>{selectedTransporter.capacity} Tons ({selectedTransporter.vehicle_type})</strong></div>
+                                    <div><span style={{ color: 'var(--text-muted)' }}>Driver Name:</span> <strong>{selectedTransporter.driver_name || selectedTransporter.name}</strong></div>
+                                    <div><span style={{ color: 'var(--text-muted)' }}>Vehicle Capacity:</span> <strong>{selectedTransporter.capacity} Tons Load</strong></div>
                                     <div><span style={{ color: 'var(--text-muted)' }}>Pickup/Equipment Date:</span> <strong style={{ color: 'var(--primary)' }}>{new Date(transportDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></div>
+                                    <div><span style={{ color: 'var(--text-muted)' }}>Driver Rating:</span> <strong>⭐ {selectedTransporter.rating || 4.8}</strong></div>
                                     <div><span style={{ color: 'var(--text-muted)' }}>Pickup Address:</span> <strong>{pickupAddress}</strong></div>
                                     <div><span style={{ color: 'var(--text-muted)' }}>Delivery Address:</span> <strong>{deliveryAddress}</strong></div>
                                     <div><span style={{ color: 'var(--text-muted)' }}>Transport Rate:</span> <strong>₹{selectedTransporter.price_per_km} / KM</strong></div>
-                                    <div><span style={{ color: 'var(--text-muted)' }}>Driver Rating:</span> <strong>⭐ {selectedTransporter.rating || 4.8}</strong></div>
+                                    <div><span style={{ color: 'var(--text-muted)' }}>Est. Haulage Cost:</span> <strong style={{ color: 'var(--accent-gold)' }}>₹{selectedTransporter.estimated_cost?.toLocaleString()}</strong></div>
                                     
-                                    {/* Selected Vehicle 2 Photos Strip */}
-                                    {selectedTransporter.vehicle_images && selectedTransporter.vehicle_images.length > 0 && (
+                                    {/* Selected Vehicle Verified Photos (Rendered ONLY if Transporter uploaded real photos) */}
+                                    {selectedTransporter.vehicle_images && selectedTransporter.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0).length > 0 ? (
                                         <div style={{ gridColumn: 'span 2', background: 'rgba(0,0,0,0.4)', padding: '0.65rem 0.85rem', borderRadius: '0.5rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                                             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                <span><i className="fa-solid fa-camera"></i> Verified Truck Photos (2 Angles)</span>
+                                                <span><i className="fa-solid fa-camera"></i> Transporter Uploaded Photos ({selectedTransporter.vehicle_name || 'Vehicle'})</span>
                                                 <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Click photo to expand</span>
                                             </div>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                                {selectedTransporter.vehicle_images.slice(0, 2).map((imgUrl, i) => (
+                                                {selectedTransporter.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0).slice(0, 2).map((imgUrl, i) => (
                                                     <div 
                                                         key={i}
                                                         onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setVehicleLightboxImage({
-                                                                url: imgUrl,
-                                                                title: `${selectedTransporter.vehicle_number} - ${i === 0 ? 'Front & Plate View' : 'Cargo Bed View'}`
-                                                            });
+                                                             e.stopPropagation();
+                                                             setVehicleLightboxImage({
+                                                                 url: imgUrl,
+                                                                 title: `${selectedTransporter.vehicle_name || 'Truck'} (${selectedTransporter.vehicle_number}) - Photo ${i + 1}`
+                                                             });
                                                         }}
-                                                        style={{ height: '70px', borderRadius: '0.4rem', overflow: 'hidden', position: 'relative', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}
+                                                        style={{ height: '75px', borderRadius: '0.4rem', overflow: 'hidden', position: 'relative', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}
                                                     >
                                                         <img src={imgUrl} alt={`Truck Angle ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                         <span style={{ position: 'absolute', bottom: '2px', left: '4px', background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: '0.2rem', fontWeight: 600 }}>
-                                                            {i === 0 ? 'Front' : 'Cargo Bed'}
+                                                            Photo {i + 1}
                                                         </span>
                                                     </div>
                                                 ))}
                                             </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{ gridColumn: 'span 2', fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.02)', padding: '0.4rem 0.6rem', borderRadius: '0.4rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <i className="fa-solid fa-truck" style={{ color: 'var(--primary)' }}></i>
+                                            <span>Registered Driver • No custom vehicle photos uploaded</span>
                                         </div>
                                     )}
 
@@ -516,48 +552,65 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                             {withTransport && (
                                 <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px dashed rgba(255, 255, 255, 0.12)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     
-                                    {/* Vehicle Capacity & Vehicle Type Filters */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                                        <div>
-                                            <label style={{ display: 'block', marginBottom: '0.35rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
-                                                Vehicle Capacity
+                                    {/* Load Selection / Capacity Filter */}
+                                    <div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                                            <label style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                <i className="fa-solid fa-truck-ramp-box" style={{ color: 'var(--primary)' }}></i>
+                                                Select Required Truck Load / Capacity
                                             </label>
-                                            <div className="input-group">
-                                                <i className="fa-solid fa-truck-ramp-box"></i>
-                                                <select
-                                                    value={vehicleCapacity}
-                                                    onChange={(e) => setVehicleCapacity(e.target.value)}
-                                                    style={{ width: '100%', background: 'transparent', border: 'none', color: 'inherit', outline: 'none', cursor: 'pointer' }}
-                                                >
-                                                    <option value="5" style={{ color: '#000', background: '#fff' }}>5 Ton (Range: 4 - 8 Ton)</option>
-                                                    <option value="10" style={{ color: '#000', background: '#fff' }}>10 Ton (Range: 8 - 14 Ton)</option>
-                                                    <option value="15" style={{ color: '#000', background: '#fff' }}>15 Ton (Range: 12 - 18 Ton)</option>
-                                                    <option value="20" style={{ color: '#000', background: '#fff' }}>20 Ton (Range: 18 - 25 Ton)</option>
-                                                    <option value="25" style={{ color: '#000', background: '#fff' }}>25 Ton (Range: 22 - 30 Ton)</option>
-                                                    <option value="30" style={{ color: '#000', background: '#fff' }}>30+ Ton (Range: 28 - 45 Ton)</option>
-                                                    <option value="ALL" style={{ color: '#000', background: '#fff' }}>All Capacities</option>
-                                                </select>
-                                            </div>
+                                            <span style={{ fontSize: '0.72rem', color: 'var(--accent-gold)', fontWeight: 600 }}>
+                                                Crop Load: {quantityTons} Tons
+                                            </span>
                                         </div>
 
-                                        <div>
-                                            <label style={{ display: 'block', marginBottom: '0.35rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>
-                                                Vehicle Type
-                                            </label>
-                                            <div className="input-group">
-                                                <i className="fa-solid fa-truck"></i>
-                                                <select
-                                                    value={vehicleType}
-                                                    onChange={(e) => setVehicleType(e.target.value)}
-                                                    style={{ width: '100%', background: 'transparent', border: 'none', color: 'inherit', outline: 'none', cursor: 'pointer' }}
+                                        <div className="input-group" style={{ marginBottom: '0.5rem' }}>
+                                            <i className="fa-solid fa-truck-moving"></i>
+                                            <select
+                                                value={vehicleCapacity}
+                                                onChange={(e) => setVehicleCapacity(e.target.value)}
+                                                style={{ width: '100%', background: 'transparent', border: 'none', color: 'inherit', outline: 'none', cursor: 'pointer', fontWeight: 600 }}
+                                            >
+                                                <option value="5" style={{ color: '#000', background: '#fff' }}>5 Ton Load (Range: 4 - 8 Tons) • Mini / Pickup Trucks</option>
+                                                <option value="10" style={{ color: '#000', background: '#fff' }}>10 Ton Load (Range: 8 - 14 Tons) • Medium Duty Cargo Trucks</option>
+                                                <option value="15" style={{ color: '#000', background: '#fff' }}>15 Ton Load (Range: 12 - 18 Tons) • Heavy Standard Trucks</option>
+                                                <option value="20" style={{ color: '#000', background: '#fff' }}>20 Ton Load (Range: 18 - 25 Tons) • 10-Wheeler Multi-Axle Trucks</option>
+                                                <option value="25" style={{ color: '#000', background: '#fff' }}>25 Ton Load (Range: 22 - 30 Tons) • Heavy Tipper & Lorries</option>
+                                                <option value="30" style={{ color: '#000', background: '#fff' }}>30+ Ton Load (Range: 28 - 45 Tons) • Heavy Multi-Axle Trailers</option>
+                                                <option value="ALL" style={{ color: '#000', background: '#fff' }}>All Capacities • Show Full Fleet</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Quick Load Capacity Buttons */}
+                                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                            {[
+                                                { id: '5', label: '5T' },
+                                                { id: '10', label: '10T' },
+                                                { id: '15', label: '15T' },
+                                                { id: '20', label: '20T' },
+                                                { id: '25', label: '25T' },
+                                                { id: '30', label: '30T+' },
+                                                { id: 'ALL', label: 'All' }
+                                            ].map(btn => (
+                                                <button
+                                                    key={btn.id}
+                                                    type="button"
+                                                    onClick={() => setVehicleCapacity(btn.id)}
+                                                    style={{
+                                                        padding: '0.25rem 0.6rem',
+                                                        fontSize: '0.72rem',
+                                                        fontWeight: 700,
+                                                        borderRadius: '0.35rem',
+                                                        border: vehicleCapacity === btn.id ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.1)',
+                                                        background: vehicleCapacity === btn.id ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.03)',
+                                                        color: vehicleCapacity === btn.id ? 'var(--primary)' : 'var(--text-muted)',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s ease'
+                                                    }}
                                                 >
-                                                    <option value="ALL" style={{ color: '#000', background: '#fff' }}>All Vehicle Types</option>
-                                                    <option value="Standard Truck" style={{ color: '#000', background: '#fff' }}>Standard Truck</option>
-                                                    <option value="Heavy Lorry" style={{ color: '#000', background: '#fff' }}>Heavy Lorry</option>
-                                                    <option value="Mini Truck" style={{ color: '#000', background: '#fff' }}>Mini Truck / Canter</option>
-                                                    <option value="Multi-Axle Trailer" style={{ color: '#000', background: '#fff' }}>Multi-Axle Trailer</option>
-                                                </select>
-                                            </div>
+                                                    {btn.label}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
 
@@ -637,11 +690,11 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                                         </div>
                                     </div>
 
-                                    {/* Drivers & Trucks Matching Section */}
+                                    {/* Drivers & Trucks Matching Section with Vehicle Images and Names */}
                                     <div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>
-                                                <i className="fa-solid fa-truck-fast"></i> Available Drivers & Trucks
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                <i className="fa-solid fa-truck-fast"></i> Available Trucks for Selected Load
                                             </span>
                                             <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                                                 {activeRange ? (
@@ -654,18 +707,30 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
 
                                         {loadingTransporters ? (
                                             <div style={{ textAlign: 'center', padding: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                                <i className="fa-solid fa-spinner fa-spin"></i> Finding matching drivers & trucks...
+                                                <i className="fa-solid fa-spinner fa-spin"></i> Finding matching trucks for load {vehicleCapacity === 'ALL' ? 'fleet' : `${vehicleCapacity} Tons`}...
                                             </div>
                                         ) : availableTransporters.length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                                No transport providers found for this capacity filter. Try selecting "All Capacities".
+                                            <div style={{ textAlign: 'center', padding: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.25)', borderRadius: '0.5rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                                <p style={{ margin: '0 0 0.6rem 0' }}>No transport vehicles found matching this filter.</p>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setVehicleCapacity('ALL')}
+                                                    style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem', background: 'var(--primary)', color: '#000', fontWeight: 700, borderRadius: '0.35rem', border: 'none', cursor: 'pointer' }}
+                                                >
+                                                    <i className="fa-solid fa-truck" style={{ marginRight: '0.35rem' }}></i> Show All Fleet Trucks
+                                                </button>
                                             </div>
                                         ) : (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '240px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '0.25rem' }}>
                                                 {availableTransporters.map((transporter) => {
                                                     const isSelected = selectedTransporter?.phone === transporter.phone;
                                                     const isSufficient = transporter.is_capacity_sufficient;
                                                     const inRange = transporter.is_within_range;
+                                                    const validImgs = transporter.vehicle_images && Array.isArray(transporter.vehicle_images)
+                                                        ? transporter.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0)
+                                                        : [];
+                                                    const hasPhoto = validImgs.length > 0;
+                                                    const mainImage = hasPhoto ? validImgs[0] : null;
 
                                                     return (
                                                         <div
@@ -673,7 +738,7 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                                                             onClick={() => handleSelectTransporter(transporter)}
                                                             style={{
                                                                 background: isSelected 
-                                                                    ? 'rgba(16, 185, 129, 0.15)' 
+                                                                    ? 'rgba(16, 185, 129, 0.16)' 
                                                                     : !inRange 
                                                                     ? 'rgba(255, 255, 255, 0.02)' 
                                                                     : 'rgba(255, 255, 255, 0.04)',
@@ -683,91 +748,153 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                                                                     ? '1px solid rgba(16, 185, 129, 0.3)' 
                                                                     : '1px solid rgba(255, 255, 255, 0.06)',
                                                                 borderRadius: '0.75rem',
-                                                                padding: '0.85rem 1rem',
+                                                                padding: '0.75rem 0.85rem',
                                                                 cursor: 'pointer',
                                                                 transition: 'all 0.2s ease',
                                                                 position: 'relative'
                                                             }}
                                                         >
-                                                            {/* Driver Header */}
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
-                                                                <div>
-                                                                    <strong style={{ fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-main)' }}>
-                                                                        <span>🚛 {transporter.driver_name || transporter.name}</span>
+                                                            {/* Main Truck Row: Image + Details */}
+                                                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                                                                
+                                                                {/* Truck Photo Thumbnail (if uploaded by driver) or Clean Vehicle Icon */}
+                                                                {hasPhoto ? (
+                                                                    <div 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setVehicleLightboxImage({
+                                                                                url: mainImage,
+                                                                                title: `${transporter.vehicle_name || 'Truck'} (${transporter.vehicle_number})`
+                                                                            });
+                                                                        }}
+                                                                        style={{ 
+                                                                            width: '78px', 
+                                                                            height: '64px', 
+                                                                            borderRadius: '0.45rem', 
+                                                                            overflow: 'hidden', 
+                                                                            flexShrink: 0, 
+                                                                            position: 'relative',
+                                                                            border: '1px solid rgba(255,255,255,0.15)',
+                                                                            background: '#000',
+                                                                            cursor: 'pointer'
+                                                                        }}
+                                                                        title="Click to zoom truck photo"
+                                                                    >
+                                                                        <img 
+                                                                            src={mainImage} 
+                                                                            alt={transporter.vehicle_name || 'Truck'} 
+                                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                                        />
+                                                                        <span style={{ 
+                                                                            position: 'absolute', 
+                                                                            bottom: '1px', 
+                                                                            right: '1px', 
+                                                                            background: 'rgba(0,0,0,0.75)', 
+                                                                            color: '#fff', 
+                                                                            fontSize: '0.58rem', 
+                                                                            padding: '0.05rem 0.25rem', 
+                                                                            borderRadius: '0.2rem' 
+                                                                        }}>
+                                                                            🔍
+                                                                        </span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div 
+                                                                        style={{ 
+                                                                            width: '78px', 
+                                                                            height: '64px', 
+                                                                            borderRadius: '0.45rem', 
+                                                                            background: 'rgba(255, 255, 255, 0.03)',
+                                                                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                                                                            display: 'flex',
+                                                                            flexDirection: 'column',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            flexShrink: 0
+                                                                        }}
+                                                                    >
+                                                                        <i className="fa-solid fa-truck" style={{ color: 'var(--primary)', fontSize: '1.25rem', opacity: 0.8, marginBottom: '0.2rem' }}></i>
+                                                                        <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>No Photo</span>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Truck Info */}
+                                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                                                                        <div style={{ minWidth: 0 }}>
+                                                                            <strong style={{ fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                                                <i className="fa-solid fa-truck" style={{ color: 'var(--primary)', fontSize: '0.85rem' }}></i>
+                                                                                <span>{transporter.vehicle_name || 'Standard Cargo Truck'}</span>
+                                                                            </strong>
+                                                                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                                                                <span>Driver: <strong style={{ color: 'var(--text-main)' }}>{transporter.driver_name || transporter.name}</strong></span>
+                                                                                <span>•</span>
+                                                                                <span style={{ fontFamily: 'monospace', color: '#fff' }}>{transporter.vehicle_number}</span>
+                                                                                <span>•</span>
+                                                                                <span style={{ color: 'var(--accent-gold)' }}>⭐ {transporter.rating || 4.8}</span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Capacity Badge */}
+                                                                        <span style={{
+                                                                            fontSize: '0.72rem',
+                                                                            padding: '0.2rem 0.5rem',
+                                                                            borderRadius: '0.35rem',
+                                                                            fontWeight: 700,
+                                                                            background: inRange ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.15)',
+                                                                            color: inRange ? 'var(--primary)' : '#fbbf24',
+                                                                            border: inRange ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(245, 158, 11, 0.3)',
+                                                                            flexShrink: 0
+                                                                        }}>
+                                                                            {transporter.capacity} Ton Load {isSufficient ? '✅' : '⚠️'}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    {/* Rate & Cost Row */}
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '0.35rem', paddingTop: '0.35rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                                                        <div>Rate: <strong style={{ color: '#fff' }}>₹{transporter.price_per_km}/KM</strong></div>
+                                                                        <div>Dist: <strong style={{ color: '#fff' }}>~{transporter.distance} KM</strong></div>
+                                                                        <div>Est: <strong style={{ color: 'var(--accent-gold)', fontSize: '0.85rem' }}>₹{transporter.estimated_cost?.toLocaleString()}</strong></div>
                                                                         {isSelected && (
-                                                                            <span style={{ fontSize: '0.68rem', background: 'var(--primary)', color: '#000', padding: '0.1rem 0.4rem', borderRadius: '1rem', fontWeight: 800 }}>
-                                                                                SELECTED
+                                                                            <span style={{ fontSize: '0.65rem', background: 'var(--primary)', color: '#000', padding: '0.1rem 0.45rem', borderRadius: '1rem', fontWeight: 800 }}>
+                                                                                ✓ SELECTED
                                                                             </span>
                                                                         )}
-                                                                    </strong>
-                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                                                                        <span style={{ fontFamily: 'monospace', color: '#fff' }}>{transporter.vehicle_number}</span> • {transporter.vehicle_type} • <span style={{ color: 'var(--accent-gold)' }}>⭐ {transporter.rating || 4.8}</span>
                                                                     </div>
                                                                 </div>
-
-                                                                {/* Load Capacity Badge */}
-                                                                <span style={{
-                                                                    fontSize: '0.74rem',
-                                                                    padding: '0.25rem 0.55rem',
-                                                                    borderRadius: '0.4rem',
-                                                                    fontWeight: 700,
-                                                                    background: inRange ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.15)',
-                                                                    color: inRange ? 'var(--primary)' : '#fbbf24',
-                                                                    border: inRange ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(245, 158, 11, 0.3)'
-                                                                }}>
-                                                                    {transporter.capacity} Ton Load {isSufficient ? '✅' : '⚠️'}
-                                                                </span>
                                                             </div>
 
-                                                            {/* Pricing & Route Info */}
-                                                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                                                                <div>Rate: <strong style={{ color: '#fff' }}>₹{transporter.price_per_km} / KM</strong></div>
-                                                                <div>Distance: <strong style={{ color: '#fff' }}>~{transporter.distance} KM</strong></div>
-                                                                <div>Est. Total: <strong style={{ color: 'var(--accent-gold)' }}>₹{transporter.estimated_cost?.toLocaleString()}</strong></div>
-                                                            </div>
-
-                                                            {/* 2 Vehicle Images Preview Strip */}
-                                                            {transporter.vehicle_images && transporter.vehicle_images.length > 0 && (
-                                                                <div style={{ marginTop: '0.6rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                                                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                                                            <i className="fa-solid fa-camera" style={{ color: 'var(--primary)' }}></i>
-                                                                            Vehicle Photos (2 Angles):
-                                                                        </span>
-                                                                        <span style={{ fontSize: '0.65rem', color: 'var(--accent-gold)' }}>
-                                                                            🔍 Tap to enlarge
-                                                                        </span>
-                                                                    </div>
-                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+                                                            {/* Additional Angle Photos Preview Strip (if available) */}
+                                                            {transporter.vehicle_images && transporter.vehicle_images.length > 1 && (
+                                                                <div style={{ marginTop: '0.45rem', paddingTop: '0.4rem', borderTop: '1px dashed rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                    <span style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+                                                                        <i className="fa-solid fa-camera" style={{ color: 'var(--primary)', marginRight: '0.25rem' }}></i>
+                                                                        View Angles:
+                                                                    </span>
+                                                                    <div style={{ display: 'flex', gap: '0.35rem' }}>
                                                                         {transporter.vehicle_images.slice(0, 2).map((imgUrl, idx) => (
-                                                                            <div
+                                                                            <button
                                                                                 key={idx}
+                                                                                type="button"
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
                                                                                     setVehicleLightboxImage({
                                                                                         url: imgUrl,
-                                                                                        title: `${transporter.vehicle_number} (${transporter.driver_name || transporter.name}) - ${idx === 0 ? 'Front & Plate' : 'Cargo Bed'}`
+                                                                                        title: `${transporter.vehicle_name || 'Truck'} (${transporter.vehicle_number}) - ${idx === 0 ? 'Front & Plate' : 'Cargo Bed'}`
                                                                                     });
                                                                                 }}
                                                                                 style={{
-                                                                                    height: '56px',
-                                                                                    borderRadius: '0.35rem',
-                                                                                    overflow: 'hidden',
-                                                                                    position: 'relative',
-                                                                                    background: '#111',
-                                                                                    border: '1px solid rgba(255,255,255,0.1)'
+                                                                                    background: 'rgba(255,255,255,0.06)',
+                                                                                    border: '1px solid rgba(255,255,255,0.12)',
+                                                                                    color: '#fff',
+                                                                                    fontSize: '0.65rem',
+                                                                                    padding: '0.15rem 0.4rem',
+                                                                                    borderRadius: '0.25rem',
+                                                                                    cursor: 'pointer'
                                                                                 }}
-                                                                                title="Click to view full photo"
                                                                             >
-                                                                                <img 
-                                                                                    src={imgUrl} 
-                                                                                    alt={`Vehicle Angle ${idx + 1}`} 
-                                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                                                                />
-                                                                                <span style={{ position: 'absolute', bottom: '2px', left: '3px', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: '0.62rem', padding: '0.05rem 0.3rem', borderRadius: '0.2rem', fontWeight: 600 }}>
-                                                                                    {idx === 0 ? 'Front' : 'Cargo Bed'}
-                                                                                </span>
-                                                                            </div>
+                                                                                {idx === 0 ? 'Front View 🔍' : 'Cargo Bed 🔍'}
+                                                                            </button>
                                                                         ))}
                                                                     </div>
                                                                 </div>

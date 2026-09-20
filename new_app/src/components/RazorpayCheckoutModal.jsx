@@ -32,26 +32,47 @@ export default function RazorpayCheckoutModal({
 
         setIsProcessing(true);
         setPaymentStatus('CREATING_ORDER');
-        setStatusMessage('Creating secure Razorpay order on backend...');
+        setStatusMessage('Opening Razorpay Checkout Modal...');
 
         try {
-            const res = await executeAutoSuccessPayment({
+            await openRazorpayCheckout({
                 amountInRupees: numAmount,
+                description,
                 receipt: `rcpt_${Date.now()}`,
+                prefill: {
+                    name: recipientName || '',
+                    contact: recipientPhone || ''
+                },
                 notes: {
                     recipient: recipientName || 'Farmer',
                     contact: recipientPhone || '',
                     ...metadata
+                },
+                onSuccess: (res) => {
+                    const verifiedData = res.verification || res;
+                    setPaymentStatus('SUCCESS');
+                    setStatusMessage('Payment verified successfully via HMAC-SHA256!');
+                    setIsProcessing(false);
+                    setCompletedPayment({
+                        razorpay_payment_id: res.razorpay_payment_id || verifiedData.payment_id,
+                        razorpay_order_id: res.razorpay_order_id || verifiedData.order_id,
+                        ...res
+                    });
+                    if (onPaymentSuccess) {
+                        onPaymentSuccess(res);
+                    }
+                },
+                onFailure: (err) => {
+                    setPaymentStatus('ERROR');
+                    setStatusMessage(err.message || 'Payment failed or was declined.');
+                    setIsProcessing(false);
+                },
+                onDismiss: () => {
+                    setPaymentStatus('IDLE');
+                    setStatusMessage('');
+                    setIsProcessing(false);
                 }
             });
-
-            setPaymentStatus('SUCCESS');
-            setStatusMessage('Payment verified successfully via HMAC-SHA256!');
-            setIsProcessing(false);
-            setCompletedPayment(res);
-            if (onPaymentSuccess) {
-                onPaymentSuccess(res);
-            }
         } catch (err) {
             setPaymentStatus('ERROR');
             setStatusMessage(err.message || 'Could not initiate checkout.');

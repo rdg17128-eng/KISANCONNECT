@@ -27,10 +27,7 @@ const FLEET_DRIVERS = [
         capacity: 15, 
         price_per_km: 42, 
         location: 'Warangal Agri Hub',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
-        ]
+        vehicle_images: []
     },
     { 
         phone: '9876500002', 
@@ -41,10 +38,7 @@ const FLEET_DRIVERS = [
         capacity: 5, 
         price_per_km: 28, 
         location: 'Karimnagar Bypass',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1559297434-fae8a1916a79?auto=format&fit=crop&w=800&q=80'
-        ]
+        vehicle_images: []
     },
     { 
         phone: '9876500003', 
@@ -55,10 +49,7 @@ const FLEET_DRIVERS = [
         capacity: 25, 
         price_per_km: 65, 
         location: 'Khammam Mandi',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=800&q=80'
-        ]
+        vehicle_images: []
     },
     { 
         phone: '9876500004', 
@@ -69,10 +60,7 @@ const FLEET_DRIVERS = [
         capacity: 10, 
         price_per_km: 35, 
         location: 'Nizamabad Yard',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
-        ]
+        vehicle_images: []
     }
 ];
 
@@ -103,13 +91,12 @@ function TripRouteMap({ pickupLat, pickupLng, deliveryLat, deliveryLng, pickupAd
                 <Marker position={[dLat, dLng]}>
                     <Popup>
                         <div style={{ color: '#000', fontSize: '0.85rem' }}>
-                            <strong>🏭 Mill Destination</strong><br />
-                            {millName}<br />
-                            {deliveryAddress}
+                            <strong>🏭 Target Mill Delivery Gate</strong><br />
+                            {millName || 'Mill Gate'} - {deliveryAddress}
                         </div>
                     </Popup>
                 </Marker>
-                <Polyline positions={polyline} color="#10b981" weight={6} opacity={0.85} dashArray="8, 8" />
+                <Polyline positions={polyline} color="#10b981" weight={4} dashArray="6, 8" />
             </MapContainer>
         </div>
     );
@@ -177,6 +164,9 @@ export default function TransportPortal({ user: propUser, onLogout }) {
         const initialPhone = user?.phone || '9876500001';
         const saved = kisanService.getTransportProvider(initialPhone);
         const seed = FLEET_DRIVERS.find(d => d.phone === initialPhone) || FLEET_DRIVERS[0];
+        const validImgs = (saved?.vehicle_images && Array.isArray(saved.vehicle_images)) 
+            ? saved.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0)
+            : [];
         return {
             name: saved?.name || user?.name || seed.name,
             driver_name: saved?.driver_name || user?.name || seed.driver_name || seed.name,
@@ -187,21 +177,19 @@ export default function TransportPortal({ user: propUser, onLogout }) {
             price_per_km: Number(saved?.price_per_km || user?.price_per_km || seed.price_per_km),
             availability: saved?.availability || 'AVAILABLE',
             location: saved?.current_location_name || seed.location,
-            vehicle_images: saved?.vehicle_images && saved.vehicle_images.length > 0 
-                ? saved.vehicle_images 
-                : (seed.vehicle_images || [
-                    'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
-                    'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
-                ])
+            vehicle_images: validImgs
         };
     });
 
     const handleSelectDriver = (driverPhone) => {
         const saved = kisanService.getTransportProvider(driverPhone);
         const seed = FLEET_DRIVERS.find(d => d.phone === driverPhone) || FLEET_DRIVERS[0];
+        const validImgs = (saved?.vehicle_images && Array.isArray(saved.vehicle_images)) 
+            ? saved.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0)
+            : [];
         const updated = {
             name: saved?.name || seed.name,
-            driver_name: saved?.driver_name || seed.driver_name || seed.name,
+            driver_name: saved?.driver_name || user?.name || seed.driver_name || seed.name,
             phone: driverPhone,
             vehicle_number: saved?.vehicle_number || seed.vehicle_number,
             vehicle_type: saved?.vehicle_type || seed.vehicle_type,
@@ -209,12 +197,7 @@ export default function TransportPortal({ user: propUser, onLogout }) {
             price_per_km: Number(saved?.price_per_km || seed.price_per_km),
             availability: saved?.availability || 'AVAILABLE',
             location: saved?.current_location_name || seed.location,
-            vehicle_images: saved?.vehicle_images && saved.vehicle_images.length > 0 
-                ? saved.vehicle_images 
-                : (seed.vehicle_images || [
-                    'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
-                    'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
-                ])
+            vehicle_images: validImgs
         };
         setProviderInfo(updated);
         setSaveSuccessMsg('');
@@ -415,13 +398,18 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                     <a className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}>
                         <i className="fa-solid fa-house"></i>
                         <span>Dashboard</span>
+                        {assignedRequests.length > 0 && (
+                            <span className="nav-badge" style={{ marginLeft: 'auto', background: 'var(--accent-gold)', color: '#000', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 800 }}>
+                                {assignedRequests.length}
+                            </span>
+                        )}
                     </a>
                     <a className={`nav-item ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => { setActiveTab('requests'); setIsSidebarOpen(false); }}>
                         <i className="fa-solid fa-clipboard-list"></i>
                         <span>Available Requests</span>
-                        {suitableRequests.length > 0 && (
+                        {(assignedRequests.length + suitableRequests.length) > 0 && (
                             <span className="nav-badge" style={{ marginLeft: 'auto', background: 'var(--primary)', color: '#000', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 800 }}>
-                                {suitableRequests.length}
+                                {assignedRequests.length + suitableRequests.length}
                             </span>
                         )}
                     </a>
@@ -494,30 +482,55 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                     {/* ======================================================== */}
                     {activeTab === 'dashboard' && (
                         <div>
-                            <div className="bento-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-                                <div className="bento-card">
-                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Available Matches</div>
-                                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--primary)' }}>{suitableRequests.length}</div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Matching your {providerInfo.capacity}T capacity</div>
+                            {/* Alert Banner for Direct Assigned Loads */}
+                            {assignedRequests.length > 0 && (
+                                <div className="bento-card" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%)', border: '2px solid var(--primary)', marginBottom: '1.75rem', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.25)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
+                                            <i className="fa-solid fa-bell fa-shake"></i>
+                                        </div>
+                                        <div>
+                                            <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#fff' }}>
+                                                {assignedRequests.length} New Farmer Harvest Load{assignedRequests.length > 1 ? 's' : ''} Assigned to You!
+                                            </h4>
+                                            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                                Direct load assignments accepted by mill, ready for your acceptance & scheduling.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button className="primary-btn" onClick={() => setActiveTab('requests')} style={{ fontWeight: 800, padding: '0.6rem 1.2rem', fontSize: '0.88rem' }}>
+                                        <i className="fa-solid fa-truck-fast"></i> View All Requests ({assignedRequests.length + suitableRequests.length})
+                                    </button>
                                 </div>
-                                <div className="bento-card">
+                            )}
+
+                            {/* Stat Cards */}
+                            <div className="bento-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+                                <div className="bento-card" style={{ border: (assignedRequests.length + suitableRequests.length) > 0 ? '1px solid rgba(16, 185, 129, 0.4)' : undefined, cursor: 'pointer' }} onClick={() => setActiveTab('requests')}>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Available Matches</div>
+                                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--primary)' }}>{assignedRequests.length + suitableRequests.length}</div>
+                                    <div style={{ fontSize: '0.75rem', color: assignedRequests.length > 0 ? 'var(--accent-gold)' : 'var(--text-muted)', fontWeight: assignedRequests.length > 0 ? 700 : 400 }}>
+                                        {assignedRequests.length > 0 ? `${assignedRequests.length} Direct Assigned • ` : ''}Matching {providerInfo.capacity}T
+                                    </div>
+                                </div>
+                                <div className="bento-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('active')}>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Active Trips</div>
                                     <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--accent-gold)' }}>{activeTrips.length}</div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Currently in transit / scheduled</div>
                                 </div>
-                                <div className="bento-card">
+                                <div className="bento-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('quotes')}>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Quotes Sent</div>
                                     <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#38bdf8' }}>{myQuotes.length}</div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Bids placed on farmer loads</div>
                                 </div>
-                                <div className="bento-card">
+                                <div className="bento-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('completed')}>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Delivered Loads</div>
                                     <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#a855f7' }}>{completedTrips.length}</div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Verified delivered at mills</div>
                                 </div>
                             </div>
 
-                            {/* Active Dispatch Hero Banner (if trip assigned) */}
+                            {/* Active Dispatch Hero Banner (if trip in progress) */}
                             {activeTrips.length > 0 && (
                                 <div className="bento-card" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%)', border: '1px solid var(--primary)', marginBottom: '2rem', padding: '1.5rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
@@ -539,20 +552,147 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                                 </div>
                             )}
 
+                            {/* DIRECT ASSIGNED REQUESTS ON DASHBOARD */}
+                            {assignedRequests.length > 0 && (
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontWeight: 800, fontSize: '1.05rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                            <i className="fa-solid fa-bell"></i> Assigned to You ({assignedRequests.length})
+                                        </div>
+                                        <button className="text-btn" onClick={() => setActiveTab('requests')} style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>
+                                            View in All Requests &rarr;
+                                        </button>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '1.25rem' }}>
+                                        {assignedRequests.map(req => (
+                                            <div key={req.id || req.transport_code} className="bento-card" style={{ border: '2px solid rgba(16, 185, 129, 0.45)', display: 'flex', flexDirection: 'column', background: 'rgba(16, 185, 129, 0.05)', boxShadow: '0 8px 30px rgba(0,0,0,0.4)' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+                                                    <div>
+                                                        <span style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--accent-gold)', fontSize: '1rem' }}>
+                                                            {req.enquiry_code || req.transport_code}
+                                                        </span>
+                                                        <div style={{ fontSize: '0.72rem', color: 'var(--primary)', fontWeight: 700 }}>
+                                                            DIRECT DRIVER ASSIGNMENT
+                                                        </div>
+                                                    </div>
+                                                    <span className="status-badge" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#fbbf24', padding: '0.2rem 0.6rem', fontSize: '0.75rem', fontWeight: 700 }}>
+                                                        AWAITING ACCEPTANCE
+                                                    </span>
+                                                </div>
+
+                                                <div style={{ marginBottom: '1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.85rem' }}>
+                                                    <h3 style={{ margin: '0 0 0.2rem 0', fontSize: '1.2rem', color: 'var(--text-main)' }}>
+                                                        {req.crop_name} • <span style={{ color: 'var(--primary)' }}>{req.quantity} Tons</span>
+                                                    </h3>
+
+                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: 'var(--primary)', padding: '0.2rem 0.55rem', borderRadius: '0.35rem', fontSize: '0.72rem', fontWeight: 700, width: 'fit-content', marginBottom: '0.25rem' }}>
+                                                        <i className="fa-solid fa-circle-check"></i>
+                                                        <span>Mill Accepted: {req.mill_name || 'Buyer Confirmed'}</span>
+                                                    </div>
+
+                                                    <div><span style={{ color: 'var(--text-muted)' }}>👨‍🌾 Farmer:</span> <strong>{req.farmer_name} ({req.farmer_phone})</strong></div>
+                                                    <div><span style={{ color: 'var(--text-muted)' }}>📍 Pickup:</span> <strong>{req.pickup_address}</strong></div>
+                                                    <div><span style={{ color: 'var(--text-muted)' }}>🏭 Destination:</span> <strong>{req.delivery_address} ({req.mill_name})</strong></div>
+                                                    <div><span style={{ color: 'var(--text-muted)' }}>🗓️ Transport Date:</span> <strong style={{ color: 'var(--primary)' }}>{req.pickup_date || 'Prompt'}</strong></div>
+                                                    <div><span style={{ color: 'var(--text-muted)' }}>🚛 Truck:</span> <strong style={{ fontFamily: 'monospace' }}>{providerInfo.vehicle_number}</strong> ({providerInfo.capacity}T {providerInfo.vehicle_type})</div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', marginTop: '0.35rem' }}>
+                                                        <span>Distance: <strong>~{req.distance || 35} KM</strong></span>
+                                                        <span>Agreed Rate: <strong>₹{providerInfo.price_per_km || 35}/KM</strong></span>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total Estimated Earnings:</span>
+                                                        <strong style={{ fontSize: '1.25rem', color: 'var(--accent-gold)' }}>₹{Number(req.final_price || Math.round((req.distance || 35) * (providerInfo.price_per_km || 35))).toLocaleString()}</strong>
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                                        <button 
+                                                            className="text-btn" 
+                                                            onClick={() => handleRejectDirectLoad(req)}
+                                                            style={{ flex: 1, justifyContent: 'center', padding: '0.65rem', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.5rem' }}
+                                                        >
+                                                            <i className="fa-solid fa-xmark" style={{ marginRight: '0.3rem' }}></i> Reject
+                                                        </button>
+                                                        <button 
+                                                            className="primary-btn" 
+                                                            onClick={() => handleAcceptDirectLoad(req)}
+                                                            style={{ flex: 1.5, justifyContent: 'center', padding: '0.65rem', fontWeight: 800 }}
+                                                        >
+                                                            <i className="fa-solid fa-truck-fast"></i> Accept Load
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* OPEN FLEET REQUESTS PREVIEW ON DASHBOARD */}
+                            {suitableRequests.length > 0 && (
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                                            Open Haulage Opportunities ({suitableRequests.length})
+                                        </div>
+                                        <button className="text-btn" onClick={() => setActiveTab('requests')} style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>
+                                            View All Bids &rarr;
+                                        </button>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '1.25rem' }}>
+                                        {suitableRequests.slice(0, 3).map(req => {
+                                            const alreadyQuoted = myQuotes.some(q => q.transport_code === req.transport_code);
+                                            const estPrice = Math.round((req.distance || 40) * providerInfo.price_per_km);
+                                            return (
+                                                <div key={req.id || req.transport_code} className="bento-card" style={{ border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                                                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent-gold)', fontSize: '0.92rem' }}>
+                                                            {req.transport_code}
+                                                        </span>
+                                                        <span className="status-badge" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '0.15rem 0.5rem', fontSize: '0.72rem' }}>
+                                                            {req.status}
+                                                        </span>
+                                                    </div>
+                                                    <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '1.05rem' }}>
+                                                        {req.crop_name} • <span style={{ color: 'var(--primary)' }}>{req.quantity} Tons</span>
+                                                    </h4>
+                                                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.75rem', flex: 1 }}>
+                                                        <div>📍 {req.pickup_address}</div>
+                                                        <div>🏭 {req.delivery_address} ({req.mill_name})</div>
+                                                        <div>Distance: <strong>~{req.distance || 40} KM</strong></div>
+                                                    </div>
+                                                    <button 
+                                                        className="primary-btn" 
+                                                        onClick={() => { setSelectedRequest(req); setQuotePrice(String(estPrice)); setActiveTab('requests'); }}
+                                                        style={{ width: '100%', justifyContent: 'center', padding: '0.55rem', fontSize: '0.82rem' }}
+                                                    >
+                                                        {alreadyQuoted ? 'Update Bid' : `Quote Bid (~₹${estPrice.toLocaleString()})`}
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Smart Matching Banner */}
-                            <div className="bento-card" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)', border: '1px solid rgba(16, 185, 129, 0.3)', marginBottom: '2rem', padding: '1.5rem' }}>
+                            <div className="bento-card" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '1.25rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                                     <div>
-                                        <h3 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                        <h4 style={{ margin: '0 0 0.35rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <i className="fa-solid fa-network-wired" style={{ color: 'var(--primary)' }}></i>
                                             KisanConnect Smart Truck Matching Active
-                                        </h3>
-                                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                        </h4>
+                                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                                             Your vehicle ({providerInfo.vehicle_number}, {providerInfo.capacity} Ton capacity) is automatically filtered for loads requiring ≤ {providerInfo.capacity} Tons.
                                         </p>
                                     </div>
-                                    <button className="primary-btn" onClick={() => setActiveTab('requests')}>
-                                        Browse Available Requests ({suitableRequests.length})
+                                    <button className="primary-btn" onClick={() => setActiveTab('requests')} style={{ padding: '0.6rem 1.1rem', fontSize: '0.85rem' }}>
+                                        Browse Available Requests ({assignedRequests.length + suitableRequests.length})
                                     </button>
                                 </div>
                             </div>
@@ -1271,7 +1411,12 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                                             <input 
                                                 type="text" 
                                                 value={providerInfo.vehicle_number} 
-                                                onChange={(e) => setProviderInfo({ ...providerInfo, vehicle_number: e.target.value.toUpperCase() })}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.toUpperCase();
+                                                    const updated = { ...providerInfo, vehicle_number: val };
+                                                    setProviderInfo(updated);
+                                                    kisanService.updateTransportProvider(providerInfo.phone, updated);
+                                                }}
                                                 placeholder="e.g. TS 09 EA 4421"
                                                 style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.5px' }}
                                             />
@@ -1284,7 +1429,12 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                                             <i className="fa-solid fa-truck-moving"></i>
                                             <select
                                                 value={providerInfo.vehicle_type}
-                                                onChange={(e) => setProviderInfo({ ...providerInfo, vehicle_type: e.target.value })}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    const updated = { ...providerInfo, vehicle_type: val };
+                                                    setProviderInfo(updated);
+                                                    kisanService.updateTransportProvider(providerInfo.phone, updated);
+                                                }}
                                                 style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', outline: 'none', cursor: 'pointer' }}
                                             >
                                                 <option value="Standard Truck" style={{ background: '#111', color: '#fff' }}>Standard Truck (10 - 20 Tons)</option>
@@ -1303,7 +1453,12 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                                             <input 
                                                 type="number" 
                                                 value={providerInfo.capacity} 
-                                                onChange={(e) => setProviderInfo({ ...providerInfo, capacity: Number(e.target.value) })}
+                                                onChange={(e) => {
+                                                    const val = Number(e.target.value);
+                                                    const updated = { ...providerInfo, capacity: val };
+                                                    setProviderInfo(updated);
+                                                    kisanService.updateTransportProvider(providerInfo.phone, updated);
+                                                }}
                                                 min="1"
                                                 max="60"
                                             />
@@ -1317,7 +1472,12 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                                             <input 
                                                 type="number" 
                                                 value={providerInfo.price_per_km} 
-                                                onChange={(e) => setProviderInfo({ ...providerInfo, price_per_km: Number(e.target.value) })}
+                                                onChange={(e) => {
+                                                    const val = Number(e.target.value);
+                                                    const updated = { ...providerInfo, price_per_km: val };
+                                                    setProviderInfo(updated);
+                                                    kisanService.updateTransportProvider(providerInfo.phone, updated);
+                                                }}
                                                 min="5"
                                                 max="200"
                                             />

@@ -163,7 +163,7 @@ export async function openRazorpayCheckout({
     }
 
     // 4. Configure Razorpay Standard Checkout options
-    const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || '';
+    const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TcYxRMRDrtCeaE';
 
     const rzpOptions = {
         key: keyId,

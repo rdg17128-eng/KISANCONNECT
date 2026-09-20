@@ -1,4 +1,5 @@
 import { supabase } from '../utils/supabase';
+import { calculateDistance, calculateHaversineDistance, getRoadRouteDistance, formatDistance } from './locationService';
 
 // Local storage backup keys
 const STORAGE_KEYS = {
@@ -11,178 +12,255 @@ const STORAGE_KEYS = {
 };
 
 // Seed initial default transport providers if none exist with rich testing data
-const DEFAULT_PROVIDERS = [
-    {
-        phone: '9876500001',
-        pin: '1234',
-        name: 'Ramesh Yadav (Kisan Gati Logistics)',
-        driver_name: 'Ramesh Yadav',
-        vehicle_number: 'TS 09 EA 4421',
-        vehicle_type: 'Standard Truck',
-        capacity: 15,
-        price_per_km: 42,
-        rating: 4.9,
-        availability: 'AVAILABLE',
-        current_location_name: 'Warangal Agri Hub',
-        service_area: 'Telangana & AP',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
-        ]
-    },
+export const DEFAULT_PROVIDERS = [
+    // 5 - 8 Ton Tier (Mini / Light Commercial Trucks)
     {
         phone: '9876500002',
         pin: '1234',
         name: 'Venkatesh Rao (Balaji Agro Freight)',
         driver_name: 'Venkatesh Rao',
+        vehicle_name: 'Tata 407 Gold SFC',
         vehicle_number: 'TS 08 UB 7712',
-        vehicle_type: 'Mini Truck',
+        vehicle_type: 'Mini Commercial Truck',
         capacity: 5,
         price_per_km: 28,
         rating: 4.8,
         availability: 'AVAILABLE',
         current_location_name: 'Karimnagar Bypass',
         service_area: 'North Telangana',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1559297434-fae8a1916a79?auto=format&fit=crop&w=800&q=80'
-        ]
-    },
-    {
-        phone: '9876500003',
-        pin: '1234',
-        name: 'Suresh Goud (Annapurna Heavy Haulers)',
-        driver_name: 'Suresh Goud',
-        vehicle_number: 'AP 16 TZ 9980',
-        vehicle_type: 'Heavy Lorry',
-        capacity: 25,
-        price_per_km: 65,
-        rating: 5.0,
-        availability: 'AVAILABLE',
-        current_location_name: 'Khammam Mandi',
-        service_area: 'South India Express',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=800&q=80'
-        ]
-    },
-    {
-        phone: '9876500004',
-        pin: '1234',
-        name: 'Mahesh Reddy (Gramin Kisan Express)',
-        driver_name: 'Mahesh Reddy',
-        vehicle_number: 'TS 07 TC 1109',
-        vehicle_type: 'Standard Truck',
-        capacity: 10,
-        price_per_km: 35,
-        rating: 4.7,
-        availability: 'AVAILABLE',
-        current_location_name: 'Nizamabad Yard',
-        service_area: 'Telangana State',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
-        ]
-    },
-    {
-        phone: '9876500005',
-        pin: '1234',
-        name: 'Chandra Shekar (Sri Lakshmi Transport)',
-        driver_name: 'Chandra Shekar',
-        vehicle_number: 'TS 12 AB 5566',
-        vehicle_type: 'Standard Truck',
-        capacity: 20,
-        price_per_km: 52,
-        rating: 4.9,
-        availability: 'AVAILABLE',
-        current_location_name: 'Nalgonda Agri Zone',
-        service_area: 'Telangana & Coastal AP',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
-        ]
-    },
-    {
-        phone: '9876500006',
-        pin: '1234',
-        name: 'Anji Babu (Deccan Agro Haulers)',
-        driver_name: 'Anji Babu',
-        vehicle_number: 'TS 04 XY 7890',
-        vehicle_type: 'Standard Truck',
-        capacity: 18,
-        price_per_km: 48,
-        rating: 4.8,
-        availability: 'AVAILABLE',
-        current_location_name: 'Khammam Rural',
-        service_area: 'Central Telangana',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
-        ]
-    },
-    {
-        phone: '9876500007',
-        pin: '1234',
-        name: 'Prasad Naidu (Khammam Express Logistics)',
-        driver_name: 'Prasad Naidu',
-        vehicle_number: 'AP 20 QR 3344',
-        vehicle_type: 'Multi-Axle Trailer',
-        capacity: 22,
-        price_per_km: 58,
-        rating: 4.95,
-        availability: 'AVAILABLE',
-        current_location_name: 'Bodulabanda Cross',
-        service_area: 'Telangana & Andhra Pradesh',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=800&q=80'
-        ]
-    },
-    {
-        phone: '9876500008',
-        pin: '1234',
-        name: 'Naveen Kumar (Godavari Heavy Freight)',
-        driver_name: 'Naveen Kumar',
-        vehicle_number: 'AP 31 KL 9012',
-        vehicle_type: 'Heavy Lorry',
-        capacity: 24,
-        price_per_km: 60,
-        rating: 4.85,
-        availability: 'AVAILABLE',
-        current_location_name: 'Kothagudem Hub',
-        service_area: 'Godavari Basin & Telangana',
-        vehicle_images: [
-            'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=800&q=80'
-        ]
+        vehicle_images: []
     },
     {
         phone: '9876500009',
         pin: '1234',
         name: 'Raju Shinde (Kisan Bandhu Mini Express)',
         driver_name: 'Raju Shinde',
+        vehicle_name: 'Mahindra Bolero Maxi Truck',
         vehicle_number: 'TS 15 EF 1234',
-        vehicle_type: 'Mini Truck',
+        vehicle_type: 'Agri Pickup Truck',
         capacity: 7,
         price_per_km: 30,
         rating: 4.7,
         availability: 'AVAILABLE',
         current_location_name: 'Warangal Subedari',
-        service_area: 'Warangal & Surrounding Villages'
+        service_area: 'Warangal & Surrounding Villages',
+        vehicle_images: []
+    },
+    {
+        phone: '9876500011',
+        pin: '1234',
+        name: 'Mallesh Goud (Rythu Mitra Express)',
+        driver_name: 'Mallesh Goud',
+        vehicle_name: 'Eicher Pro 2049 Light Truck',
+        vehicle_number: 'TS 09 BC 3412',
+        vehicle_type: 'Light Commercial Truck',
+        capacity: 6,
+        price_per_km: 29,
+        rating: 4.85,
+        availability: 'AVAILABLE',
+        current_location_name: 'Jangaon Market Yard',
+        service_area: 'Central Telangana',
+        vehicle_images: []
+    },
+
+    // 8 - 14 Ton Tier (Medium Haulage / Intermediate Trucks)
+    {
+        phone: '9876500004',
+        pin: '1234',
+        name: 'Mahesh Reddy (Gramin Kisan Express)',
+        driver_name: 'Mahesh Reddy',
+        vehicle_name: 'Tata 1109 G LPT',
+        vehicle_number: 'TS 07 TC 1109',
+        vehicle_type: 'Intermediate Cargo Truck',
+        capacity: 10,
+        price_per_km: 35,
+        rating: 4.75,
+        availability: 'AVAILABLE',
+        current_location_name: 'Nizamabad Yard',
+        service_area: 'Telangana State',
+        vehicle_images: []
     },
     {
         phone: '9876500010',
         pin: '1234',
         name: 'Vamshi Krishna (Telangana Grain Movers)',
         driver_name: 'Vamshi Krishna',
+        vehicle_name: 'Ashok Leyland Ecomet 1215',
         vehicle_number: 'TS 03 GH 8899',
-        vehicle_type: 'Standard Truck',
+        vehicle_type: 'Medium Duty Truck',
         capacity: 12,
         price_per_km: 38,
         rating: 4.8,
         availability: 'AVAILABLE',
         current_location_name: 'Suryapet Mandi',
-        service_area: 'Southern Telangana'
+        service_area: 'Southern Telangana',
+        vehicle_images: []
+    },
+    {
+        phone: '9876500012',
+        pin: '1234',
+        name: 'Shankar Nayak (Kakatiya Agro Haulage)',
+        driver_name: 'Shankar Nayak',
+        vehicle_name: 'BharatBenz 1217C Lorry',
+        vehicle_number: 'TS 05 KL 5678',
+        vehicle_type: 'Intermediate Heavy Truck',
+        capacity: 11,
+        price_per_km: 37,
+        rating: 4.9,
+        availability: 'AVAILABLE',
+        current_location_name: 'Warangal Grain Market',
+        service_area: 'Warangal & Khammam',
+        vehicle_images: []
+    },
+
+    // 12 - 18 Ton Tier (Standard / Heavy 6-Wheel Trucks)
+    {
+        phone: '9876500001',
+        pin: '1234',
+        name: 'Ramesh Yadav (Kisan Gati Logistics)',
+        driver_name: 'Ramesh Yadav',
+        vehicle_name: 'Tata 1512 LPT Cargo',
+        vehicle_number: 'TS 09 EA 4421',
+        vehicle_type: 'Heavy Standard Truck',
+        capacity: 15,
+        price_per_km: 42,
+        rating: 4.9,
+        availability: 'AVAILABLE',
+        current_location_name: 'Warangal Agri Hub',
+        service_area: 'Telangana & AP',
+        vehicle_images: []
+    },
+    {
+        phone: '9876500006',
+        pin: '1234',
+        name: 'Anji Babu (Deccan Agro Haulers)',
+        driver_name: 'Anji Babu',
+        vehicle_name: 'Eicher Pro 3015 Freight',
+        vehicle_number: 'TS 04 XY 7890',
+        vehicle_type: 'Heavy Commercial Truck',
+        capacity: 18,
+        price_per_km: 48,
+        rating: 4.8,
+        availability: 'AVAILABLE',
+        current_location_name: 'Khammam Rural',
+        service_area: 'Central Telangana',
+        vehicle_images: []
+    },
+    {
+        phone: '9876500013',
+        pin: '1234',
+        name: 'Krishna Murthy (Sri Sai Grain Freight)',
+        driver_name: 'Krishna Murthy',
+        vehicle_name: 'Ashok Leyland 1615 HE',
+        vehicle_number: 'AP 24 MN 9812',
+        vehicle_type: 'Standard Heavy Truck',
+        capacity: 16,
+        price_per_km: 44,
+        rating: 4.85,
+        availability: 'AVAILABLE',
+        current_location_name: 'Miryalaguda Mill Area',
+        service_area: 'Nalgonda & Khammam',
+        vehicle_images: []
+    },
+
+    // 18 - 25 Ton Tier (Heavy 10-Wheeler / Multi-Axle Trucks)
+    {
+        phone: '9876500005',
+        pin: '1234',
+        name: 'Chandra Shekar (Sri Lakshmi Transport)',
+        driver_name: 'Chandra Shekar',
+        vehicle_name: 'BharatBenz 1923C Heavy Hauler',
+        vehicle_number: 'TS 12 AB 5566',
+        vehicle_type: 'Multi-Axle Heavy Truck',
+        capacity: 20,
+        price_per_km: 52,
+        rating: 4.9,
+        availability: 'AVAILABLE',
+        current_location_name: 'Nalgonda Agri Zone',
+        service_area: 'Telangana & Coastal AP',
+        vehicle_images: []
+    },
+    {
+        phone: '9876500007',
+        pin: '1234',
+        name: 'Prasad Naidu (Khammam Express Logistics)',
+        driver_name: 'Prasad Naidu',
+        vehicle_name: 'Tata Signa 1918.K Lorry',
+        vehicle_number: 'AP 20 QR 3344',
+        vehicle_type: 'Heavy 10-Wheeler Lorry',
+        capacity: 22,
+        price_per_km: 56,
+        rating: 4.95,
+        availability: 'AVAILABLE',
+        current_location_name: 'Bodulabanda Cross',
+        service_area: 'Telangana & Andhra Pradesh',
+        vehicle_images: []
+    },
+    {
+        phone: '9876500008',
+        pin: '1234',
+        name: 'Naveen Kumar (Godavari Heavy Freight)',
+        driver_name: 'Naveen Kumar',
+        vehicle_name: 'Ashok Leyland 1920 Tipper',
+        vehicle_number: 'AP 31 KL 9012',
+        vehicle_type: 'Heavy Multi-Axle Lorry',
+        capacity: 24,
+        price_per_km: 60,
+        rating: 4.85,
+        availability: 'AVAILABLE',
+        current_location_name: 'Kothagudem Hub',
+        service_area: 'Godavari Basin & Telangana',
+        vehicle_images: []
+    },
+
+    // 22 - 45 Ton Tier (Heavy Multi-Axle Trailers & Mega Haulers)
+    {
+        phone: '9876500003',
+        pin: '1234',
+        name: 'Suresh Goud (Annapurna Heavy Haulers)',
+        driver_name: 'Suresh Goud',
+        vehicle_name: 'Tata Signa 2823.K HD',
+        vehicle_number: 'AP 16 TZ 9980',
+        vehicle_type: '10-Wheeler Heavy Lorry',
+        capacity: 25,
+        price_per_km: 65,
+        rating: 5.0,
+        availability: 'AVAILABLE',
+        current_location_name: 'Khammam Mandi',
+        service_area: 'South India Express',
+        vehicle_images: []
+    },
+    {
+        phone: '9876500014',
+        pin: '1234',
+        name: 'Rajendra Prasad (Deccan Super Multi-Axle)',
+        driver_name: 'Rajendra Prasad',
+        vehicle_name: 'BharatBenz 3528C Heavy Trailer',
+        vehicle_number: 'TS 11 TR 8822',
+        vehicle_type: 'Multi-Axle Heavy Trailer',
+        capacity: 32,
+        price_per_km: 75,
+        rating: 4.95,
+        availability: 'AVAILABLE',
+        current_location_name: 'Hyderabad Outer Ring Road Hub',
+        service_area: 'Telangana, AP & Karnataka',
+        vehicle_images: []
+    },
+    {
+        phone: '9876500015',
+        pin: '1234',
+        name: 'Satyanarayana (Telangana Agro Express Lines)',
+        driver_name: 'Satyanarayana',
+        vehicle_name: 'Ashok Leyland 2820 6x2 Haulage',
+        vehicle_number: 'AP 09 TY 1144',
+        vehicle_type: 'Multi-Axle Heavy Hauler',
+        capacity: 28,
+        price_per_km: 70,
+        rating: 4.9,
+        availability: 'AVAILABLE',
+        current_location_name: 'Vijayawada Highway Hub',
+        service_area: 'Telangana & Andhra Pradesh',
+        vehicle_images: []
     }
 ];
 
@@ -330,23 +408,70 @@ class KisanService {
     async getAvailableTransporters({ farmerLat, farmerLng, requiredCapacityTons = 0, minCapacityTons, maxCapacityTons, vehicleType } = {}) {
         let providers = [];
         try {
-            const { data, error } = await supabase.from('transport_providers').select('*');
-            if (!error && data && data.length > 0) {
-                providers = data;
+            if (supabase && supabase.from) {
+                const fetchPromise = supabase.from('transport_providers').select('*');
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500));
+                const res = await Promise.race([fetchPromise, timeoutPromise]);
+                if (res && !res.error && res.data && res.data.length > 0) {
+                    providers = res.data;
+                }
             }
         } catch (e) {
-            console.warn("Supabase fetch transport providers fallback:", e);
+            // Fail-safe immediate fallback
         }
 
         const localProviders = getLocal(STORAGE_KEYS.TRANSPORT_PROVIDERS, DEFAULT_PROVIDERS);
         const map = new Map();
+        
         // Seed default rich test drivers first
-        DEFAULT_PROVIDERS.forEach(p => map.set(p.phone, p));
-        // Merge stored local providers
-        localProviders.forEach(p => map.set(p.phone, { ...map.get(p.phone), ...p }));
+        DEFAULT_PROVIDERS.forEach(p => map.set(p.phone, { ...p }));
+
+        // Merge stored local providers ensuring custom added vehicles and uploaded images are fully preserved
+        if (Array.isArray(localProviders) && localProviders.length > 0) {
+            localProviders.forEach(p => {
+                if (!p || !p.phone) return;
+                const existing = map.get(p.phone) || {};
+                const validImgs = (p.vehicle_images && Array.isArray(p.vehicle_images)) 
+                    ? p.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0)
+                    : [];
+
+                const assignedImgs = validImgs.length > 0 ? validImgs : (existing.vehicle_images || []);
+
+                map.set(p.phone, {
+                    ...existing,
+                    ...p,
+                    phone: p.phone,
+                    driver_name: p.driver_name || p.name || existing.driver_name || 'Fleet Driver',
+                    name: p.name || p.driver_name || existing.name || 'Fleet Transporter',
+                    vehicle_number: (p.vehicle_number || existing.vehicle_number || 'TS 09 EA 4421').toUpperCase(),
+                    vehicle_name: p.vehicle_name || p.vehicle_type || existing.vehicle_name || (Number(p.capacity || 10) <= 7 ? 'Tata 407 Gold SFC' : Number(p.capacity || 10) <= 14 ? 'Tata 1109 G LPT' : Number(p.capacity || 10) <= 18 ? 'Tata 1512 LPT Cargo' : Number(p.capacity || 10) <= 24 ? 'BharatBenz 1923C Heavy Hauler' : 'Tata Signa 2823.K HD'),
+                    vehicle_type: p.vehicle_type || existing.vehicle_type || 'Standard Truck',
+                    capacity: Number(p.capacity || existing.capacity || 10),
+                    price_per_km: Number(p.price_per_km || existing.price_per_km || 35),
+                    vehicle_images: assignedImgs,
+                    is_custom: true
+                });
+            });
+        }
+
         // Merge Supabase providers
-        providers.forEach(p => map.set(p.phone, { ...map.get(p.phone), ...p }));
-        const combined = Array.from(map.values());
+        if (Array.isArray(providers) && providers.length > 0) {
+            providers.forEach(p => {
+                if (!p || !p.phone) return;
+                const existing = map.get(p.phone) || {};
+                const validImgs = (p.vehicle_images && Array.isArray(p.vehicle_images)) 
+                    ? p.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0)
+                    : [];
+                map.set(p.phone, {
+                    ...existing,
+                    ...p,
+                    vehicle_name: p.vehicle_name || existing.vehicle_name,
+                    vehicle_images: validImgs.length > 0 ? validImgs : (existing.vehicle_images || [])
+                });
+            });
+        }
+
+        const combined = Array.from(map.values()).length > 0 ? Array.from(map.values()) : DEFAULT_PROVIDERS;
 
         const fLat = Number(farmerLat) || 17.0916;
         const fLng = Number(farmerLng) || 80.0210;
@@ -354,7 +479,12 @@ class KisanService {
         let mapped = combined.map(p => {
             const pLat = Number(p.current_lat) || 17.1000 + (Math.random() * 0.05);
             const pLng = Number(p.current_lng) || 80.0200 + (Math.random() * 0.05);
-            const distance = calculateDistance(fLat, fLng, pLat, pLng);
+            let distance = 12;
+            try {
+                distance = calculateDistance(fLat, fLng, pLat, pLng) || 12;
+            } catch (err) {
+                distance = 12;
+            }
             const ratePerKm = Number(p.price_per_km) || 35;
             const estimatedCost = Math.round(distance * ratePerKm);
             const capacity = Number(p.capacity) || 10;
@@ -365,18 +495,17 @@ class KisanService {
                 ? (capacity >= Number(minCapacityTons) && capacity <= Number(maxCapacityTons))
                 : true;
 
-            const defaultImgs = [
-                'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
-                'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
-            ];
-            const vImages = (p.vehicle_images && Array.isArray(p.vehicle_images) && p.vehicle_images.length > 0)
-                ? p.vehicle_images
-                : defaultImgs;
+            const vImages = (p.vehicle_images && Array.isArray(p.vehicle_images))
+                ? p.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0)
+                : [];
+
+            const vName = p.vehicle_name || (capacity <= 7 ? 'Tata 407 Gold SFC' : capacity <= 12 ? 'Tata 1109 G LPT' : capacity <= 18 ? 'Tata 1512 LPT Cargo' : capacity <= 24 ? 'BharatBenz 1923C Heavy Hauler' : 'Tata Signa 2823.K HD');
 
             return {
                 ...p,
                 id: p.phone,
                 driver_name: p.driver_name || p.name,
+                vehicle_name: vName,
                 vehicle_number: p.vehicle_number || 'TS 09 EA 4421',
                 vehicle_type: p.vehicle_type || 'Standard Truck',
                 vehicle_images: vImages,
@@ -394,16 +523,38 @@ class KisanService {
 
         if (vehicleType && vehicleType !== 'ALL' && vehicleType !== 'All Vehicles') {
             const lowerType = vehicleType.toLowerCase();
-            mapped = mapped.filter(p => (p.vehicle_type || '').toLowerCase().includes(lowerType));
+            mapped = mapped.filter(p => (p.vehicle_type || '').toLowerCase().includes(lowerType) || (p.vehicle_name || '').toLowerCase().includes(lowerType));
         }
 
-        return mapped.sort((a, b) => {
+        // If specific capacity range was selected, filter matching trucks; if none match exactly, show all sorted by nearest
+        let result = mapped;
+        if (minCapacityTons !== undefined && maxCapacityTons !== undefined && minCapacityTons !== null && maxCapacityTons !== null) {
+            const inRangeList = mapped.filter(p => p.is_within_range);
+            if (inRangeList.length > 0) {
+                result = inRangeList;
+            }
+        }
+
+        if (!result || result.length === 0) {
+            result = mapped.length > 0 ? mapped : DEFAULT_PROVIDERS;
+        }
+
+        return result.sort((a, b) => {
+            // Priority 1: User's custom added or modified truck
+            if (a.is_custom && !b.is_custom) return -1;
+            if (!a.is_custom && b.is_custom) return 1;
+
+            // Priority 2: Within selected capacity range
             if (a.is_within_range !== b.is_within_range) {
                 return a.is_within_range ? -1 : 1;
             }
+
+            // Priority 3: Sufficient for total load
             if (a.is_capacity_sufficient !== b.is_capacity_sufficient) {
                 return a.is_capacity_sufficient ? -1 : 1;
             }
+
+            // Priority 4: Distance
             return a.distance - b.distance;
         });
     }
@@ -1979,13 +2130,9 @@ class KisanService {
     }
 
     submitTransportQuote(transportCode, providerData, price, estimatedTime) {
-        const defaultImgs = [
-            'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80'
-        ];
-        const vImages = (providerData.vehicle_images && Array.isArray(providerData.vehicle_images) && providerData.vehicle_images.length > 0)
-            ? providerData.vehicle_images
-            : defaultImgs;
+        const vImages = (providerData.vehicle_images && Array.isArray(providerData.vehicle_images))
+            ? providerData.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0)
+            : [];
 
         const quote = {
             id: 'QT-' + Date.now(),

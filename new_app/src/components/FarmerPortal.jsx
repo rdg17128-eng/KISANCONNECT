@@ -1978,7 +1978,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                         {hasTransport && (
                                                             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem' }}>
                                                                 <div>Driver: <strong style={{ color: '#fff' }}>{enq.driver_name || 'Assigned Driver'}</strong></div>
-                                                                <div>Vehicle: <strong style={{ color: '#fff' }}>{enq.vehicle_number || enq.vehicle_type || 'Truck'}</strong></div>
+                                                                <div>Vehicle: <strong style={{ color: '#fff' }}>{enq.vehicle_name ? `${enq.vehicle_name} (${enq.vehicle_number || 'Verified'})` : (enq.vehicle_number || enq.vehicle_type || 'Truck')}</strong></div>
                                                                 <div>Date: <strong style={{ color: '#fff' }}>{enq.transport_date || enq.pickup_date || 'Flexible'}</strong></div>
                                                                 <div>Est. Cost: <strong style={{ color: 'var(--accent-gold)' }}>₹{enq.estimated_transport_cost?.toLocaleString() || 'Calculated'}</strong></div>
                                                             </div>

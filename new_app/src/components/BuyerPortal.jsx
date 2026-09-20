@@ -12,6 +12,7 @@ import { useLanguage } from '../context/LanguageContext';
 import LanguageSelector from './LanguageSelector';
 import { openRazorpayCheckout, executeAutoSuccessPayment } from '../services/razorpayService';
 import RazorpayCheckoutModal from './RazorpayCheckoutModal';
+import { normalizeTelPhone, formatDisplayPhone } from '../utils/phoneUtils';
 
 // Memoized Header Clock to avoid continuous re-rendering of the entire BuyerPortal
 const HeaderClock = React.memo(function HeaderClock() {
@@ -401,13 +402,15 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
         if (!selectedLoadForPayment) return;
         setIsSubmittingPayment(true);
         try {
-            // Call Auto-Success Payment API:
-            // 1. Creates a real order on Razorpay API (POST https://api.razorpay.com/v1/orders)
-            // 2. Automatically authorizes payment without getting stuck on the mock bank [Success]/[Failure] prompt
-            // 3. Generates & verifies authentic HMAC-SHA256 signature
-            const verifiedResponse = await executeAutoSuccessPayment({
+            await openRazorpayCheckout({
                 amountInRupees: selectedLoadForPayment.total_amount || 100,
+                description: `Produce Settlement - ${selectedLoadForPayment.crop_name || 'Produce'} (${selectedLoadForPayment.enquiry_code || ''})`,
                 receipt: `load_${selectedLoadForPayment.id || Date.now()}`,
+                prefill: {
+                    name: selectedLoadForPayment.farmer_name || '',
+                    contact: selectedLoadForPayment.farmer_phone || '',
+                    email: ''
+                },
                 notes: {
                     load_id: String(selectedLoadForPayment.id || ''),
                     enquiry_code: selectedLoadForPayment.enquiry_code || '',
@@ -415,33 +418,52 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                     farmer_name: selectedLoadForPayment.farmer_name || '',
                     crop_name: selectedLoadForPayment.crop_name || '',
                     mill_name: activeMill?.mill_name || 'Mill'
+                },
+                onSuccess: async (verifiedResponse) => {
+                    try {
+                        const paymentId = verifiedResponse.razorpay_payment_id || verifiedResponse.verification?.payment_id || 'pay_unknown';
+                        const orderId = verifiedResponse.razorpay_order_id || verifiedResponse.verification?.order_id || 'order_unknown';
+
+                        // Update Supabase & local storage records
+                        const updated = await kisanService.completePayment(
+                            selectedLoadForPayment.id || selectedLoadForPayment.enquiry_code,
+                            {
+                                paymentMethod: 'Razorpay Standard Checkout',
+                                referenceNumber: paymentId,
+                                remarks: `Razorpay Verified: ${paymentId} (Order: ${orderId})`
+                            },
+                            activeMill
+                        );
+
+                        // Close payment modal, refresh data, switch to COMPLETED category
+                        setSelectedLoadForPayment(null);
+                        await refreshAllData();
+                        setPaymentCategory('COMPLETED');
+
+                        // Automatically display the verified Payment Receipt modal with Transaction ID!
+                        if (updated) {
+                            setSelectedLoadForReceipt(updated);
+                        }
+                    } catch (saveErr) {
+                        console.error('Error recording verified payment:', saveErr);
+                        alert(`Payment was successful on Razorpay, but recording the invoice failed: ${saveErr.message}`);
+                    } finally {
+                        setIsSubmittingPayment(false);
+                    }
+                },
+                onFailure: (err) => {
+                    console.error('Razorpay payment failed:', err);
+                    alert(`Razorpay Payment Failed: ${err.message || 'Payment was declined or cancelled.'}`);
+                    setIsSubmittingPayment(false);
+                },
+                onDismiss: () => {
+                    console.log('Razorpay modal closed by user');
+                    setIsSubmittingPayment(false);
                 }
             });
-
-            // 4. Update Supabase & local storage records
-            const updated = await kisanService.completePayment(
-                selectedLoadForPayment.id || selectedLoadForPayment.enquiry_code,
-                {
-                    paymentMethod: 'Razorpay Standard Checkout',
-                    referenceNumber: verifiedResponse.razorpay_payment_id,
-                    remarks: `Razorpay Verified: ${verifiedResponse.razorpay_payment_id} (Order: ${verifiedResponse.razorpay_order_id})`
-                },
-                activeMill
-            );
-
-            // 5. Close payment modal, refresh data, switch to COMPLETED category
-            setSelectedLoadForPayment(null);
-            await refreshAllData();
-            setPaymentCategory('COMPLETED');
-
-            // 6. Automatically display the verified Payment Receipt modal with Transaction ID!
-            if (updated) {
-                setSelectedLoadForReceipt(updated);
-            }
         } catch (err) {
-            console.error('Razorpay auto-payment error:', err);
+            console.error('Razorpay checkout error:', err);
             alert(`Razorpay Payment Encountered an Issue: ${err.message}`);
-        } finally {
             setIsSubmittingPayment(false);
         }
     };
@@ -717,8 +739,21 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                                             {eq.enquiry_code}
                                                         </td>
                                                         <td style={{ padding: '1rem' }}>
-                                                            <strong>{eq.farmer_name}</strong>
-                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{eq.farmer_phone}</div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                                                <strong>{eq.farmer_name}</strong>
+                                                                {eq.farmer_phone && (
+                                                                    <a 
+                                                                        href={`tel:${normalizeTelPhone(eq.farmer_phone)}`}
+                                                                        className="mill-call-farmer-btn-sm"
+                                                                        title="Calling is available when using a device with phone-call support."
+                                                                    >
+                                                                        <i className="fa-solid fa-phone"></i> Call
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '0.2rem' }}>
+                                                                {formatDisplayPhone(eq.farmer_phone)}
+                                                            </div>
                                                         </td>
                                                         <td style={{ padding: '1rem' }}>
                                                             <strong>{eq.crop_name}</strong>
@@ -864,9 +899,39 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
 
                                                 {/* Body Details */}
                                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                        <span style={{ color: 'var(--text-muted)' }}>Farmer:</span>
-                                                        <strong>{enq.farmer_name} ({enq.farmer_phone})</strong>
+                                                    {/* Farmer Contact Card */}
+                                                    <div className="mill-farmer-contact-card">
+                                                        <div>
+                                                            <div style={{ fontSize: '0.68rem', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                                                                Farmer Contact
+                                                            </div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                                                                <i className="fa-solid fa-user" style={{ color: '#94A3B8', fontSize: '0.78rem' }}></i>
+                                                                <strong style={{ color: '#F8FAFC', fontSize: '0.9rem' }}>{enq.farmer_name || 'Farmer'}</strong>
+                                                            </div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
+                                                                <i className="fa-solid fa-phone" style={{ color: '#F59E0B', fontSize: '0.75rem' }}></i>
+                                                                <span style={{ color: '#F8FAFC', fontSize: '0.82rem', fontFamily: 'monospace', fontWeight: 600 }}>
+                                                                    {formatDisplayPhone(enq.farmer_phone)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        {enq.farmer_phone && (
+                                                            <a
+                                                                href={`tel:${normalizeTelPhone(enq.farmer_phone)}`}
+                                                                className="mill-call-farmer-btn"
+                                                                title="Calling is available when using a device with phone-call support."
+                                                                onClick={() => {
+                                                                    if (!navigator.userAgent.match(/Android|iPhone|iPad|iPod|Mobile/i)) {
+                                                                        setCopySuccessToast('Opening native dialer • Device phone support required');
+                                                                        setTimeout(() => setCopySuccessToast(''), 3000);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <i className="fa-solid fa-phone"></i>
+                                                                <span>Call Farmer</span>
+                                                            </a>
+                                                        )}
                                                     </div>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                         <span style={{ color: 'var(--text-muted)' }}>Crop:</span>
@@ -901,7 +966,7 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                                         {hasTransport && (
                                                             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem' }}>
                                                                 <div>Driver: <strong style={{ color: '#fff' }}>{enq.driver_name || 'Assigned Driver'}</strong></div>
-                                                                <div>Vehicle: <strong style={{ color: '#fff' }}>{enq.vehicle_number || enq.vehicle_type || 'Truck'}</strong></div>
+                                                                <div>Vehicle: <strong style={{ color: '#fff' }}>{enq.vehicle_name ? `${enq.vehicle_name} (${enq.vehicle_number || 'Verified'})` : (enq.vehicle_number || enq.vehicle_type || 'Truck')}</strong></div>
                                                                 <div>Date: <strong style={{ color: '#fff' }}>{enq.transport_date || enq.pickup_date || 'Flexible'}</strong></div>
                                                                 <div>Transport Cost: <strong style={{ color: 'var(--accent-gold)' }}>₹{enq.estimated_transport_cost?.toLocaleString() || 'Calculated'}</strong></div>
                                                             </div>
@@ -1183,9 +1248,20 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                                                 </td>
 
                                                                 <td style={{ padding: '1rem' }}>
-                                                                    <strong>{load.farmer_name}</strong>
-                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                                        {load.farmer_phone || load.farmer_id}
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                                                        <strong>{load.farmer_name}</strong>
+                                                                        {(load.farmer_phone || load.farmer_id) && (
+                                                                            <a 
+                                                                                href={`tel:${normalizeTelPhone(load.farmer_phone || load.farmer_id)}`}
+                                                                                className="mill-call-farmer-btn-sm"
+                                                                                title="Calling is available when using a device with phone-call support."
+                                                                            >
+                                                                                <i className="fa-solid fa-phone"></i> Call
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '0.2rem' }}>
+                                                                        {formatDisplayPhone(load.farmer_phone || load.farmer_id)}
                                                                     </div>
                                                                 </td>
 
@@ -1475,8 +1551,21 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                                                 {item.enquiry_code}
                                                             </td>
                                                             <td style={{ padding: '0.85rem 1rem' }}>
-                                                                <strong>{item.farmer_name}</strong>
-                                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{item.farmer_phone}</div>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                                                    <strong>{item.farmer_name}</strong>
+                                                                    {item.farmer_phone && (
+                                                                        <a 
+                                                                            href={`tel:${normalizeTelPhone(item.farmer_phone)}`}
+                                                                            className="mill-call-farmer-btn-sm"
+                                                                            title="Calling is available when using a device with phone-call support."
+                                                                        >
+                                                                            <i className="fa-solid fa-phone"></i>
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '0.15rem' }}>
+                                                                    {formatDisplayPhone(item.farmer_phone)}
+                                                                </div>
                                                             </td>
                                                             <td style={{ padding: '0.85rem 1rem' }}>
                                                                 <strong style={{ color: 'var(--primary)' }}>{item.crop_name}</strong>
@@ -1624,9 +1713,23 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                     <span style={{ color: 'var(--text-muted)' }}>Enquiry Code:</span>
                                     <strong style={{ fontFamily: 'monospace', color: 'var(--accent-gold)' }}>{selectedEnquiryForLoadReceived.enquiry_code}</strong>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Farmer:</span>
-                                    <strong>{selectedEnquiryForLoadReceived.farmer_name} ({selectedEnquiryForLoadReceived.farmer_phone})</strong>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <strong>{selectedEnquiryForLoadReceived.farmer_name}</strong>
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                                            ({formatDisplayPhone(selectedEnquiryForLoadReceived.farmer_phone)})
+                                        </span>
+                                        {selectedEnquiryForLoadReceived.farmer_phone && (
+                                            <a
+                                                href={`tel:${normalizeTelPhone(selectedEnquiryForLoadReceived.farmer_phone)}`}
+                                                className="mill-call-farmer-btn-sm"
+                                                title="Call Farmer"
+                                            >
+                                                <i className="fa-solid fa-phone"></i> Call
+                                            </a>
+                                        )}
+                                    </div>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Crop:</span>
@@ -2020,9 +2123,23 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                 <span style={{ color: 'var(--text-muted)' }}>Enquiry Code:</span>
                                 <strong style={{ fontFamily: 'monospace' }}>{selectedLoadForReceipt.enquiry_code}</strong>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ color: 'var(--text-muted)' }}>Farmer:</span>
-                                <strong>{selectedLoadForReceipt.farmer_name} ({selectedLoadForReceipt.farmer_phone})</strong>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <strong>{selectedLoadForReceipt.farmer_name}</strong>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                                        ({formatDisplayPhone(selectedLoadForReceipt.farmer_phone)})
+                                    </span>
+                                    {selectedLoadForReceipt.farmer_phone && (
+                                        <a
+                                            href={`tel:${normalizeTelPhone(selectedLoadForReceipt.farmer_phone)}`}
+                                            className="mill-call-farmer-btn-sm"
+                                            title="Call Farmer"
+                                        >
+                                            <i className="fa-solid fa-phone"></i>
+                                        </a>
+                                    )}
+                                </div>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <span style={{ color: 'var(--text-muted)' }}>Purchaser Mill:</span>
