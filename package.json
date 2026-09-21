@@ -9,7 +9,7 @@
     "dev": "npm --prefix new_app run dev",
     "test": "npm --prefix new_app test",
     "test:razorpay": "npm --prefix new_app run test:razorpay",
-    "build": "npm --prefix new_app install --include=dev && npm --prefix new_app run build"
+    "build": "node -e \"const fs=require('fs'),cp=require('child_process'); if(fs.existsSync('./new_app/package.json')){ cp.execSync('npm --prefix new_app run build', {stdio:'inherit'}); } else { cp.execSync('npm run build', {stdio:'inherit'}); }\""
   },
   "dependencies": {
     "razorpay": "^2.9.8"
