@@ -12,6 +12,66 @@ const STORAGE_KEYS = {
 };
 
 // Seed initial default transport providers if none exist with rich testing data
+// Helper to get fallback vehicle photos based on truck type, model, and capacity
+export function getDefaultVehicleImages(vehicleName = '', vehicleType = '', capacity = 10) {
+    const cap = Number(capacity) || 10;
+    const nameLower = (vehicleName || '').toLowerCase();
+    const typeLower = (vehicleType || '').toLowerCase();
+
+    // 1. Mini Commercial / Pickup (<= 7 Tons) - Tata 407, Bolero Maxi, Eicher 2049
+    if (cap <= 7 || nameLower.includes('407') || nameLower.includes('bolero') || typeLower.includes('pickup') || typeLower.includes('mini')) {
+        return [
+            'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80'
+        ];
+    }
+
+    // 2. Intermediate Cargo (8 - 14 Tons) - Tata 1109, Ashok Leyland Ecomet, BharatBenz 1217
+    if (cap <= 14 || nameLower.includes('1109') || nameLower.includes('ecomet') || nameLower.includes('1217') || typeLower.includes('intermediate') || typeLower.includes('medium')) {
+        return [
+            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
+        ];
+    }
+
+    // 3. Heavy Standard Commercial (15 - 19 Tons) - Tata 1512, Eicher Pro 3015, Ashok Leyland 1615
+    if (cap <= 19 || nameLower.includes('1512') || nameLower.includes('3015') || nameLower.includes('1615') || typeLower.includes('standard')) {
+        return [
+            'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1616432043562-3671ea2e5242?auto=format&fit=crop&w=800&q=80'
+        ];
+    }
+
+    // 4. Multi-Axle Heavy 10-Wheeler (20 - 26 Tons) - BharatBenz 1923C, Tata Signa 1918, Ashok Leyland 1920
+    if (cap <= 26 || nameLower.includes('1923') || nameLower.includes('1918') || nameLower.includes('1920') || nameLower.includes('signa') || typeLower.includes('10-wheeler')) {
+        return [
+            'https://images.unsplash.com/photo-1592838064575-70ed626d3a0e?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80'
+        ];
+    }
+
+    // 5. Mega Heavy Multi-Axle / Trailer (> 26 Tons) - Tata Signa 2823, BharatBenz 3528, Ashok Leyland 2820
+    return [
+        'https://images.unsplash.com/photo-1586191582056-a60d62a392e9?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1586528116493-a029325540fa?auto=format&fit=crop&w=800&q=80'
+    ];
+}
+
+// Helper to resolve images for any transporter entity
+export function getVehicleImages(transporter) {
+    if (!transporter) return [];
+    if (transporter.vehicle_images && Array.isArray(transporter.vehicle_images)) {
+        const valid = transporter.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0);
+        if (valid.length > 0) return valid;
+    }
+    return getDefaultVehicleImages(
+        transporter.vehicle_name || transporter.name,
+        transporter.vehicle_type,
+        transporter.capacity
+    );
+}
+
+// Seed initial default transport providers with rich images
 export const DEFAULT_PROVIDERS = [
     // 5 - 8 Ton Tier (Mini / Light Commercial Trucks)
     {
@@ -28,7 +88,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Karimnagar Bypass',
         service_area: 'North Telangana',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500009',
@@ -44,7 +107,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Warangal Subedari',
         service_area: 'Warangal & Surrounding Villages',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1559297434-fae8a1916a79?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500011',
@@ -60,7 +126,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Jangaon Market Yard',
         service_area: 'Central Telangana',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
+        ]
     },
 
     // 8 - 14 Ton Tier (Medium Haulage / Intermediate Trucks)
@@ -78,7 +147,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Nizamabad Yard',
         service_area: 'Telangana State',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500010',
@@ -94,7 +166,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Suryapet Mandi',
         service_area: 'Southern Telangana',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1616432043562-3671ea2e5242?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500012',
@@ -110,7 +185,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Warangal Grain Market',
         service_area: 'Warangal & Khammam',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
+        ]
     },
 
     // 12 - 18 Ton Tier (Standard / Heavy 6-Wheel Trucks)
@@ -128,7 +206,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Warangal Agri Hub',
         service_area: 'Telangana & AP',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1616432043562-3671ea2e5242?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500006',
@@ -144,7 +225,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Khammam Rural',
         service_area: 'Central Telangana',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1592838064575-70ed626d3a0e?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500013',
@@ -160,7 +244,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Miryalaguda Mill Area',
         service_area: 'Nalgonda & Khammam',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1616432043562-3671ea2e5242?auto=format&fit=crop&w=800&q=80'
+        ]
     },
 
     // 18 - 25 Ton Tier (Heavy 10-Wheeler / Multi-Axle Trucks)
@@ -178,7 +265,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Nalgonda Agri Zone',
         service_area: 'Telangana & Coastal AP',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1592838064575-70ed626d3a0e?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500007',
@@ -194,7 +284,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Bodulabanda Cross',
         service_area: 'Telangana & Andhra Pradesh',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1592838064575-70ed626d3a0e?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500008',
@@ -210,7 +303,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Kothagudem Hub',
         service_area: 'Godavari Basin & Telangana',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1592838064575-70ed626d3a0e?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80'
+        ]
     },
 
     // 22 - 45 Ton Tier (Heavy Multi-Axle Trailers & Mega Haulers)
@@ -228,7 +324,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Khammam Mandi',
         service_area: 'South India Express',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1586191582056-a60d62a392e9?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1586528116493-a029325540fa?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500014',
@@ -244,7 +343,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Hyderabad Outer Ring Road Hub',
         service_area: 'Telangana, AP & Karnataka',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1586191582056-a60d62a392e9?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1586528116493-a029325540fa?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     {
         phone: '9876500015',
@@ -260,7 +362,10 @@ export const DEFAULT_PROVIDERS = [
         availability: 'AVAILABLE',
         current_location_name: 'Vijayawada Highway Hub',
         service_area: 'Telangana & Andhra Pradesh',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1586191582056-a60d62a392e9?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1586528116493-a029325540fa?auto=format&fit=crop&w=800&q=80'
+        ]
     }
 ];
 
@@ -495,11 +600,14 @@ class KisanService {
                 ? (capacity >= Number(minCapacityTons) && capacity <= Number(maxCapacityTons))
                 : true;
 
-            const vImages = (p.vehicle_images && Array.isArray(p.vehicle_images))
+            const vName = p.vehicle_name || (capacity <= 7 ? 'Tata 407 Gold SFC' : capacity <= 12 ? 'Tata 1109 G LPT' : capacity <= 18 ? 'Tata 1512 LPT Cargo' : capacity <= 24 ? 'BharatBenz 1923C Heavy Hauler' : 'Tata Signa 2823.K HD');
+
+            const rawImgs = (p.vehicle_images && Array.isArray(p.vehicle_images))
                 ? p.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0)
                 : [];
-
-            const vName = p.vehicle_name || (capacity <= 7 ? 'Tata 407 Gold SFC' : capacity <= 12 ? 'Tata 1109 G LPT' : capacity <= 18 ? 'Tata 1512 LPT Cargo' : capacity <= 24 ? 'BharatBenz 1923C Heavy Hauler' : 'Tata Signa 2823.K HD');
+            const vImages = rawImgs.length > 0 
+                ? rawImgs 
+                : getDefaultVehicleImages(vName, p.vehicle_type, capacity);
 
             return {
                 ...p,

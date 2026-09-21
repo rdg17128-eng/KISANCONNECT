@@ -22,45 +22,61 @@ const FLEET_DRIVERS = [
         phone: '9876500001', 
         name: 'Kisan Gati Logistics', 
         driver_name: 'Ramesh Yadav',
+        vehicle_name: 'Tata 1512 LPT Cargo',
         vehicle_number: 'TS 09 EA 4421', 
         vehicle_type: 'Standard Truck', 
         capacity: 15, 
         price_per_km: 42, 
         location: 'Warangal Agri Hub',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1616432043562-3671ea2e5242?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     { 
         phone: '9876500002', 
         name: 'Balaji Agro Freight', 
         driver_name: 'Venkatesh Rao',
+        vehicle_name: 'Tata 407 Gold SFC',
         vehicle_number: 'TS 08 UB 7712', 
-        vehicle_type: 'Mini Truck', 
+        vehicle_type: 'Mini Commercial Truck', 
         capacity: 5, 
         price_per_km: 28, 
         location: 'Karimnagar Bypass',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     { 
         phone: '9876500003', 
         name: 'Annapurna Heavy Haulers', 
         driver_name: 'Suresh Goud',
+        vehicle_name: 'Tata Signa 2823.K HD',
         vehicle_number: 'AP 16 TZ 9980', 
-        vehicle_type: 'Heavy Lorry', 
+        vehicle_type: 'Heavy Multi-Axle Lorry', 
         capacity: 25, 
         price_per_km: 65, 
         location: 'Khammam Mandi',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1586191582056-a60d62a392e9?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1586528116493-a029325540fa?auto=format&fit=crop&w=800&q=80'
+        ]
     },
     { 
         phone: '9876500004', 
         name: 'Gramin Kisan Express', 
         driver_name: 'Mahesh Reddy',
+        vehicle_name: 'Tata 1109 G LPT',
         vehicle_number: 'TS 07 TC 1109', 
-        vehicle_type: 'Standard Truck', 
+        vehicle_type: 'Intermediate Cargo Truck', 
         capacity: 10, 
         price_per_km: 35, 
         location: 'Nizamabad Yard',
-        vehicle_images: []
+        vehicle_images: [
+            'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80',
+            'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=800&q=80'
+        ]
     }
 ];
 

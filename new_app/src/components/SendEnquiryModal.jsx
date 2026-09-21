@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { kisanService, calculateDistance, getCapacityRange, DEFAULT_PROVIDERS } from '../services/kisanService';
+import { kisanService, calculateDistance, getCapacityRange, DEFAULT_PROVIDERS, getVehicleImages } from '../services/kisanService';
 
 export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryCreated }) {
     const [step, setStep] = useState('form'); // 'form' | 'summary' | 'success'
@@ -355,40 +355,43 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                                     <div><span style={{ color: 'var(--text-muted)' }}>Transport Rate:</span> <strong>₹{selectedTransporter.price_per_km} / KM</strong></div>
                                     <div><span style={{ color: 'var(--text-muted)' }}>Est. Haulage Cost:</span> <strong style={{ color: 'var(--accent-gold)' }}>₹{selectedTransporter.estimated_cost?.toLocaleString()}</strong></div>
                                     
-                                    {/* Selected Vehicle Verified Photos (Rendered ONLY if Transporter uploaded real photos) */}
-                                    {selectedTransporter.vehicle_images && selectedTransporter.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0).length > 0 ? (
-                                        <div style={{ gridColumn: 'span 2', background: 'rgba(0,0,0,0.4)', padding: '0.65rem 0.85rem', borderRadius: '0.5rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                                            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                <span><i className="fa-solid fa-camera"></i> Transporter Uploaded Photos ({selectedTransporter.vehicle_name || 'Vehicle'})</span>
-                                                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Click photo to expand</span>
+                                    {/* Selected Vehicle Verified Photos */}
+                                    {(() => {
+                                        const selectedImgs = getVehicleImages(selectedTransporter);
+                                        return selectedImgs.length > 0 ? (
+                                            <div style={{ gridColumn: 'span 2', background: 'rgba(0,0,0,0.4)', padding: '0.65rem 0.85rem', borderRadius: '0.5rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                    <span><i className="fa-solid fa-camera"></i> Verified Vehicle Photos ({selectedTransporter.vehicle_name || 'Vehicle'})</span>
+                                                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Click photo to expand</span>
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                                    {selectedImgs.slice(0, 2).map((imgUrl, i) => (
+                                                        <div 
+                                                            key={i}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setVehicleLightboxImage({
+                                                                    url: imgUrl,
+                                                                    title: `${selectedTransporter.vehicle_name || 'Truck'} (${selectedTransporter.vehicle_number}) - Photo ${i + 1}`
+                                                                });
+                                                            }}
+                                                            style={{ height: '75px', borderRadius: '0.4rem', overflow: 'hidden', position: 'relative', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}
+                                                        >
+                                                            <img src={imgUrl} alt={`Truck Angle ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            <span style={{ position: 'absolute', bottom: '2px', left: '4px', background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: '0.2rem', fontWeight: 600 }}>
+                                                                {i === 0 ? 'Front & Plate' : 'Cargo Bed'} 🔍
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                                {selectedTransporter.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0).slice(0, 2).map((imgUrl, i) => (
-                                                    <div 
-                                                        key={i}
-                                                        onClick={(e) => {
-                                                             e.stopPropagation();
-                                                             setVehicleLightboxImage({
-                                                                 url: imgUrl,
-                                                                 title: `${selectedTransporter.vehicle_name || 'Truck'} (${selectedTransporter.vehicle_number}) - Photo ${i + 1}`
-                                                             });
-                                                        }}
-                                                        style={{ height: '75px', borderRadius: '0.4rem', overflow: 'hidden', position: 'relative', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}
-                                                    >
-                                                        <img src={imgUrl} alt={`Truck Angle ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        <span style={{ position: 'absolute', bottom: '2px', left: '4px', background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: '0.2rem', fontWeight: 600 }}>
-                                                            Photo {i + 1}
-                                                        </span>
-                                                    </div>
-                                                ))}
+                                        ) : (
+                                            <div style={{ gridColumn: 'span 2', fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.02)', padding: '0.4rem 0.6rem', borderRadius: '0.4rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <i className="fa-solid fa-truck" style={{ color: 'var(--primary)' }}></i>
+                                                <span>Registered Driver • Standard Fleet Vehicle</span>
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <div style={{ gridColumn: 'span 2', fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.02)', padding: '0.4rem 0.6rem', borderRadius: '0.4rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <i className="fa-solid fa-truck" style={{ color: 'var(--primary)' }}></i>
-                                            <span>Registered Driver • No custom vehicle photos uploaded</span>
-                                        </div>
-                                    )}
+                                        );
+                                    })()}
 
                                     {transportInstructions && (
                                         <div style={{ gridColumn: 'span 2', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -726,9 +729,7 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                                                     const isSelected = selectedTransporter?.phone === transporter.phone;
                                                     const isSufficient = transporter.is_capacity_sufficient;
                                                     const inRange = transporter.is_within_range;
-                                                    const validImgs = transporter.vehicle_images && Array.isArray(transporter.vehicle_images)
-                                                        ? transporter.vehicle_images.filter(img => typeof img === 'string' && img.trim().length > 0)
-                                                        : [];
+                                                    const validImgs = getVehicleImages(transporter);
                                                     const hasPhoto = validImgs.length > 0;
                                                     const mainImage = hasPhoto ? validImgs[0] : null;
 
@@ -865,14 +866,14 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
                                                             </div>
 
                                                             {/* Additional Angle Photos Preview Strip (if available) */}
-                                                            {transporter.vehicle_images && transporter.vehicle_images.length > 1 && (
+                                                            {validImgs && validImgs.length > 1 && (
                                                                 <div style={{ marginTop: '0.45rem', paddingTop: '0.4rem', borderTop: '1px dashed rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                                     <span style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
                                                                         <i className="fa-solid fa-camera" style={{ color: 'var(--primary)', marginRight: '0.25rem' }}></i>
                                                                         View Angles:
                                                                     </span>
                                                                     <div style={{ display: 'flex', gap: '0.35rem' }}>
-                                                                        {transporter.vehicle_images.slice(0, 2).map((imgUrl, idx) => (
+                                                                        {validImgs.slice(0, 2).map((imgUrl, idx) => (
                                                                             <button
                                                                                 key={idx}
                                                                                 type="button"
