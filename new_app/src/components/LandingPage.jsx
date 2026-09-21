@@ -14,15 +14,27 @@ export default function LandingPage() {
     const navigate = useNavigate();
     const { roleId } = useParams();
 
-    // Check if OAuth callback or active session redirection is in progress
-    const isOAuthInFlight = typeof window !== 'undefined' && (
+    // Check if OAuth callback is in progress
+    const isOAuthInFlight = typeof window !== 'undefined' && Boolean(
         window.location.hash.includes('access_token') ||
         window.location.hash.includes('refresh_token') ||
-        window.location.search.includes('code=') ||
-        Boolean(localStorage.getItem('kisan_intended_role'))
+        window.location.search.includes('code=')
     );
 
-    const isRedirecting = Boolean((user && role) || loading || isOAuthInFlight);
+    const [forcedTimeout, setForcedTimeout] = useState(false);
+
+    // Fallback: Clear any infinite spinner after 3 seconds
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            setForcedTimeout(true);
+            try {
+                localStorage.removeItem('kisan_intended_role');
+            } catch {}
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, []);
+
+    const isRedirecting = !forcedTimeout && Boolean((user && role) || (loading && isOAuthInFlight));
 
     // If user is already authenticated and has a role, redirect to their portal
     React.useEffect(() => {

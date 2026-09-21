@@ -32,11 +32,6 @@ export function AuthProvider({ children }) {
             ) {
                 return true;
             }
-            try {
-                if (localStorage.getItem('kisan_intended_role')) {
-                    return true;
-                }
-            } catch {}
         }
         return false;
     });
