@@ -40,5 +40,11 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "postcss": "^8.5.26"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "*",
+    "@rollup/rollup-linux-x64-musl": "*",
+    "@rollup/rollup-linux-arm64-gnu": "*",
+    "@rollup/rollup-linux-arm64-musl": "*"
   }
 }
