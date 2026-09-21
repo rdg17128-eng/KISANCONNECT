@@ -1,6 +1,7 @@
 [build]
-  command = "npm --prefix new_app install --include=dev && npm --prefix new_app run build"
-  publish = "new_app/dist"
+  base = "new_app"
+  command = "npm install --include=dev && npm run build"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
