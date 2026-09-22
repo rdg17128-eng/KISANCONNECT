@@ -459,7 +459,135 @@ export const TRANSLATIONS = {
         cropVariety: 'फसल की किस्म',
         acres: 'एकड़',
         estimatedYield: 'अनुमानित उपज (टन)',
-        harvestDate: 'कटाई तिथि'
+        harvestDate: 'कटाई तिथि',
+        farmLocation: 'खेत का स्थान',
+        actions: 'कार्रवाई',
+        deleteCrop: 'फसल हटाएं',
+        findNearbyMills: 'मिलें खोजें',
+        noCropsFound: 'अभी कोई फसल नहीं जोड़ी गई। ऊपर दिए बटन से फसल जोड़ें!',
+        
+        // Mills Tab
+        verifiedMillsTitle: 'सत्यापित प्रसंस्करण मिलें और सीधे भाव',
+        comparePrices: 'मंडी भाव की तुलना मिल के सीधे खरीद भाव से करें',
+        highestOffer: 'सर्वोत्तम भाव',
+        perQuintal: 'प्रति क्विंटल',
+        sendEnquiry: 'पूछताछ भेजें',
+        capacity: 'दैनिक क्षमता',
+        distance: 'दूरी',
+        contactMill: 'मिल से संपर्क करें',
+        noMillsFound: 'वर्तमान में आपके क्षेत्र में कोई मिल उपलब्ध नहीं है।',
+        
+        // Enquiries Tab
+        produceEnquiriesTitle: 'मेरी उपज पूछताछ और भाव बातचीत',
+        filterAll: 'सभी',
+        filterPending: 'लंबित',
+        filterAccepted: 'स्वीकृत',
+        filterRejected: 'अस्वीकृत',
+        offeredRate: 'प्रस्तावित दर',
+        agreedPrice: 'सहमति मूल्य',
+        transportRequired: 'परिवहन आवश्यक है',
+        pickupDate: 'पिकअप तिथि',
+        weighedQuantity: 'तौला गया वजन',
+        paymentStatus: 'भुगतान स्थिति',
+        
+        // Payments & Settlements
+        paymentsTitle: 'सीधा मिल भुगतान एवं निपटान',
+        paymentsSubtitle: 'वेब्रिज पर सही तौल, क्विंटल दर गणना और मिलों से सीधे बैंक खाते में भुगतान',
+        updateBankAccount: 'बैंक खाता बदलें',
+        totalPaymentsReceived: 'कुल प्राप्त भुगतान',
+        completedTransfers: 'सफल बैंक ट्रांसफर',
+        pendingSettlements: 'लंबित भुगतान',
+        awaitingMillPayment: 'भुगतान के लिए प्रतीक्षारत लोड',
+        totalWeighedProduce: 'कुल तौला गया माल',
+        deliveredQuintals: 'डिलीवर किए गए क्विंटल',
+        registeredBankTitle: 'सीधे मिल भुगतान के लिए पंजीकृत बैंक खाता',
+        verifiedForTransfer: 'प्रत्यक्ष ट्रांसफर के लिए सत्यापित',
+        accountHolder: 'खाताधारक का नाम',
+        bankName: 'बैंक का नाम',
+        accountNumber: 'खाता संख्या',
+        ifscCode: 'IFSC कोड',
+        upiId: 'UPI आईडी',
+        allTransactions: 'सभी लेन-देन',
+        paymentCompleted: 'भुगतान पूर्ण',
+        paymentPending: 'भुगतान लंबित',
+        awaitingMill: 'मिल भुगतान लंबित',
+        enquiryRef: 'पूछताछ संदर्भ',
+        purchaserMill: 'खरीदार मिल',
+        cropAndQuantity: 'फसल और मात्रा',
+        pricePerQuintal: 'भाव प्रति क्विंटल',
+        totalAmount: 'कुल राशि',
+        status: 'स्थिति',
+        paymentDate: 'भुगतान तिथि',
+        receipt: 'रसीद',
+        viewBill: 'बिल देखें',
+        viewSlip: 'पर्ची देखें',
+        close: 'बंद करें',
+        print: 'प्रिंट करें',
+        saveBankDetails: 'बैंक विवरण सुरक्षित करें',
+        tonnes: 'टन',
+        quintals: 'क्विंटल',
+        shareWhatsApp: 'व्हाट्सएप पर शेयर करें',
+        
+        // Profile & Preferences
+        profileTitle: 'किसान प्रोफ़ाइल और सेटिंग्स',
+        generalTab: 'सामान्य विवरण',
+        farmPersonalTab: 'कृषि एवं व्यक्तिगत विवरण',
+        payoutTab: 'बैंक विवरण और भुगतान',
+        securityTab: 'सुरक्षा पिन (PIN)',
+        preferencesTab: 'पसंद और भाषा',
+        preferredLanguage: 'पसंदीदा क्षेत्रीय भाषा',
+        languageSettingDesc: 'डैशबोर्ड और सूचनाओं के लिए अपनी स्थानीय भाषा चुनें।',
+        savePreferences: 'पसंद सहेजें',
+        savedSuccess: 'भाषा प्राथमिकता सफलतापूर्वक सहेजी गई!',
+        fullName: 'पूरा नाम',
+        primaryPhone: 'पंजीकृत प्राथमिक फोन',
+        altPhone: 'व्हाट्सएप / वैकल्पिक फोन',
+        village: 'गाँव / ग्राम पंचायत',
+        districtState: 'जिला और राज्य',
+        farmingPractice: 'मुख्य कृषि पद्धति',
+        saveProfileChanges: 'विवरण सहेजें',
+        totalLandHolding: 'कुल जोत भूमि',
+        registeredCrops: 'पंजीकृत फसलें',
+        millEnquiries: 'मिल पूछताछ',
+        kycStatus: 'केवाईसी (KYC) स्थिति',
+        verifiedFarmer: 'सत्यापित किसान',
+        dailyMandiAlerts: 'दैनिक मंडी भाव अलर्ट',
+        loadDispatchSms: 'लोड प्रस्थान एवं आगमन SMS',
+        extremeWeatherAlerts: 'मौसम संबंधी अलर्ट',
+        
+        // Mill Buyer Portal
+        paymentsAndLoads: 'भुगतान और लोड',
+        loadsPendingBadge: 'लंबित',
+        confirmLoadReceived: 'लोड प्राप्ति की पुष्टि करें',
+        actualTonnesReceived: 'वेब्रिज वास्तविक वजन (टन)',
+        convertedQuintals: 'क्विंटल में परिवर्तन (1 टन = 10 क्विंटल)',
+        automatedCalculation: 'स्वचालित बिल गणना',
+        totalPayableAmount: 'कुल देय राशि',
+        makePayment: 'भुगतान करें',
+        farmerBankDetailsTitle: 'किसान बैंक विवरण (ट्रांसफर के लिए)',
+        copyAccount: 'खाता संख्या कॉपी करें',
+        copyIfsc: 'IFSC कोड कॉपी करें',
+        copyUpi: 'UPI कॉपी करें',
+        paymentMethod: 'भुगतान का तरीका',
+        utrReference: 'लेन-देन / UTR संदर्भ संख्या',
+        confirmPaymentCompleted: 'भुगतान पूर्ण हुआ',
+        produceIntakeReceipt: 'अनाज आवक भुगतान रसीद',
+        scanFarmerQr: 'गेट क्यूआर स्कैन करें',
+        
+        // Common Buttons & Badges
+        save: 'सहेजें',
+        cancel: 'रद्द करें',
+        confirm: 'पुष्टि करें',
+        delete: 'हटाएं',
+        edit: 'संपादित करें',
+        active: 'सक्रिय',
+        pending: 'लंबित',
+        completed: 'पूर्ण',
+        paid: 'भुगतान किया गया',
+        yes: 'हाँ',
+        no: 'नहीं',
+        back: 'वापस',
+        footerCopyright: '© 2026 किसान कनेक्ट इकोसिस्टम'
     },
     // Tamil (தமிழ்)
     ta: {
@@ -686,7 +814,74 @@ const EXTRA_PHRASES = {
     "Total Payable Amount": { te: "చెల్లించవలసిన మొత్తం", hi: "कुल देय राशि", kn: "ಒಟ್ಟು ಪಾವತಿಸಬೇಕಾದ ಮೊತ್ತ", ta: "செலுத்த வேண்டிய மொத்த தொகை", mr: "एकूण देय रक्कम" },
     "Confirm Load Received": { te: "లోడ్ రసీదును నిర్ధారించండి", hi: "लोड प्राप्ति की पुष्टि करें", kn: "ಲೋಡ್ ದೃಢೀಕರಿಸಿ", ta: "சுமை ரசீதை உறுதிப்படுத்தவும்", mr: "लोड मिळाल्याची खात्री करा" },
     "Produce Intake Payment Receipt": { te: "పంట కొనుగోలు చెల్లింపు రసీదు", hi: "अनाज आवक भुगतान रसीद", kn: "ಧಾನ್ಯ ಖರೀದಿ ರಸೀದಿ", ta: "கொள்முதல் ரசீது", mr: "खरेदी पावती" },
-    "Scan Gate QR": { te: "గేట్ క్యూఆర్ స్కాన్ చేయండి", hi: "गेट क्यूआर स्कैन करें", kn: "ಗೇಟ್ ಕ್ಯೂಆರ್ ಸ್ಕ್ಯಾನ್", ta: "கேட் QR ஸ்கேன்", mr: "गेट QR स्कॅन करा" }
+    "Scan Gate QR": { te: "గేట్ క్యూఆర్ స్కాన్ చేయండి", hi: "गेट क्यूआर स्कैन करें", kn: "ಗೇಟ್ ಕ್ಯೂಆರ್ ಸ್ಕ್ಯಾನ್", ta: "கேட் QR ஸ்கேன்", mr: "गेट QR स्कॅन करा" },
+    "Cereals / Grains": { te: "ధాన్యాలు", hi: "अनाज / खाद्यान्न", kn: "ಧಾನ್ಯಗಳು", ta: "தானியங்கள்", mr: "तृणधान्ये" },
+    "Pulses": { te: "పప్పుదినుసులు", hi: "दालें / दलहन", kn: "ಕಾಳುಗಳು", ta: "பருப்பு வகைகள்", mr: "कडधान्ये" },
+    "Oilseeds": { te: "నూనెగింజలు", hi: "तिलहन", kn: "ಎಣ್ಣೆಕಾಳುಗಳು", ta: "எண்ணெய் வித்துக்கள்", mr: "गळीत धान्ये / तेलबिया" },
+    "Sugar & Industrial Crops": { te: "చక్కెర & వాణిజ్య పంటలు", hi: "शर्करा एवं औद्योगिक फसलें", kn: "ಸಕ್ಕರೆ & ಕೈಗಾರಿಕಾ ಬೆಳೆಗಳು", ta: "சர்க்கரை & தொழிற்துறை பயிர்கள்", mr: "साखर आणि औद्योगिक पिके" },
+    "Spices & Processing Crops": { te: "మసాలా దినుసులు & ప్రాసెసింగ్ పంటలు", hi: "मसाले एवं प्रसंस्करण फसलें", kn: "ಮಸಾಲೆ & ಸಂಸ್ಕರಣಾ ಬೆಳೆಗಳು", ta: "மசாலா & பதப்படுத்தும் பயிர்கள்", mr: "मसाले आणि प्रक्रिया पिके" },
+    "Paddy (Rice)": { te: "వరి (బియ్యం)", hi: "धान (चावल)", kn: "ಭತ್ತ (ಅಕ್ಕಿ)", ta: "நெல் (அரிசி)", mr: "भात (तांदूळ)" },
+    "Wheat": { te: "గోధుమలు", hi: "गेहूं", kn: "ಗೋಧಿ", ta: "கோதுமை", mr: "गहू" },
+    "Maize": { te: "మొక్కజొన్న", hi: "मक्का", kn: "ಮೆಕ್ಕೆಜೋಳ", ta: "மக்காச்சோளம்", mr: "मका" },
+    "Sorghum (Jowar)": { te: "జొన్నలు", hi: "ज्वार", kn: "ಜೋಳ", ta: "சோளம்", mr: "ज्वारी" },
+    "Pearl Millet (Bajra)": { te: "సజ్జలు", hi: "बाजरा", kn: "ಸಜ್ಜೆ", ta: "கம்பு", mr: "बाजरी" },
+    "Finger Millet (Ragi)": { te: "రాగులు", hi: "रागी", kn: "ರಾಗಿ", ta: "கேழ்வரகு (ராகி)", mr: "नाचणी (रागी)" },
+    "Barley": { te: "బార్లీ", hi: "जौ", kn: "ಬಾರ್ಲಿ", ta: "பார்லி", mr: "जव (बार्ली)" },
+    "Oats": { te: "ఓట్స్", hi: "जई (ओट्स)", kn: "ಓಟ್ಸ್", ta: "ಓட்ஸ்", mr: "ओट्स" },
+    "Red Gram (Tur/Arhar)": { te: "కందులు (తూర్/అర్హర్)", hi: "अरहर / तूर दाल", kn: "ತೊಗರಿ ಬೇಳೆ", ta: "துவரம் பருப்பு", mr: "तूर डाळ" },
+    "Green Gram (Moong)": { te: "పెసలు (మూంగ్)", hi: "मूंग", kn: "ಹೆಸರು ಕಾಳು", ta: "பாசிப் பயறு", mr: "मूग" },
+    "Black Gram (Urad)": { te: "మినుములు (ఉరద్)", hi: "उड़द", kn: "ಉದ್ದಿನ ಕಾಳು", ta: "உளுந்து", mr: "उडीद" },
+    "Bengal Gram (Chana)": { te: "శనగలు (చన)", hi: "चना / चना दाल", kn: "ಕಡಲೆ ಕಾಳು", ta: "கொண்டைக்கಡலை", mr: "हरभरा (चना)" },
+    "Lentil (Masoor)": { te: "ఎర్ర కందులు (మసూర్)", hi: "मसूर", kn: "ಮಸೂರ್ ಬೇಳೆ", ta: "மைசூர் பருப்பு", mr: "मसूर" },
+    "Peas": { te: "బఠానీలు", hi: "मटर", kn: "ಬಟಾಣಿ", ta: "பட்டாணி", mr: "मटार" },
+    "Horse Gram": { te: "ఉలవలు", hi: "कुलथी", kn: "ಹುರುಳಿ", ta: "கொள்ளு", mr: "कुळीथ" },
+    "Cowpea": { te: "అలసందలు / బొబ్బర్లు", hi: "लोबिया", kn: "ಅಲಸಂದೆ", ta: "காராமணி", mr: "चवळी" },
+    "Groundnut": { te: "వేరుశనగ", hi: "मूंगफली", kn: "ಕಡಲೆಕಾಯಿ", ta: "வேர்க்கடலை", mr: "भुईमूग" },
+    "Sunflower": { te: "పొద్దుతిరుగుడు", hi: "सूरजमुखी", kn: "ಸೂರ್ಯಕಾಂತಿ", ta: "சூரியகாந்தி", mr: "सूर्यफूल" },
+    "Soybean": { te: "సోయాబీన్", hi: "सोयाबीन", kn: "ಸೋಯಾಬೀನ್", ta: "சோயாபீன்", mr: "सोयाबीन" },
+    "Mustard": { te: "ఆవాలు", hi: "सरसों / राई", kn: "ಸಾಸಿವೆ", ta: "கடுகு", mr: "मोहरी" },
+    "Sesame": { te: "నువ్వులు", hi: "तिल", kn: "ಎಳ್ಳು", ta: "எள்ளு", mr: "तीळ" },
+    "Safflower": { te: "కుసుమలు", hi: "कुसुम", kn: "ಕುಸುಮೆ", ta: "குங்குமப்பூ விதை", mr: "करडई" },
+    "Castor": { te: "ఆముదం", hi: "अरंडी", kn: "ಔಡಲ", ta: "ஆமணக்கு", mr: "एरंडी" },
+    "Linseed": { te: "అవిసె గింజలు", hi: "अलसी", kn: "ಅಗಸೆ", ta: "ஆளி விதை", mr: "जवस" },
+    "Coconut/Copra": { te: "కొబ్బరి / కొబ్బరి కురిడీ", hi: "नारियल / खोपरा", kn: "ತೆಂಗಿನಕಾಯಿ / ಕೊಬ್ಬರಿ", ta: "தேங்காய் / கொப்பரை", mr: "नारळ / खोबरे" },
+    "Sugarcane": { te: "చెరకు", hi: "गन्ना", kn: "ಕಬ್ಬು", ta: "கரும்பு", mr: "ऊस" },
+    "Cotton": { te: "పత్తి", hi: "कपास", kn: "ಹತ್ತಿ", ta: "பருத்தி", mr: "कापूस" },
+    "Jute": { te: "జనపనార", hi: "पटसन / जूट", kn: "ಸೆಣಬು", ta: "சணல்", mr: "ताग" },
+    "Tobacco": { te: "పొగాకు", hi: "तंबाकू", kn: "ತಂಬಾಕು", ta: "புகையிலை", mr: "तंबाखू" },
+    "Red Chilli": { te: "ఎర్ర మిరపకాయలు", hi: "लाल मिर्च", kn: "ಒಣ ಮೆಣಸಿನಕಾಯಿ", ta: "சிகப்பு மிளகாய்", mr: "लाल मिरची" },
+    "Turmeric": { te: "పసుపు", hi: "హल्दी", kn: "ಅರಿಶಿನ", ta: "மஞ்சள்", mr: "हळद" },
+    "Coriander": { te: "ధనియాలు", hi: "धनिया", kn: "ಕೊತ್ತಂಬರಿ", ta: "கொத்தமல்லி", mr: "धने" },
+    "Cumin": { te: "జీలకర్ర", hi: "जीरा", kn: "ಜೀರಿಗೆ", ta: "சீரகம்", mr: "जिरे" },
+    "Black Pepper": { te: "మిరియాలు", hi: "काली मिर्च", kn: "ಕಾಳುಮೆಣಸು", ta: "கருப்பு மிளகு", mr: "काळी मिरी" },
+    "Ginger": { te: "అల్లం", hi: "अदरक", kn: "ಶುಂಠಿ", ta: "இஞ்சி", mr: "आले" },
+    "Garlic": { te: "వెల్లుల్లి", hi: "लहसुन", kn: "ಬೆಳ್ಳುಳ್ಳಿ", ta: "பூண்டு", mr: "लसूण" },
+    "Cardamom": { te: "యాలకులు", hi: "इलायची", kn: "ಏಲಕ್ಕಿ", ta: "ஏலக்காய்", mr: "वेलची" },
+    "Clove": { te: "లవంగాలు", hi: "लौंग", kn: "ಲವಂಗ", ta: "கிராம்பு", mr: "लवंग" },
+
+    // Mill Types
+    "Rice Mill": { te: "వరి మిల్లు (రైస్ మిల్)", hi: "चावल मिल", kn: "ರೈಸ್ ಮಿಲ್", ta: "அரிசி ஆலை", mr: "राईस मिल" },
+    "Flour / Wheat Mill": { te: "పిండి / గోధుమ మిల్లు", hi: "आटा / गेहूं मिल", kn: "ಹಿಟ್ಟಿನ ಗಿರಣಿ", ta: "மாவு ஆலை", mr: "पीठ गिरणी" },
+    "Maize / Corn Processing Mill": { te: "మొక్కజొన్న ప్రాసెసింగ్ మిల్లు", hi: "मक्का प्रसंस्करण मिल", kn: "ಮೆಕ್ಕೆಜೋಳ ಸಂಸ್ಕರಣಾ ಘಟಕ", ta: "மக்காச்சோள ஆலை", mr: "मका प्रक्रिया मिल" },
+    "Millet & Sorghum Mill (Jowar, Bajra, Ragi)": { te: "చిరుధాన్యాల & జొన్నల మిల్లు", hi: "मिलेट्स एवं ज्वार/बाजरा मिल", kn: "ಸಿರಿಧಾನ್ಯಗಳ ಗಿರಣಿ", ta: "சிறுதானிய ஆலை", mr: "भरडधान्य मिल" },
+    "Barley & Oats Mill": { te: "బార్లీ & ఓట్స్ మిల్లు", hi: "जौ एवं ओट्स मिल", kn: "ಬಾರ್ಲಿ & ಓಟ್ಸ್ ಮಿಲ್", ta: "பார்லி & ஓட்ஸ் ஆலை", mr: "जव व ओट्स मिल" },
+    "Grain & Cereal Processing Plant": { te: "ధాన్యాల ప్రాసెసింగ్ ప్లాంట్", hi: "अनाज एवं खाद्यान्न प्रसंस्करण संयंत्र", kn: "ಧಾನ್ಯ ಸಂಸ್ಕರಣಾ ಘಟಕ", ta: "தானிய பதப்படுத்தும் ஆலை", mr: "धान्य प्रक्रिया केंद्र" },
+    "Dal / Pulse Mill": { te: "పప్పుల మిల్లు (దాల్ మిల్)", hi: "दाल मिल", kn: "ದಾಲ್ ಮಿಲ್", ta: "பருப்பு ஆலை", mr: "डाळ मिल" },
+    "Bengal Gram & Besan Mill": { te: "శనగ & శనగపిండి మిల్లు", hi: "चना एवं बेसन मिल", kn: "ಕಡಲೆ & ಕಡಲೆಹಿಟ್ಟು ಗಿರಣಿ", ta: "கடலை & கடலை மாவு ஆலை", mr: "हरभरा व बेसन मिल" },
+    "Lentil & Masoor Processing Mill": { te: "ఎర్ర కందులు/మసూర్ మిల్లు", hi: "मसूर दाल प्रसंस्करण मिल", kn: "ಮಸೂರ್ ಬೇಳೆ ಸಂಸ್ಕರಣಾ ಘಟಕ", ta: "மைசூர் பருப்பு ஆலை", mr: "मसूर डाळ प्रक्रिया मिल" },
+    "Legumes & Peas Processing Plant": { te: "లెగ్యూమ్స్ & బఠానీల ప్రాసెసింగ్ ప్లాంట్", hi: "दलहन एवं मटर प्रसंस्करण संयंत्र", kn: "ಬಟಾಣಿ ಸಂಸ್ಕರಣಾ ಘಟಕ", ta: "பட்டாணி பதப்படுத்தும் ஆலை", mr: "मटार व कडधान्य प्रक्रिया केंद्र" },
+    "Oil Mill & Expeller": { te: "నూనె మిల్లు & ఎక్స్‌పెల్లర్", hi: "तेल मिल एवं एक्सपेलर", kn: "ಎಣ್ಣೆ ಗಿರಣಿ", ta: "எண்ணெய் ஆலை", mr: "तेल मिल" },
+    "Soybean Solvent Extraction Plant": { te: "సోయాబీన్ సాల్వెంట్ ప్లాంట్", hi: "सोयाबीन निष्कर्षण संयंत्र", kn: "ಸೋಯಾಬೀನ್ ಸಂಸ್ಕರಣಾ ಘಟಕ", ta: "சோயாபீன் ஆலை", mr: "सोयाबीन प्रक्रिया केंद्र" },
+    "Castor & Safflower Oil Mill": { te: "ఆముదం & కుసుమల నూనె మిల్లు", hi: "अरंडी एवं कुसुम तेल मिल", kn: "ಔಡಲ & ಕುಸುಮೆ ಎಣ್ಣೆ ಗಿರಣಿ", ta: "ஆமணக்கு எண்ணெய் ஆலை", mr: "एरंडी व करडई तेल मिल" },
+    "Copra & Coconut Processing Mill": { te: "కొబ్బరి & కురిడీ ప్రాసెసింగ్ మిల్లు", hi: "नारियल एवं खोपरा प्रसंस्करण मिल", kn: "ಕೊಬ್ಬರಿ ಸಂಸ್ಕರಣಾ ಘಟಕ", ta: "கொப்பரை ஆலை", mr: "खोबर प्रक्रिया केंद्र" },
+    "Sugar Factory / Sugarcane Crushing Mill": { te: "చక్కెర కర్మాగారం / చెరకు మిల్లు", hi: "चीनी मिल / गन्ना पेराई संयंत्र", kn: "ಸಕ್ಕರೆ ಕಾರ್ಖಾನೆ / ಕಬ್ಬಿನ ಗಿರಣಿ", ta: "சர்க்கரை ஆலை", mr: "साखर कारखाना" },
+    "Cotton Ginning & Pressing Mill": { te: "కాటన్ జిన్నింగ్ & ప్రెస్సింగ్ మిల్లు", hi: "कपास जिनिंग एवं प्रेसिंग मिल", kn: "ಹತ್ತಿ ಜಿನ್ನಿಂಗ್ ಗಿರಣಿ", ta: "பருத்தி ஜின்னிங் ஆலை", mr: "कापूस जिनिंग व प्रेसिंग मिल" },
+    "Jute Processing Mill": { te: "జనపనార మిల్లు", hi: "जूट / पटसन प्रसंस्करण मिल", kn: "ಸೆಣಬು ಸಂಸ್ಕರಣಾ ಗಿರಣಿ", ta: "சணல் ஆலை", mr: "ताग प्रक्रिया मिल" },
+    "Tobacco Processing Plant": { te: "పొగాకు ప్రాసెసింగ్ ప్లాంట్", hi: "तंबाकू प्रसंस्करण संयंत्र", kn: "ತಂಬಾಕು ಸಂಸ್ಕರಣಾ ಘಟಕ", ta: "புகையிலை ஆலை", mr: "तंबाखू प्रक्रिया केंद्र" },
+    "Chilli & Spice Processing Mill": { te: "మిరప & మసాలా మిల్లు", hi: "मिर्च एवं मसाला प्रसंस्करण मिल", kn: "ಮೆಣಸಿನಕಾಯಿ & ಮಸಾಲೆ ಗಿರಣಿ", ta: "மிளகாய் & மசாலா ஆலை", mr: "मिरची व मसाला गिरणी" },
+    "Ginger & Garlic Processing Unit": { te: "అల్లం & వెల్లుల్లి ప్రాసెసింగ్ యూనిట్", hi: "अदरक एवं लहसुन प्रसंस्करण इकाई", kn: "ಶುಂಠಿ & ಬೆಳ್ಳುಳ್ಳಿ ಸಂಸ್ಕರಣಾ ಘಟಕ", ta: "இஞ்சி & பூண்டு பதப்படுத்தும் ஆலை", mr: "आले व लसूण प्रक्रिया केंद्र" },
+    "Plantation Spices Processing (Pepper, Cardamom, Clove)": { te: "తోటల మసాలా దినుసుల మిల్లు", hi: "बागवानी मसाला प्रसंस्करण मिल", kn: "ತೋಟಗಾರಿಕಾ ಮಸಾಲೆ ಗಿರಣಿ", ta: "தோட்டக்கலை மசாலா ஆலை", mr: "मसाले प्रक्रिया गिरणी" },
+    "Multi-Crop Agro Processing Mill": { te: "బహుళ పంటల వ్యవసాయ మిల్లు", hi: "बहु-फसलीय कृषि प्रसंस्करण मिल", kn: "ಬಹು-ಬೆಳೆ ಕೃಷಿ ಗಿರಣಿ", ta: "பல்வகை பயிர் ஆலை", mr: "बहु-पीक कृषी प्रक्रिया मिल" }
 };
 Object.assign(STRING_MAP, EXTRA_PHRASES);
 
@@ -726,33 +921,13 @@ export function LanguageProvider({ children }) {
         try {
             localStorage.setItem('kisan_language', langCode);
 
-            // Manage Google Translate cookies and triggers cleanly
+            // Clear any lingering google translate cookies
+            document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
             const domain = window.location.hostname;
-            if (langCode === 'en') {
-                document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
-                if (domain && domain !== 'localhost' && !domain.includes('127.0.0.1')) {
-                    document.cookie = `googtrans=; path=/; domain=.${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
-                    document.cookie = `googtrans=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
-                }
-                document.cookie = 'googtrans=/en/en; path=/;';
-            } else {
-                document.cookie = `googtrans=/en/${langCode}; path=/;`;
-                if (domain && domain !== 'localhost' && !domain.includes('127.0.0.1')) {
-                    document.cookie = `googtrans=/en/${langCode}; path=/; domain=.${domain};`;
-                }
+            if (domain && domain !== 'localhost' && !domain.includes('127.0.0.1')) {
+                document.cookie = `googtrans=; path=/; domain=.${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+                document.cookie = `googtrans=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
             }
-
-            const triggerGoogleCombo = () => {
-                const combo = document.querySelector('.goog-te-combo');
-                if (combo) {
-                    combo.value = langCode === 'en' ? 'en' : langCode;
-                    combo.dispatchEvent(new Event('change'));
-                }
-            };
-            triggerGoogleCombo();
-            setTimeout(triggerGoogleCombo, 80);
-            setTimeout(triggerGoogleCombo, 250);
-            setTimeout(triggerGoogleCombo, 600);
 
             window.dispatchEvent(new CustomEvent('kisan_language_changed', { detail: langCode }));
         } catch (e) {
@@ -760,24 +935,9 @@ export function LanguageProvider({ children }) {
         }
     };
 
-    // Restore language on initial page load / refresh
+    // Clean up any stale cookies on initial mount
     useEffect(() => {
-        const saved = localStorage.getItem('kisan_language');
-        if (saved && saved !== 'en') {
-            document.cookie = `googtrans=/en/${saved}; path=/;`;
-            let attempts = 0;
-            const checkCombo = setInterval(() => {
-                attempts++;
-                const combo = document.querySelector('.goog-te-combo');
-                if (combo) {
-                    combo.value = saved;
-                    combo.dispatchEvent(new Event('change'));
-                    clearInterval(checkCombo);
-                } else if (attempts > 20) {
-                    clearInterval(checkCombo);
-                }
-            }, 200);
-        }
+        document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
     }, []);
 
     useEffect(() => {
@@ -836,6 +996,12 @@ export function LanguageProvider({ children }) {
                     {
                         acceptNode: (node) => {
                             if (!node.nodeValue) return NodeFilter.FILTER_REJECT;
+                            if (node.parentElement && (
+                                node.parentElement.closest('.notranslate') ||
+                                node.parentElement.closest('[translate="no"]')
+                            )) {
+                                return NodeFilter.FILTER_REJECT;
+                            }
                             const text = node.nodeValue.trim();
                             if (text.length > 0 && (CANONICAL_MAP[text] || STRING_MAP[text])) {
                                 return NodeFilter.FILTER_ACCEPT;
@@ -873,6 +1039,7 @@ export function LanguageProvider({ children }) {
 
                 // 2. Input placeholders
                 document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+                    if (el.closest('.notranslate') || el.closest('[translate="no"]')) return;
                     const ph = el.placeholder.trim();
                     const key = CANONICAL_MAP[ph];
                     if (key) {
@@ -893,13 +1060,8 @@ export function LanguageProvider({ children }) {
         };
 
         translateDom();
-        const t1 = setTimeout(translateDom, 60);
-        const t2 = setTimeout(translateDom, 250);
-
-        return () => {
-            clearTimeout(t1);
-            clearTimeout(t2);
-        };
+        const animFrame = requestAnimationFrame(translateDom);
+        return () => cancelAnimationFrame(animFrame);
     }, [language]);
 
     return (

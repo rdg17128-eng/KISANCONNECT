@@ -1,7 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import MapModal from './MapModal';
 import { getCurrentCoordinates, reverseGeocode, searchLocations } from '../services/locationService';
 import { compressImageFile } from '../utils/imageUtils';
+
+const CROP_CATEGORIES_DATA = [
+    {
+        category: '🌾 Cereals / Grains',
+        crops: [
+            'Paddy (Rice)',
+            'Wheat',
+            'Maize',
+            'Sorghum (Jowar)',
+            'Pearl Millet (Bajra)',
+            'Finger Millet (Ragi)',
+            'Barley',
+            'Oats'
+        ]
+    },
+    {
+        category: '🫘 Pulses',
+        crops: [
+            'Red Gram (Tur/Arhar)',
+            'Green Gram (Moong)',
+            'Black Gram (Urad)',
+            'Bengal Gram (Chana)',
+            'Lentil (Masoor)',
+            'Peas',
+            'Horse Gram',
+            'Cowpea'
+        ]
+    },
+    {
+        category: '🌻 Oilseeds',
+        crops: [
+            'Groundnut',
+            'Sunflower',
+            'Soybean',
+            'Mustard',
+            'Sesame',
+            'Safflower',
+            'Castor',
+            'Linseed',
+            'Coconut/Copra'
+        ]
+    },
+    {
+        category: '🍬 Sugar & Industrial Crops',
+        crops: [
+            'Sugarcane',
+            'Cotton',
+            'Jute',
+            'Tobacco'
+        ]
+    },
+    {
+        category: '🌶️ Spices & Processing Crops',
+        crops: [
+            'Red Chilli',
+            'Turmeric',
+            'Coriander',
+            'Cumin',
+            'Black Pepper',
+            'Ginger',
+            'Garlic',
+            'Cardamom',
+            'Clove'
+        ]
+    }
+];
 
 export default function AddCropModal({ onClose, onSaveCrop }) {
     const [crop, setCrop] = useState('');
@@ -14,6 +80,32 @@ export default function AddCropModal({ onClose, onSaveCrop }) {
     const [isLocatingGps, setIsLocatingGps] = useState(false);
     const [accuracyText, setAccuracyText] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filteredCropCategories = useMemo(() => {
+        if (!searchQuery.trim()) return CROP_CATEGORIES_DATA;
+        const q = searchQuery.toLowerCase().trim();
+        return CROP_CATEGORIES_DATA.map(cat => ({
+            ...cat,
+            crops: cat.crops.filter(c => 
+                c.toLowerCase().includes(q) || 
+                cat.category.toLowerCase().includes(q)
+            )
+        })).filter(cat => cat.crops.length > 0);
+    }, [searchQuery]);
 
     const handleConfirmLocation = (placeName, lat, lng) => {
         setLocationInput(placeName);
@@ -108,32 +200,168 @@ export default function AddCropModal({ onClose, onSaveCrop }) {
                         Select your crop and pinpoint your exact farm plot
                     </p>
 
-                    {/* Crop Selection Dropdown */}
-                    <div className="input-group" style={{ marginBottom: '1rem', borderColor: 'var(--primary)' }}>
-                        <select 
-                            style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', padding: '0', fontFamily: 'inherit', fontSize: '0.95rem', color: 'inherit', cursor: 'pointer' }} 
-                            value={crop} 
-                            onChange={(e) => setCrop(e.target.value)}
+                    {/* Crop Selection Custom Dropdown */}
+                    <div style={{ marginBottom: '1rem', position: 'relative' }} ref={dropdownRef}>
+                        <div 
+                            className="input-group" 
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            style={{ 
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center',
+                                borderColor: isDropdownOpen ? 'var(--primary)' : 'var(--primary)',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                padding: '0.65rem 0.9rem',
+                                borderRadius: '0.6rem'
+                            }}
                         >
-                            <option value="" disabled style={{ color: '#000', background: '#fff' }}>Select a Crop</option>
-                            <optgroup label="🌾 Cereals / Grains" style={{ color: '#000', background: '#fff' }}>
-                                <option value="Paddy (Rice)" style={{ color: '#000', background: '#fff' }}>Paddy (Rice)</option>
-                                <option value="Maize" style={{ color: '#000', background: '#fff' }}>Maize</option>
-                                <option value="Wheat" style={{ color: '#000', background: '#fff' }}>Wheat</option>
-                            </optgroup>
-                            <optgroup label="🌱 Pulses" style={{ color: '#000', background: '#fff' }}>
-                                <option value="Red Gram" style={{ color: '#000', background: '#fff' }}>Red Gram</option>
-                                <option value="Green Gram" style={{ color: '#000', background: '#fff' }}>Green Gram</option>
-                            </optgroup>
-                            <optgroup label="🌻 Oilseeds" style={{ color: '#000', background: '#fff' }}>
-                                <option value="Groundnut" style={{ color: '#000', background: '#fff' }}>Groundnut</option>
-                                <option value="Sunflower" style={{ color: '#000', background: '#fff' }}>Sunflower</option>
-                            </optgroup>
-                            <optgroup label="🧵 Commercial" style={{ color: '#000', background: '#fff' }}>
-                                <option value="Cotton" style={{ color: '#000', background: '#fff' }}>Cotton</option>
-                            </optgroup>
-                            <option value="Other" style={{ color: '#000', background: '#fff' }}>Other (Type custom name)</option>
-                        </select>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', overflow: 'hidden' }}>
+                                <i className="fa-solid fa-wheat-awn" style={{ color: 'var(--primary)', flexShrink: 0 }}></i>
+                                <span style={{ color: crop ? '#fff' : 'var(--text-muted)', fontSize: '0.92rem', fontWeight: crop ? 600 : 400, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                                    {crop ? (crop === 'Other' ? 'Other (Custom Crop)' : crop) : 'Select a Crop'}
+                                </span>
+                            </div>
+                            <i className="fa-solid fa-chevron-down" style={{ 
+                                color: 'var(--text-muted)', 
+                                fontSize: '0.8rem',
+                                transition: 'transform 0.2s ease',
+                                transform: isDropdownOpen ? 'rotate(180deg)' : 'none' 
+                            }}></i>
+                        </div>
+
+                        {/* Custom Luxury Dark Dropdown Menu */}
+                        {isDropdownOpen && (
+                            <div 
+                                style={{
+                                    position: 'absolute',
+                                    top: 'calc(100% + 6px)',
+                                    left: 0,
+                                    right: 0,
+                                    zIndex: 1200,
+                                    background: '#091c13',
+                                    border: '1px solid rgba(16, 185, 129, 0.45)',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 16px 40px rgba(0, 0, 0, 0.85)',
+                                    backdropFilter: 'blur(16px)',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                {/* Search Filter Header */}
+                                <div style={{ padding: '0.55rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <i className="fa-solid fa-magnifying-glass" style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}></i>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search crop name..." 
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        autoFocus
+                                        style={{
+                                            width: '100%',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            outline: 'none',
+                                            color: '#fff',
+                                            fontSize: '0.85rem'
+                                        }}
+                                    />
+                                    {searchQuery && (
+                                        <i 
+                                            className="fa-solid fa-xmark" 
+                                            onClick={(e) => { e.stopPropagation(); setSearchQuery(''); }}
+                                            style={{ color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
+                                        ></i>
+                                    )}
+                                </div>
+
+                                {/* Scrollable Grouped Items */}
+                                <div style={{ maxHeight: '230px', overflowY: 'auto', padding: '0.35rem 0' }}>
+                                    {filteredCropCategories.length === 0 ? (
+                                        <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                                            No crops matching "{searchQuery}"
+                                        </div>
+                                    ) : (
+                                        filteredCropCategories.map(cat => (
+                                            <div key={cat.category} style={{ marginBottom: '0.35rem' }}>
+                                                <div style={{ 
+                                                    padding: '0.35rem 0.85rem', 
+                                                    fontSize: '0.72rem', 
+                                                    fontWeight: 800, 
+                                                    color: 'var(--accent-gold)', 
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.04em',
+                                                    background: 'rgba(255, 255, 255, 0.04)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.4rem'
+                                                }}>
+                                                    {cat.category}
+                                                </div>
+                                                {cat.crops.map(cName => {
+                                                    const isSelected = crop === cName;
+                                                    return (
+                                                        <div
+                                                            key={cName}
+                                                            onClick={() => {
+                                                                setCrop(cName);
+                                                                setIsDropdownOpen(false);
+                                                                setSearchQuery('');
+                                                            }}
+                                                            style={{
+                                                                padding: '0.55rem 0.85rem',
+                                                                fontSize: '0.85rem',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                color: isSelected ? 'var(--primary)' : '#e2e8f0',
+                                                                background: isSelected ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                                                                fontWeight: isSelected ? 700 : 500,
+                                                                transition: 'background 0.15s'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.07)';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                                            }}
+                                                        >
+                                                            <span>{cName}</span>
+                                                            {isSelected && <i className="fa-solid fa-check" style={{ color: 'var(--primary)', fontSize: '0.8rem' }}></i>}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ))
+                                    )}
+
+                                    {/* Other custom option */}
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '0.35rem', paddingTop: '0.35rem' }}>
+                                        <div
+                                            onClick={() => {
+                                                setCrop('Other');
+                                                setIsDropdownOpen(false);
+                                                setSearchQuery('');
+                                            }}
+                                            style={{
+                                                padding: '0.55rem 0.85rem',
+                                                fontSize: '0.85rem',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                color: crop === 'Other' ? 'var(--primary)' : '#94a3b8',
+                                                background: crop === 'Other' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                                                fontWeight: crop === 'Other' ? 700 : 500
+                                            }}
+                                        >
+                                            <span><i className="fa-solid fa-pen-to-square" style={{ marginRight: '0.5rem' }}></i> Other (Type custom name)</span>
+                                            {crop === 'Other' && <i className="fa-solid fa-check" style={{ color: 'var(--primary)' }}></i>}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {crop === 'Other' && (

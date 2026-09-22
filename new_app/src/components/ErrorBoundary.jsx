@@ -30,7 +30,7 @@ export default class ErrorBoundary extends React.Component {
                     fontFamily: 'system-ui, sans-serif'
                 }}>
                     <i className="fa-solid fa-seedling" style={{ fontSize: '3rem', color: '#10b981', marginBottom: '1.5rem' }}></i>
-                    <h2 style={{ fontSize: '1.75rem', marginBottom: '0.5rem', fontWeight: 800 }}>KisanConnect Workspace</h2>
+                    <h2 style={{ fontSize: '1.75rem', marginBottom: '0.5rem', fontWeight: 800 }}><span className="notranslate" translate="no">KisanConnect</span> Workspace</h2>
                     <p style={{ color: '#8ba699', maxWidth: '480px', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
                         Session updated. Click below to continue.
                     </p>

@@ -86,7 +86,7 @@ export default function RolePickerModal() {
                         <KisanLogo size="md" />
                     </div>
                     <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 0.35rem 0' }}>
-                        Welcome to KisanConnect!
+                        Welcome to <span className="notranslate" translate="no">KisanConnect</span>!
                     </h2>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: 0 }}>
                         {googleUser?.email ? `Signed in as ${googleUser.email}. ` : ''}Please select your primary role to configure your portal workspace:

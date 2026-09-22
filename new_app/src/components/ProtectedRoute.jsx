@@ -19,7 +19,7 @@ export default function ProtectedRoute({ requiredRole, children }) {
             }}>
                 <div style={{ textAlign: 'center' }}>
                     <i className="fa-solid fa-seedling fa-spin fa-2x" style={{ color: 'var(--primary)', marginBottom: '1rem' }}></i>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Authenticating KisanConnect session...</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Authenticating <span className="notranslate" translate="no">KisanConnect</span> session...</p>
                 </div>
             </div>
         );

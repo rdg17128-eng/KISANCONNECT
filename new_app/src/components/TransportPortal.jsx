@@ -11,6 +11,8 @@ import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
+import ActiveDeliveryNavigationMap from './ActiveDeliveryNavigationMap';
+
 L.Icon.Default.mergeOptions({
     iconRetinaUrl,
     iconUrl,
@@ -941,69 +943,61 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                                     <p style={{ color: 'var(--text-muted)' }}>When an enquiry is accepted with transport, the assigned driver will receive the trip here.</p>
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
                                     {activeTrips.map(trip => {
                                         const statuses = ['ASSIGNED', 'PICKUP_STARTED', 'CROP_PICKED_UP', 'IN_TRANSIT', 'ARRIVED_AT_MILL', 'DELIVERED'];
                                         const currentIndex = statuses.indexOf(trip.status);
-                                        const isPrePickup = trip.status === 'ASSIGNED' || trip.status === 'PICKUP_STARTED';
                                         const isPostPickup = trip.status === 'CROP_PICKED_UP' || trip.status === 'IN_TRANSIT' || trip.status === 'ARRIVED_AT_MILL';
-                                        const cleanFarmerPhone = (trip.farmer_phone || '').replace(/\D/g, '');
-
-                                        const pLat = Number(trip.pickup_lat) || 17.0916;
-                                        const pLng = Number(trip.pickup_lng) || 80.0210;
-                                        const dLat = Number(trip.delivery_lat) || 17.1033;
-                                        const dLng = Number(trip.delivery_lng) || 80.0536;
-                                        const googleMapsNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${pLat},${pLng}&destination=${dLat},${dLng}&travelmode=driving`;
 
                                         return (
-                                            <div key={trip.transport_code} className="bento-card" style={{ border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                                            <div key={trip.transport_code} className="bento-card" style={{ border: '1px solid rgba(16, 185, 129, 0.3)', padding: 'clamp(0.75rem, 2vw, 1.25rem)', width: '100%', boxSizing: 'border-box' }}>
                                                 {/* Card Header */}
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                    <div>
-                                                        <span style={{ fontFamily: 'monospace', color: 'var(--accent-gold)', fontWeight: 800, fontSize: '1.1rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.6rem' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                        <span style={{ fontFamily: 'monospace', color: 'var(--accent-gold)', fontWeight: 800, fontSize: 'clamp(1rem, 2.5vw, 1.2rem)' }}>
                                                             {trip.transport_code}
                                                         </span>
-                                                        <span style={{ marginLeft: '0.75rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                                                             Enquiry: <strong style={{ color: 'var(--text-main)' }}>{trip.enquiry_code}</strong>
                                                         </span>
                                                     </div>
-                                                    <span className="status-badge" style={{ background: isPostPickup ? 'rgba(16, 185, 129, 0.2)' : 'rgba(234, 179, 8, 0.2)', color: isPostPickup ? 'var(--primary)' : '#fbbf24' }}>
+                                                    <span className="status-badge" style={{ background: isPostPickup ? 'rgba(16, 185, 129, 0.2)' : 'rgba(234, 179, 8, 0.2)', color: isPostPickup ? 'var(--primary)' : '#fbbf24', fontSize: '0.78rem', padding: '0.3rem 0.75rem' }}>
                                                         {trip.status.replace(/_/g, ' ')}
                                                     </span>
                                                 </div>
 
-                                                {/* Visual Transport Progress Stepper */}
-                                                <div style={{ marginBottom: '1.5rem', overflowX: 'auto', padding: '0.5rem 0' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', minWidth: '600px' }}>
+                                                {/* Visual Transport Progress Stepper (Responsive) */}
+                                                <div style={{ marginBottom: '1.25rem', overflowX: 'auto', padding: '0.25rem 0', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', minWidth: '420px', width: '100%' }}>
                                                         {statuses.slice(0, 5).map((st, idx) => {
                                                             const isDone = currentIndex >= idx;
                                                             const isCurrent = currentIndex === idx;
 
                                                             return (
                                                                 <React.Fragment key={st}>
-                                                                    <div style={{ textAlign: 'center', flex: 1 }}>
+                                                                    <div style={{ textAlign: 'center', flex: 1, minWidth: '70px' }}>
                                                                         <div style={{
-                                                                            width: '32px',
-                                                                            height: '32px',
+                                                                            width: '30px',
+                                                                            height: '30px',
                                                                             borderRadius: '50%',
-                                                                            margin: '0 auto 0.4rem',
+                                                                            margin: '0 auto 0.35rem',
                                                                             display: 'flex',
                                                                             alignItems: 'center',
                                                                             justifyContent: 'center',
                                                                             background: isDone ? 'var(--primary)' : 'rgba(255, 255, 255, 0.1)',
                                                                             color: isDone ? '#000' : 'var(--text-muted)',
                                                                             fontWeight: 800,
-                                                                            fontSize: '0.8rem',
-                                                                            boxShadow: isCurrent ? '0 0 15px var(--primary-glow)' : 'none'
+                                                                            fontSize: '0.78rem',
+                                                                            boxShadow: isCurrent ? '0 0 12px var(--primary-glow)' : 'none'
                                                                         }}>
                                                                             {isDone ? <i className="fa-solid fa-check"></i> : idx + 1}
                                                                         </div>
-                                                                        <div style={{ fontSize: '0.7rem', color: isDone ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: isCurrent ? 700 : 400 }}>
+                                                                        <div style={{ fontSize: '0.7rem', color: isDone ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: isCurrent ? 700 : 400, whiteSpace: 'nowrap' }}>
                                                                             {st.replace(/_/g, ' ')}
                                                                         </div>
                                                                     </div>
                                                                     {idx < 4 && (
-                                                                        <div style={{ flex: 1, height: '3px', background: currentIndex > idx ? 'var(--primary)' : 'rgba(255, 255, 255, 0.1)', margin: '0 -10px 1.2rem' }}></div>
+                                                                        <div style={{ flex: 1, height: '2px', background: currentIndex > idx ? 'var(--primary)' : 'rgba(255, 255, 255, 0.1)', margin: '0 -6px 1rem' }}></div>
                                                                     )}
                                                                 </React.Fragment>
                                                             );
@@ -1011,206 +1005,12 @@ export default function TransportPortal({ user: propUser, onLogout }) {
                                                     </div>
                                                 </div>
 
-                                                {/* ======================================================== */}
-                                                {/* PHASE 1: BEFORE PICKUP (FARM PICKUP & FARMER CONTACT) */}
-                                                {/* ======================================================== */}
-                                                {isPrePickup && (
-                                                    <div style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.3)', borderRadius: '0.75rem', padding: '1.25rem', marginBottom: '1.25rem' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fbbf24', fontWeight: 800, fontSize: '0.95rem', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                            <i className="fa-solid fa-map-pin"></i> STEP 1: GO TO FARM & PICK UP HARVEST
-                                                        </div>
-
-                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-                                                            {/* Farm Pickup Location */}
-                                                            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>📍 Farm Pickup Location</div>
-                                                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.2rem' }}>
-                                                                    {trip.pickup_address}
-                                                                </div>
-                                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                                                                    Distance: ~{trip.distance || 38.5} km from Mill
-                                                                </div>
-                                                                <a 
-                                                                    href={`https://www.google.com/maps/search/?api=1&query=${pLat},${pLng}`} 
-                                                                    target="_blank" 
-                                                                    rel="noreferrer"
-                                                                    className="action-btn"
-                                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', padding: '0.35rem 0.75rem', fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--primary)' }}
-                                                                >
-                                                                    <i className="fa-solid fa-location-dot"></i> View Farm on Map
-                                                                </a>
-                                                            </div>
-
-                                                            {/* Farmer Contact Card */}
-                                                            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>👨‍🌾 Farmer Contact</div>
-                                                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-gold)', marginTop: '0.2rem' }}>
-                                                                    {trip.farmer_name}
-                                                                </div>
-                                                                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '0.2rem' }}>
-                                                                    📞 {trip.farmer_phone}
-                                                                </div>
-                                                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                                                                    <a 
-                                                                        href={`tel:${trip.farmer_phone}`} 
-                                                                        className="primary-btn"
-                                                                        style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', textDecoration: 'none' }}
-                                                                    >
-                                                                        <i className="fa-solid fa-phone"></i> Call Farmer
-                                                                    </a>
-                                                                    {cleanFarmerPhone && (
-                                                                        <a 
-                                                                            href={`https://wa.me/${cleanFarmerPhone}`} 
-                                                                            target="_blank" 
-                                                                            rel="noreferrer"
-                                                                            className="secondary-btn"
-                                                                            style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', textDecoration: 'none', background: 'rgba(37, 211, 102, 0.15)', color: '#25D366', border: '1px solid rgba(37, 211, 102, 0.3)' }}
-                                                                        >
-                                                                            <i className="fa-brands fa-whatsapp"></i> WhatsApp
-                                                                        </a>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Load Summary based on land and crop */}
-                                                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem 1rem', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                            <div>
-                                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Harvest Load: </span>
-                                                                <strong style={{ color: 'var(--primary)' }}>{trip.crop_name} • {trip.quantity} Tons ({trip.acres || Math.round(trip.quantity / 2)} Acres)</strong>
-                                                            </div>
-                                                            <div>
-                                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Delivery To: </span>
-                                                                <strong>{trip.mill_name}</strong>
-                                                            </div>
-                                                            <div>
-                                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Agreed Fee: </span>
-                                                                <strong style={{ color: 'var(--accent-gold)' }}>₹{trip.final_price?.toLocaleString()}</strong>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Action Button */}
-                                                        <div style={{ marginTop: '1rem' }}>
-                                                            {trip.status === 'ASSIGNED' ? (
-                                                                <button 
-                                                                    className="primary-btn" 
-                                                                    onClick={() => handleUpdateTripStatus(trip.transport_code, 'PICKUP_STARTED')}
-                                                                    style={{ width: '100%', justifyContent: 'center', padding: '0.85rem', fontSize: '1rem', fontWeight: 800 }}
-                                                                >
-                                                                    <i className="fa-solid fa-truck-fast"></i> 1. Start Journey to Farm
-                                                                </button>
-                                                            ) : (
-                                                                <button 
-                                                                    className="primary-btn" 
-                                                                    onClick={() => handleUpdateTripStatus(trip.transport_code, 'CROP_PICKED_UP')}
-                                                                    style={{ width: '100%', justifyContent: 'center', padding: '0.85rem', fontSize: '1rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
-                                                                >
-                                                                    <i className="fa-solid fa-box-open"></i> 2. Confirm Crop Picked Up / Load Loaded
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* ======================================================== */}
-                                                {/* PHASE 2: AFTER PICKUP (LIVE ROUTE MAP & NAVIGATION) */}
-                                                {/* ======================================================== */}
-                                                {isPostPickup && (
-                                                    <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '0.75rem', padding: '1.25rem', marginBottom: '1.25rem' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontWeight: 800, fontSize: '0.95rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                                <i className="fa-solid fa-route"></i> STEP 2: HARVEST LOADED • LIVE NAVIGATION TO MILL
-                                                            </div>
-                                                            <span style={{ fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.2)', color: 'var(--primary)', padding: '0.2rem 0.6rem', borderRadius: '1rem', fontWeight: 700 }}>
-                                                                {trip.status.replace(/_/g, ' ')}
-                                                            </span>
-                                                        </div>
-
-                                                        {/* Live Route Map */}
-                                                        <TripRouteMap 
-                                                            pickupLat={pLat}
-                                                            pickupLng={pLng}
-                                                            deliveryLat={dLat}
-                                                            deliveryLng={dLng}
-                                                            pickupAddress={trip.pickup_address}
-                                                            deliveryAddress={trip.delivery_address}
-                                                            millName={trip.mill_name}
-                                                        />
-
-                                                        {/* Route Stats & Mill Info */}
-                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', margin: '1rem 0' }}>
-                                                            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>📍 From Farm:</div>
-                                                                <strong style={{ fontSize: '0.85rem' }}>{trip.pickup_address}</strong>
-                                                            </div>
-                                                            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>🏭 Destination Mill:</div>
-                                                                <strong style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>{trip.mill_name} ({trip.delivery_address})</strong>
-                                                            </div>
-                                                            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>⏱️ Distance & Drive Time:</div>
-                                                                <strong style={{ fontSize: '0.85rem', color: 'var(--accent-gold)' }}>~{trip.distance || 38.5} km • ~{Math.round((trip.distance || 38.5) * 1.5)} mins</strong>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* One-Click Google Maps Turn-by-Turn GPS Navigation Button */}
-                                                        <a 
-                                                            href={googleMapsNavUrl}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className="primary-btn"
-                                                            style={{ 
-                                                                background: 'linear-gradient(135deg, #4285F4 0%, #1a73e8 100%)', 
-                                                                color: '#fff', 
-                                                                padding: '0.9rem 1.5rem', 
-                                                                width: '100%', 
-                                                                justifyContent: 'center', 
-                                                                fontSize: '1rem', 
-                                                                fontWeight: 800,
-                                                                borderRadius: '0.75rem', 
-                                                                textDecoration: 'none', 
-                                                                display: 'flex', 
-                                                                alignItems: 'center', 
-                                                                gap: '0.6rem', 
-                                                                boxShadow: '0 4px 14px rgba(66, 133, 244, 0.4)',
-                                                                marginBottom: '1rem'
-                                                            }}
-                                                        >
-                                                            <i className="fa-solid fa-location-arrow"></i> Open Turn-by-Turn GPS Navigation in Google Maps
-                                                        </a>
-
-                                                        {/* Next Stage Delivery Actions */}
-                                                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                                            {trip.status === 'CROP_PICKED_UP' && (
-                                                                <button 
-                                                                    className="primary-btn" 
-                                                                    onClick={() => handleUpdateTripStatus(trip.transport_code, 'IN_TRANSIT')}
-                                                                    style={{ flex: 1, justifyContent: 'center', padding: '0.85rem', fontSize: '0.95rem', fontWeight: 700 }}
-                                                                >
-                                                                    <i className="fa-solid fa-road"></i> Start Transit to Mill Gate
-                                                                </button>
-                                                            )}
-                                                            {trip.status === 'IN_TRANSIT' && (
-                                                                <button 
-                                                                    className="primary-btn" 
-                                                                    onClick={() => handleUpdateTripStatus(trip.transport_code, 'ARRIVED_AT_MILL')}
-                                                                    style={{ flex: 1, justifyContent: 'center', padding: '0.85rem', fontSize: '0.95rem', fontWeight: 700 }}
-                                                                >
-                                                                    <i className="fa-solid fa-warehouse"></i> Arrived at Mill Gate
-                                                                </button>
-                                                            )}
-                                                            {trip.status === 'ARRIVED_AT_MILL' && (
-                                                                <button 
-                                                                    className="primary-btn" 
-                                                                    onClick={() => handleUpdateTripStatus(trip.transport_code, 'DELIVERED')}
-                                                                    style={{ flex: 1, justifyContent: 'center', padding: '0.85rem', fontSize: '0.95rem', fontWeight: 800, background: 'var(--accent-gold)', color: '#000' }}
-                                                                >
-                                                                    <i className="fa-solid fa-circle-check"></i> Complete Unload & Gate Delivery
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                {/* Accurate Driver-to-Field Live Route Map & Navigation */}
+                                                <ActiveDeliveryNavigationMap
+                                                    trip={trip}
+                                                    providerInfo={providerInfo}
+                                                    onUpdateStatus={handleUpdateTripStatus}
+                                                />
                                             </div>
                                         );
                                     })}

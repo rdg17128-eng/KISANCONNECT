@@ -13,7 +13,8 @@ export default function KisanLogo({ size = 'md', showText = true, className = ''
 
     return (
         <div 
-            className={`kisan-logo-container ${className}`} 
+            className={`kisan-logo-container notranslate ${className}`}
+            translate="no"
             style={{ 
                 display: 'inline-flex', 
                 alignItems: 'center', 
@@ -23,7 +24,8 @@ export default function KisanLogo({ size = 'md', showText = true, className = ''
             }}
         >
             <div 
-                className="kisan-logo-icon-wrap"
+                className="kisan-logo-icon-wrap notranslate"
+                translate="no"
                 style={{
                     width: `${current.width}px`,
                     height: `${current.height}px`,
@@ -37,13 +39,16 @@ export default function KisanLogo({ size = 'md', showText = true, className = ''
                 <img 
                     src="/kisanconnect-logo.svg" 
                     alt="KisanConnect Logo" 
+                    className="notranslate"
+                    translate="no"
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
             </div>
 
             {showText && (
                 <span 
-                    className="kisan-logo-text"
+                    className="kisan-logo-text notranslate"
+                    translate="no"
                     style={{ 
                         fontSize: current.fontSize, 
                         fontWeight: 800, 
@@ -53,8 +58,8 @@ export default function KisanLogo({ size = 'md', showText = true, className = ''
                         lineHeight: 1
                     }}
                 >
-                    <span className="logo-kisan">Kisan</span>
-                    <span className="logo-connect">Connect</span>
+                    <span className="logo-kisan notranslate" translate="no">Kisan</span>
+                    <span className="logo-connect notranslate" translate="no">Connect</span>
                 </span>
             )}
         </div>

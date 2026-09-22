@@ -141,7 +141,7 @@ export default function LandingPage() {
                         <i className="fa-solid fa-circle-notch fa-spin fa-xl" style={{ color: 'var(--primary)' }}></i>
                     </div>
                     <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                        {targetRole ? `Entering ${targetTitle}...` : 'Connecting to KisanConnect...'}
+                        {targetRole ? `Entering ${targetTitle}...` : <span>Connecting to <span className="notranslate" translate="no">KisanConnect</span>...</span>}
                     </h2>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                         Authenticating Google account and opening your workspace...
@@ -234,7 +234,7 @@ export default function LandingPage() {
                 </div>
 
                 <footer style={{ marginTop: '1.75rem', opacity: 0.6, fontSize: '0.75rem', textAlign: 'center' }}>
-                    <p>© 2026 KisanConnect Ecosystem </p>
+                    <p>© 2026 <span className="notranslate" translate="no">KisanConnect</span> Ecosystem </p>
                 </footer>
             </div>
 

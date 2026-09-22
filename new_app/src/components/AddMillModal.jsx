@@ -1,7 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { supabase } from '../utils/supabase';
 import MapModal from './MapModal';
 import { searchLocations } from '../services/locationService';
+
+const MILL_TYPE_CATEGORIES = [
+    {
+        category: '🌾 Cereals & Grains Mills',
+        options: [
+            { value: 'Rice Mill', label: 'Rice Mill (Paddy)' },
+            { value: 'Flour / Wheat Mill', label: 'Flour / Wheat Mill' },
+            { value: 'Maize / Corn Processing Mill', label: 'Maize / Corn Processing Mill' },
+            { value: 'Millet & Sorghum Mill (Jowar, Bajra, Ragi)', label: 'Millet & Sorghum Mill (Jowar, Bajra, Ragi)' },
+            { value: 'Barley & Oats Mill', label: 'Barley & Oats Mill' },
+            { value: 'Grain & Cereal Processing Plant', label: 'Grain & Cereal Processing Plant' }
+        ]
+    },
+    {
+        category: '🫘 Pulses & Dal Mills',
+        options: [
+            { value: 'Dal / Pulse Mill', label: 'Dal / Pulse Mill (Tur/Arhar, Moong, Urad)' },
+            { value: 'Bengal Gram & Besan Mill', label: 'Bengal Gram & Besan Mill (Chana)' },
+            { value: 'Lentil & Masoor Processing Mill', label: 'Lentil & Masoor Processing Mill' },
+            { value: 'Legumes & Peas Processing Plant', label: 'Legumes & Peas Processing Plant' }
+        ]
+    },
+    {
+        category: '🌻 Oil Extraction Mills',
+        options: [
+            { value: 'Oil Mill & Expeller', label: 'Oil Mill & Expeller (Groundnut, Sunflower, Mustard, Sesame)' },
+            { value: 'Soybean Solvent Extraction Plant', label: 'Soybean Solvent Extraction Plant' },
+            { value: 'Castor & Safflower Oil Mill', label: 'Castor & Safflower Oil Mill' },
+            { value: 'Copra & Coconut Processing Mill', label: 'Copra & Coconut Processing Mill' }
+        ]
+    },
+    {
+        category: '🍬 Sugar, Cotton & Industrial Processing',
+        options: [
+            { value: 'Sugar Factory / Sugarcane Crushing Mill', label: 'Sugar Factory / Sugarcane Crushing Mill' },
+            { value: 'Cotton Ginning & Pressing Mill', label: 'Cotton Ginning & Pressing Mill' },
+            { value: 'Jute Processing Mill', label: 'Jute Processing Mill' },
+            { value: 'Tobacco Processing Plant', label: 'Tobacco Processing Plant' }
+        ]
+    },
+    {
+        category: '🌶️ Spices & Agro Processing',
+        options: [
+            { value: 'Chilli & Spice Processing Mill', label: 'Chilli & Spice Processing Mill (Turmeric, Coriander, Cumin)' },
+            { value: 'Ginger & Garlic Processing Unit', label: 'Ginger & Garlic Processing Unit' },
+            { value: 'Plantation Spices Processing (Pepper, Cardamom, Clove)', label: 'Plantation Spices Processing (Pepper, Cardamom, Clove)' },
+            { value: 'Multi-Crop Agro Processing Mill', label: 'Multi-Crop Agro Processing Mill' }
+        ]
+    }
+];
 
 export default function AddMillModal({ user, onClose, onMillAdded }) {
     const [step, setStep] = useState(1);
@@ -17,27 +67,101 @@ export default function AddMillModal({ user, onClose, onMillAdded }) {
     const [hasColdStorage, setHasColdStorage] = useState(false);
 
     const [isMapOpen, setIsMapOpen] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filteredCategories = useMemo(() => {
+        if (!searchQuery.trim()) return MILL_TYPE_CATEGORIES;
+        const q = searchQuery.toLowerCase().trim();
+        return MILL_TYPE_CATEGORIES.map(cat => ({
+            ...cat,
+            options: cat.options.filter(opt => 
+                opt.label.toLowerCase().includes(q) || 
+                opt.value.toLowerCase().includes(q) ||
+                cat.category.toLowerCase().includes(q)
+            )
+        })).filter(cat => cat.options.length > 0);
+    }, [searchQuery]);
 
     const cropCategories = [
         {
             name: 'Cereals / Grains',
             icon: 'fa-wheat-awn',
-            crops: ['Paddy (Rice)', 'Maize', 'Wheat']
+            crops: [
+                'Paddy (Rice)',
+                'Wheat',
+                'Maize',
+                'Sorghum (Jowar)',
+                'Pearl Millet (Bajra)',
+                'Finger Millet (Ragi)',
+                'Barley',
+                'Oats'
+            ]
         },
         {
             name: 'Pulses',
             icon: 'fa-seedling',
-            crops: ['Red Gram', 'Green Gram']
+            crops: [
+                'Red Gram (Tur/Arhar)',
+                'Green Gram (Moong)',
+                'Black Gram (Urad)',
+                'Bengal Gram (Chana)',
+                'Lentil (Masoor)',
+                'Peas',
+                'Horse Gram',
+                'Cowpea'
+            ]
         },
         {
             name: 'Oilseeds',
             icon: 'fa-sun',
-            crops: ['Groundnut', 'Sunflower']
+            crops: [
+                'Groundnut',
+                'Sunflower',
+                'Soybean',
+                'Mustard',
+                'Sesame',
+                'Safflower',
+                'Castor',
+                'Linseed',
+                'Coconut/Copra'
+            ]
         },
         {
-            name: 'Commercial',
-            icon: 'fa-shirt',
-            crops: ['Cotton']
+            name: 'Sugar & Industrial Crops',
+            icon: 'fa-cubes-stacked',
+            crops: [
+                'Sugarcane',
+                'Cotton',
+                'Jute',
+                'Tobacco'
+            ]
+        },
+        {
+            name: 'Spices & Processing Crops',
+            icon: 'fa-pepper-hot',
+            crops: [
+                'Red Chilli',
+                'Turmeric',
+                'Coriander',
+                'Cumin',
+                'Black Pepper',
+                'Ginger',
+                'Garlic',
+                'Cardamom',
+                'Clove'
+            ]
         }
     ];
 
@@ -149,17 +273,144 @@ export default function AddMillModal({ user, onClose, onMillAdded }) {
                             </div>
                         </div>
 
-                        <div className="input-field" style={{ marginBottom: '1rem' }}>
+                        <div className="input-field" style={{ marginBottom: '1rem', position: 'relative' }} ref={dropdownRef}>
                             <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Mill Type *</label>
-                            <div className="input-group">
-                                <i className="fa-solid fa-gears"></i>
-                                <select value={millType} onChange={e => setMillType(e.target.value)} style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text-main)', outline: 'none' }}>
-                                    <option value="Rice Mill" style={{ color: '#000' }}>Rice Mill</option>
-                                    <option value="Flour Mill" style={{ color: '#000' }}>Flour Mill</option>
-                                    <option value="Oil Mill" style={{ color: '#000' }}>Oil Mill</option>
-                                    <option value="Pulse Mill" style={{ color: '#000' }}>Pulse Mill</option>
-                                </select>
+                            
+                            {/* Custom Trigger */}
+                            <div 
+                                className="input-group" 
+                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                style={{ 
+                                    cursor: 'pointer', 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    alignItems: 'center',
+                                    borderColor: isDropdownOpen ? 'var(--primary)' : undefined,
+                                    background: 'var(--bg-dark)',
+                                    padding: '0.65rem 0.9rem'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', overflow: 'hidden' }}>
+                                    <i className="fa-solid fa-gears" style={{ color: 'var(--primary)', flexShrink: 0 }}></i>
+                                    <span style={{ color: '#fff', fontSize: '0.92rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                                        {millType}
+                                    </span>
+                                </div>
+                                <i className="fa-solid fa-chevron-down" style={{ 
+                                    color: 'var(--text-muted)', 
+                                    fontSize: '0.8rem',
+                                    transition: 'transform 0.2s ease',
+                                    transform: isDropdownOpen ? 'rotate(180deg)' : 'none' 
+                                }}></i>
                             </div>
+
+                            {/* Custom Luxury Dark Dropdown Menu */}
+                            {isDropdownOpen && (
+                                <div 
+                                    style={{
+                                        position: 'absolute',
+                                        top: 'calc(100% + 6px)',
+                                        left: 0,
+                                        right: 0,
+                                        zIndex: 1200,
+                                        background: '#091c13',
+                                        border: '1px solid rgba(16, 185, 129, 0.45)',
+                                        borderRadius: '12px',
+                                        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.85)',
+                                        backdropFilter: 'blur(16px)',
+                                        overflow: 'hidden'
+                                    }}
+                                >
+                                    {/* Search Filter Header */}
+                                    <div style={{ padding: '0.55rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <i className="fa-solid fa-magnifying-glass" style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}></i>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search mill type..." 
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            autoFocus
+                                            style={{
+                                                width: '100%',
+                                                background: 'transparent',
+                                                border: 'none',
+                                                outline: 'none',
+                                                color: '#fff',
+                                                fontSize: '0.85rem'
+                                            }}
+                                        />
+                                        {searchQuery && (
+                                            <i 
+                                                className="fa-solid fa-xmark" 
+                                                onClick={(e) => { e.stopPropagation(); setSearchQuery(''); }}
+                                                style={{ color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
+                                            ></i>
+                                        )}
+                                    </div>
+
+                                    {/* Scrollable Grouped Items */}
+                                    <div style={{ maxHeight: '230px', overflowY: 'auto', padding: '0.35rem 0' }}>
+                                        {filteredCategories.length === 0 ? (
+                                            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                                                No mill types matching "{searchQuery}"
+                                            </div>
+                                        ) : (
+                                            filteredCategories.map(cat => (
+                                                <div key={cat.category} style={{ marginBottom: '0.35rem' }}>
+                                                    <div style={{ 
+                                                        padding: '0.35rem 0.85rem', 
+                                                        fontSize: '0.72rem', 
+                                                        fontWeight: 800, 
+                                                        color: 'var(--accent-gold)', 
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.04em',
+                                                        background: 'rgba(255, 255, 255, 0.04)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.4rem'
+                                                    }}>
+                                                        {cat.category}
+                                                    </div>
+                                                    {cat.options.map(opt => {
+                                                        const isSelected = millType === opt.value;
+                                                        return (
+                                                            <div
+                                                                key={opt.value}
+                                                                onClick={() => {
+                                                                    setMillType(opt.value);
+                                                                    setIsDropdownOpen(false);
+                                                                    setSearchQuery('');
+                                                                }}
+                                                                style={{
+                                                                    padding: '0.55rem 0.85rem',
+                                                                    fontSize: '0.85rem',
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center',
+                                                                    color: isSelected ? 'var(--primary)' : '#e2e8f0',
+                                                                    background: isSelected ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                                                                    fontWeight: isSelected ? 700 : 500,
+                                                                    transition: 'background 0.15s'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.07)';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                                                }}
+                                                            >
+                                                                <span>{opt.label}</span>
+                                                                {isSelected && <i className="fa-solid fa-check" style={{ color: 'var(--primary)', fontSize: '0.8rem' }}></i>}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="input-field" style={{ marginBottom: '1.5rem' }}>

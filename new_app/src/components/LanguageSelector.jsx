@@ -54,15 +54,17 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
     // Cards variant for Profile Preferences section
     if (variant === 'cards') {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', ...style }}>
+            <div className="notranslate" translate="no" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', ...style }}>
                 {/* Search Bar for 20 Languages */}
-                <div style={{ position: 'relative', width: '100%', maxWidth: '380px' }}>
-                    <i className="fa-solid fa-search" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '0.85rem' }}></i>
+                <div className="notranslate" translate="no" style={{ position: 'relative', width: '100%', maxWidth: '380px' }}>
+                    <i className="fa-solid fa-search notranslate" translate="no" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '0.85rem' }}></i>
                     <input
                         type="text"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         placeholder="Search 20 Indian languages (e.g. Telugu, Hindi, Tamil, Marathi)..."
+                        className="notranslate"
+                        translate="no"
                         style={{
                             width: '100%',
                             padding: '0.6rem 1rem 0.6rem 2.4rem',
@@ -77,20 +79,24 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
                         <button
                             type="button"
                             onClick={() => setSearchTerm('')}
+                            className="notranslate"
+                            translate="no"
                             style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                         >
-                            <i className="fa-solid fa-xmark"></i>
+                            <i className="fa-solid fa-xmark notranslate" translate="no"></i>
                         </button>
                     )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(145px, 1fr))', gap: '0.75rem', maxHeight: '360px', overflowY: 'auto', paddingRight: '0.35rem' }}>
+                <div className="notranslate" translate="no" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(145px, 1fr))', gap: '0.75rem', maxHeight: '360px', overflowY: 'auto', paddingRight: '0.35rem' }}>
                     {filteredLanguages.map(l => {
                         const isSelected = l.code === language;
                         return (
                             <div
                                 key={l.code}
                                 onClick={() => setLanguage(l.code)}
+                                className="notranslate"
+                                translate="no"
                                 style={{
                                     padding: '0.85rem 0.65rem',
                                     borderRadius: '0.75rem',
@@ -102,14 +108,14 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
                                     boxShadow: isSelected ? '0 0 12px rgba(16, 185, 129, 0.25)' : 'none'
                                 }}
                             >
-                                <div style={{ fontSize: '1.35rem', marginBottom: '0.2rem' }}>{l.flag}</div>
-                                <div style={{ fontWeight: 800, fontSize: '0.9rem', color: isSelected ? 'var(--primary)' : 'var(--text-main)' }}>
+                                <div className="notranslate" translate="no" style={{ fontSize: '1.35rem', marginBottom: '0.2rem' }}>{l.flag}</div>
+                                <div className="notranslate" translate="no" style={{ fontWeight: 800, fontSize: '0.9rem', color: isSelected ? 'var(--primary)' : 'var(--text-main)' }}>
                                     {l.native}
                                 </div>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                                <div className="notranslate" translate="no" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
                                     {l.name}
                                 </div>
-                                <div style={{ fontSize: '0.62rem', color: isSelected ? 'var(--primary-light)' : 'rgba(255,255,255,0.4)', marginTop: '0.2rem' }}>
+                                <div className="notranslate" translate="no" style={{ fontSize: '0.62rem', color: isSelected ? 'var(--primary-light)' : 'rgba(255,255,255,0.4)', marginTop: '0.2rem' }}>
                                     {l.region}
                                 </div>
                             </div>
@@ -122,14 +128,15 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
 
     // Default compact dropdown (for top headers) with quick-search
     return (
-        <div ref={dropdownRef} className="language-selector-wrapper" style={{ position: 'relative', display: 'inline-block', ...style }}>
+        <div ref={dropdownRef} className="language-selector-wrapper notranslate" translate="no" style={{ position: 'relative', display: 'inline-block', ...style }}>
             <button
                 type="button"
                 onClick={() => {
                     setIsOpen(!isOpen);
                     setSearchTerm('');
                 }}
-                className="action-btn lang-selector-btn"
+                className="action-btn lang-selector-btn notranslate"
+                translate="no"
                 style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -144,14 +151,17 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
                     whiteSpace: 'nowrap'
                 }}
             >
-                <i className="fa-solid fa-language" style={{ color: 'var(--primary)', fontSize: '0.95rem' }}></i>
-                <span className="lang-selector-label" style={{ fontWeight: 700 }}>{activeLang.flag} {activeLang.native}</span>
-                <i className="fa-solid fa-chevron-down" style={{ fontSize: '0.6rem', opacity: 0.7, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}></i>
+                <i className="fa-solid fa-language notranslate" translate="no" style={{ color: 'var(--primary)', fontSize: '0.95rem' }}></i>
+                <span className="lang-selector-label notranslate" translate="no" style={{ fontWeight: 700 }}>
+                    {activeLang.flag} {activeLang.native}
+                </span>
+                <i className="fa-solid fa-chevron-down notranslate" translate="no" style={{ fontSize: '0.6rem', opacity: 0.7, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}></i>
             </button>
 
             {isOpen && (
                 <div 
-                    className="language-dropdown-menu"
+                    className="language-dropdown-menu notranslate"
+                    translate="no"
                     style={{
                         position: 'absolute',
                         top: 'calc(100% + 6px)',
@@ -172,7 +182,7 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
                     }}
                 >
                     {/* Search Input for 20 Languages */}
-                    <div style={{ position: 'relative', padding: '0.2rem' }}>
+                    <div className="notranslate" translate="no" style={{ position: 'relative', padding: '0.2rem' }}>
                         <i className="fa-solid fa-search" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '0.75rem' }}></i>
                         <input
                             type="text"
@@ -180,6 +190,8 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
                             onChange={e => setSearchTerm(e.target.value)}
                             placeholder="Find your language..."
                             autoFocus
+                            className="notranslate"
+                            translate="no"
                             style={{
                                 width: '100%',
                                 padding: '0.45rem 0.6rem 0.45rem 1.8rem',
@@ -193,9 +205,9 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
                     </div>
 
                     {/* Scrollable Language List */}
-                    <div style={{ overflowY: 'auto', maxHeight: '280px', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                    <div className="notranslate" translate="no" style={{ overflowY: 'auto', maxHeight: '280px', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                         {filteredLanguages.length === 0 ? (
-                            <div style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            <div className="notranslate" translate="no" style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                 No language matching "{searchTerm}"
                             </div>
                         ) : (
@@ -209,6 +221,8 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
                                             setLanguage(l.code);
                                             setIsOpen(false);
                                         }}
+                                        className="notranslate"
+                                        translate="no"
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -225,14 +239,14 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
                                             transition: 'background 0.15s ease'
                                         }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                            <span style={{ fontSize: '1.1rem' }}>{l.flag}</span>
-                                            <div>
-                                                <div style={{ fontWeight: isSelected ? 800 : 600, fontSize: '0.84rem' }}>{l.native}</div>
-                                                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{l.name} • {l.region}</div>
+                                        <div className="notranslate" translate="no" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                            <span className="notranslate" translate="no" style={{ fontSize: '1.1rem' }}>{l.flag}</span>
+                                            <div className="notranslate" translate="no">
+                                                <div className="notranslate" translate="no" style={{ fontWeight: isSelected ? 800 : 600, fontSize: '0.84rem' }}>{l.native}</div>
+                                                <div className="notranslate" translate="no" style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{l.name} • {l.region}</div>
                                             </div>
                                         </div>
-                                        {isSelected && <i className="fa-solid fa-check" style={{ fontSize: '0.75rem', color: 'var(--primary)' }}></i>}
+                                        {isSelected && <i className="fa-solid fa-check notranslate" translate="no" style={{ fontSize: '0.75rem', color: 'var(--primary)' }}></i>}
                                     </button>
                                 );
                             })
