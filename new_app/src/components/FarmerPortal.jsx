@@ -1222,35 +1222,36 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                                             flexWrap: 'wrap',
                                                                             gap: '0.6rem',
                                                                             padding: '0.65rem 0.75rem', 
-                                                                            borderRadius: '0.5rem', 
+                                                                            borderRadius: '0.55rem', 
                                                                             background: isTop ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255,255,255,0.03)',
                                                                             border: isTop ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(255,255,255,0.04)',
                                                                             boxShadow: isTop ? '0 0 12px rgba(16, 185, 129, 0.1)' : 'none',
-                                                                            boxSizing: 'border-box'
+                                                                            boxSizing: 'border-box',
+                                                                            width: '100%'
                                                                         }}
                                                                     >
-                                                                        <div style={{ flex: '1 1 130px', minWidth: '120px' }}>
+                                                                        <div style={{ flex: '1 1 120px', minWidth: '0' }}>
                                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                                                                <strong style={{ fontSize: '0.88rem', color: 'var(--text-main)' }}>
+                                                                                <strong style={{ fontSize: '0.88rem', color: 'var(--text-main)', wordBreak: 'break-word' }}>
                                                                                     {offer.mill.millName}
                                                                                 </strong>
                                                                                 {isTop && (
-                                                                                    <span style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '0.3rem', fontWeight: 800, letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
+                                                                                    <span style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', fontSize: '0.62rem', padding: '0.1rem 0.35rem', borderRadius: '0.3rem', fontWeight: 800, letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
                                                                                         👑 HIGHEST PRICE
                                                                                     </span>
                                                                                 )}
                                                                             </div>
-                                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem', wordBreak: 'break-word' }}>
+                                                                            <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: '0.15rem', wordBreak: 'break-word' }}>
                                                                                 <i className="fa-solid fa-location-dot"></i> {offer.mill.locationName || 'Nearby Mill'} • ~{offer.distance.toFixed(1)} km
                                                                             </div>
                                                                         </div>
 
-                                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.65rem', flexWrap: 'wrap', flex: '1 1 auto', minWidth: '140px' }}>
-                                                                            <div style={{ textAlign: 'left', minWidth: '55px' }}>
-                                                                                <div style={{ fontWeight: 800, fontSize: '0.98rem', color: isTop ? 'var(--primary)' : 'var(--accent-gold)', whiteSpace: 'nowrap' }}>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem', flexWrap: 'wrap', flex: '0 1 auto', marginLeft: 'auto' }}>
+                                                                            <div style={{ textAlign: 'right', minWidth: '55px' }}>
+                                                                                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: isTop ? 'var(--primary)' : 'var(--accent-gold)', whiteSpace: 'nowrap' }}>
                                                                                     ₹{offer.price.toLocaleString('en-IN')}
                                                                                 </div>
-                                                                                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>per quintal</div>
+                                                                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>per quintal</div>
                                                                             </div>
 
                                                                             <button
@@ -1260,12 +1261,12 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                                                     setSelectedCropForSearch(offer.farmerCrop);
                                                                                 }}
                                                                                 style={{ 
-                                                                                    padding: '0.42rem 0.8rem', 
-                                                                                    fontSize: '0.75rem', 
+                                                                                    padding: '0.4rem 0.75rem', 
+                                                                                    fontSize: '0.76rem', 
                                                                                     fontWeight: 700,
                                                                                     background: isTop ? 'var(--primary)' : 'rgba(255,255,255,0.08)',
                                                                                     color: isTop ? '#000' : 'var(--text-main)',
-                                                                                    border: isTop ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                                                                                    border: isTop ? 'none' : '1px solid rgba(255,255,255,0.12)',
                                                                                     whiteSpace: 'nowrap',
                                                                                     flexShrink: 0,
                                                                                     borderRadius: '0.5rem'

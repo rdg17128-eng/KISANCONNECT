@@ -711,8 +711,9 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                         <button 
                             className="primary-btn pulse-glow"
                             onClick={() => setIsQrScannerOpen(true)}
+                            title="Scan Gate QR Code"
                             style={{ 
-                                padding: '0.55rem 1rem', 
+                                padding: '0.45rem 0.85rem', 
                                 fontSize: '0.82rem',
                                 borderRadius: '0.75rem',
                                 whiteSpace: 'nowrap',
@@ -720,13 +721,13 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                             }}
                         >
                             <i className="fa-solid fa-qrcode" style={{ fontSize: '0.95rem' }}></i>
-                            <span>Scan Gate QR</span>
+                            <span className="header-scan-text">Scan Gate QR</span>
                         </button>
 
                         <HeaderClock />
 
-                        <div className="user-profile">
-                            <div className="profile-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#8B5E34', color: '#FFF7ED', fontSize: '1.15rem', width: '38px', height: '38px', borderRadius: '50%' }}>
+                        <div className="user-profile" title="Mill Account">
+                            <div className="profile-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#8B5E34', color: '#FFF7ED', fontSize: '1.15rem', width: '36px', height: '36px', borderRadius: '50%' }}>
                                 <i className="fa-solid fa-industry"></i>
                             </div>
                             <div className="user-info">
