@@ -490,8 +490,9 @@ export default function TransportPortal({ user: propUser, onLogout }) {
 
                     <div className="header-actions" style={{ alignItems: 'center', gap: '0.65rem' }}>
                         <LanguageSelector />
-                        <button className="action-btn back-btn" onClick={handleLogout} title="Sign Out" style={{ display: 'flex' }}>
+                        <button className="header-logout-btn" onClick={handleLogout} title="Sign Out">
                             <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                            <span className="header-logout-text">Logout</span>
                         </button>
                     </div>
                 </header>

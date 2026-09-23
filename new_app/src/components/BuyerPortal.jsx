@@ -734,6 +734,11 @@ export default function BuyerPortal({ user: propUser, onLogout }) {
                                 <p>Miller / Buyer</p>
                             </div>
                         </div>
+
+                        <button className="header-logout-btn" onClick={handleLogout} title="Sign Out">
+                            <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                            <span className="header-logout-text">Logout</span>
+                        </button>
                     </div>
                 </header>
 

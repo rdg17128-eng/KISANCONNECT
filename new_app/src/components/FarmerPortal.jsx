@@ -958,6 +958,11 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                 <p>Verified Farmer</p>
                             </div>
                         </div>
+
+                        <button className="header-logout-btn" onClick={handleLogout} title={t('logout') || 'Sign Out'}>
+                            <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                            <span className="header-logout-text">{t('logout') || 'Logout'}</span>
+                        </button>
                     </div>
                 </header>
 
