@@ -2,6 +2,7 @@
   "name": "kisanconnect",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
   "workspaces": [
     "new_app"
   ],
@@ -9,9 +10,24 @@
     "dev": "npm --prefix new_app run dev",
     "test": "npm --prefix new_app test",
     "test:razorpay": "npm --prefix new_app run test:razorpay",
-    "build": "node -e \"const fs=require('fs'),cp=require('child_process'); if(fs.existsSync('./new_app/package.json')){ cp.execSync('npm --prefix new_app install --include=dev --include=optional && npm --prefix new_app run build', {stdio:'inherit'}); try{ fs.cpSync('./new_app/dist', './dist', {recursive:true}); }catch(e){} } else { cp.execSync('npm run build', {stdio:'inherit'}); }\""
+    "build": "node -e \"const fs=require('fs'),cp=require('child_process'); cp.execSync('npm --prefix new_app run build', {stdio:'inherit'}); try{ fs.cpSync('./new_app/dist', './dist', {recursive:true}); }catch(e){}\""
   },
   "dependencies": {
     "razorpay": "^2.9.8"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "*",
+    "@rollup/rollup-linux-x64-musl": "*",
+    "@rollup/rollup-linux-arm64-gnu": "*",
+    "@rollup/rollup-linux-arm64-musl": "*",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.3.3",
+    "@tailwindcss/oxide-linux-x64-musl": "4.3.3",
+    "@tailwindcss/oxide-linux-arm64-gnu": "4.3.3",
+    "@tailwindcss/oxide-linux-arm64-musl": "4.3.3",
+    "@tailwindcss/oxide-win32-x64-msvc": "4.3.3",
+    "lightningcss-linux-x64-gnu": "*",
+    "lightningcss-linux-x64-musl": "*",
+    "lightningcss-linux-arm64-gnu": "*",
+    "lightningcss-linux-arm64-musl": "*"
   }
 }
