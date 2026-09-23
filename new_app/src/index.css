@@ -169,6 +169,7 @@ h6 {
     max-height: 100vh;
     box-sizing: border-box;
     z-index: 100;
+    overflow-x: hidden;
 }
 
 .logo {
@@ -1327,7 +1328,9 @@ h6 {
     /* Fast, smooth hardware-accelerated drawer transition */
     .sidebar {
         transform: translate3d(-100%, 0, 0);
-        transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+        visibility: hidden;
+        pointer-events: none;
+        transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1), visibility 0.25s !important;
         will-change: transform;
         -webkit-backface-visibility: hidden;
         backface-visibility: hidden;
@@ -1339,6 +1342,8 @@ h6 {
     
     .sidebar.open {
         transform: translate3d(0, 0, 0);
+        visibility: visible;
+        pointer-events: auto;
     }
 
     /* Lightweight overlay on mobile: avoids expensive full-screen Gaussian blur */
@@ -2174,60 +2179,110 @@ h6 {
 }
 
 .compact-role-card {
-    background: rgba(9, 23, 15, 0.82);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(16, 185, 129, 0.22);
+    position: relative;
     border-radius: 1.25rem;
-    padding: 1.35rem 1.2rem;
-    min-height: 230px;
     display: flex;
     flex-direction: column;
     cursor: pointer;
-    transition: var(--transition);
-    position: relative;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, border-color 0.3s ease;
     overflow: hidden;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.7);
+    background: #091710;
+}
+
+.role-card-banner {
+    position: relative;
+    width: 100%;
+    height: 145px;
+    overflow: hidden;
+    background: #050d09;
+}
+
+.role-card-banner-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.compact-role-card:hover .role-card-banner-img {
+    transform: scale(1.08);
+}
+
+.role-card-banner-badges {
+    position: absolute;
+    inset: 0;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, transparent 50%, rgba(9, 23, 16, 0.85) 100%);
+    z-index: 2;
+}
+
+.role-card-subtitle-badge {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.role-card-body {
+    padding: 1.15rem 1.25rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    background: #091710;
 }
 
 .compact-role-card:hover {
-    transform: translateY(-4px);
-    border-color: var(--accent-gold);
-    background: rgba(14, 34, 22, 0.95);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(245, 158, 11, 0.2);
+    transform: translateY(-6px);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(16, 185, 129, 0.25);
 }
 
 .compact-role-icon {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     border-radius: 10px;
-    background: rgba(16, 185, 129, 0.15);
-    color: var(--primary);
+    background: rgba(0, 0, 0, 0.75);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
-    transition: var(--transition);
+    font-size: 1.15rem;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    transition: transform 0.3s ease;
 }
 
 .compact-role-card:hover .compact-role-icon {
-    background: var(--accent-gold);
-    color: #000;
-    box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    transform: scale(1.08);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
 }
 
 .card-enter-btn {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
-    color: var(--accent-gold);
+    gap: 0.5rem;
     font-weight: 700;
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     margin-top: auto;
+    transition: gap 0.2s ease;
 }
 
 .compact-role-card:hover .card-enter-btn i {
-    transform: translateX(4px);
+    transform: translateX(5px);
 }
 
 /* ==========================================
@@ -2389,7 +2444,9 @@ h6 {
 
     .sidebar {
         transform: translateX(-100%) !important;
-        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s !important;
         z-index: 10001 !important;
         width: 280px !important;
         max-width: 85vw !important;
@@ -2398,6 +2455,8 @@ h6 {
 
     .sidebar.open {
         transform: translateX(0) !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
     }
 
     .main-content {
@@ -2427,80 +2486,85 @@ h6 {
         display: none !important;
     }
 
-    .dashboard-content {
-        padding: 1.15rem 0.75rem !important;
-    }
-
-    .welcome-section {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 0.85rem !important;
-    }
-
-    .welcome-section h1 {
-        font-size: 1.4rem !important;
-    }
-
-    .welcome-section .primary-btn {
+    .table-responsive {
         width: 100% !important;
-        justify-content: center !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: block !important;
     }
 
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 0.75rem !important;
+    .table-responsive table {
+        min-width: 580px;
     }
 
-    .stat-card {
-        padding: 1rem 0.85rem !important;
-        gap: 0.75rem !important;
+    .orders-table th, .orders-table td {
+        white-space: nowrap !important;
+    }
+}
+
+/* TABLET & MOBILE BREAKPOINT (<= 640px) */
+@media (max-width: 640px) {
+    .top-header {
+        height: 56px !important;
+        padding: 0 0.65rem !important;
+        gap: 0.35rem !important;
+        overflow: hidden !important;
     }
 
-    .stat-card h2 {
-        font-size: 1.3rem !important;
+    .header-left {
+        gap: 0.35rem !important;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
     }
 
-    .stat-card h3 {
-        font-size: 0.75rem !important;
+    .header-actions {
+        gap: 0.35rem !important;
+        flex-shrink: 0;
     }
 
-    .mobile-nav-bar {
-        display: flex !important;
+    .search-bar {
+        display: none !important;
     }
 
-    .modal-content {
-        width: 95% !important;
-        max-width: 95vw !important;
-        max-height: 88vh !important;
-        padding: 1.25rem 1rem !important;
-        margin: auto !important;
+    .user-profile .user-info {
+        display: none !important;
     }
 
-    .profile-hero-card {
-        padding: 1.25rem 1rem !important;
+    .user-profile {
+        padding: 0.15rem !important;
     }
 
-    .profile-avatar-wrapper {
-        width: 72px !important;
-        height: 72px !important;
+    .user-profile .profile-img {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1.1rem !important;
     }
 
-    .profile-avatar-inner {
-        font-size: 1.8rem !important;
+    .header-qr-text {
+        display: none !important;
     }
 
-    .profile-stats-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 0.65rem !important;
+    .lang-selector-btn {
+        padding: 0.35rem 0.55rem !important;
+        font-size: 0.76rem !important;
+        border-radius: 1rem !important;
     }
 
-    .leaflet-container {
-        height: 290px !important;
+    .lang-selector-label {
+        max-width: 70px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 }
 
 /* SMALL PHONE BREAKPOINT (<= 480px) */
 @media (max-width: 480px) {
+    .top-header {
+        padding: 0 0.5rem !important;
+    }
+
     .stats-grid {
         grid-template-columns: 1fr !important;
         gap: 0.65rem !important;
@@ -2519,7 +2583,7 @@ h6 {
     }
 
     .user-profile {
-        padding: 0.2rem !important;
+        padding: 0.15rem !important;
     }
 
     .crops-horizontal-container {
@@ -2544,20 +2608,29 @@ h6 {
         padding: 0.5rem 0.75rem !important;
         font-size: 0.78rem !important;
     }
+
+    .welcome-section .primary-btn, .welcome-section .action-btn {
+        width: 100% !important;
+        justify-content: center !important;
+    }
 }
 
 /* ULTRA COMPACT PHONES (<= 360px) */
 @media (max-width: 360px) {
     .dashboard-content {
-        padding: 0.85rem 0.5rem !important;
+        padding: 0.75rem 0.4rem !important;
     }
 
     .bento-card {
-        padding: 0.85rem 0.65rem !important;
+        padding: 0.75rem 0.55rem !important;
     }
 
     .top-header {
-        padding: 0 0.5rem !important;
+        padding: 0 0.35rem !important;
+    }
+
+    .lang-selector-label {
+        max-width: 50px;
     }
 }
 
@@ -3146,4 +3219,1220 @@ body {
     background-color: #1D4ED8;
     color: #FFFFFF !important;
     transform: translateY(-1px);
+}
+
+/* ======================================================== */
+/* MILL PORTAL EXCLUSIVE THEME: SAND, CREAM, DEEP BROWN & PRIMARY ORANGE */
+/* ======================================================== */
+.mill-theme-portal {
+    --primary: #FF8A00;
+    --primary-glow: rgba(255, 138, 0, 0.35);
+    --primary-light: #FFA233;
+    --primary-dark: #D97706;
+    
+    --accent-gold: #D97706;
+    --accent-gold-light: #F59E0B;
+    --accent-gold-dark: #B45309;
+
+    --bg-deep: #F9E5C7;
+    --bg-dark: #FFF7ED;
+    --bg-card: #FFF7ED;
+    --bg-card-hover: #FDF1E2;
+
+    --text-main: #1C0F05;
+    --text-muted: #5C371B;
+    --border-color: #EAD2B2;
+    --border-highlight: #FF8A00;
+
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    background-color: #F9E5C7 !important;
+    background: #F9E5C7 !important;
+    color: #1C0F05 !important;
+    min-height: 100vh;
+}
+
+.mill-theme-portal h1,
+.mill-theme-portal h2,
+.mill-theme-portal h3,
+.mill-theme-portal h4,
+.mill-theme-portal h5,
+.mill-theme-portal h6 {
+    color: #1C0F05 !important;
+    font-weight: 800;
+}
+
+.mill-theme-portal strong,
+.mill-theme-portal b {
+    color: #1C0F05 !important;
+}
+
+.mill-theme-portal p {
+    color: #5C371B;
+}
+
+/* Sidebar */
+.mill-theme-portal .sidebar {
+    background: #8B5E34 !important;
+    border-right: 1px solid #734923 !important;
+    box-shadow: 4px 0 25px rgba(46, 26, 15, 0.15) !important;
+}
+
+.mill-theme-portal .sidebar .logo {
+    color: #FFF7ED !important;
+}
+
+.mill-theme-portal .sidebar .logo-kisan,
+.mill-theme-portal .kisan-logo-text .logo-kisan {
+    color: #FF8A00 !important;
+}
+
+.mill-theme-portal .sidebar .logo-connect,
+.mill-theme-portal .kisan-logo-text .logo-connect {
+    color: #FFF7ED !important;
+}
+
+.mill-theme-portal .mill-hero-content h1 {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-weight: 800;
+}
+
+.mill-theme-portal .sidebar .nav-item {
+    color: #FFF7ED !important;
+    border-radius: 0.65rem;
+    font-weight: 600;
+    font-size: 0.92rem;
+    transition: all 0.2s ease;
+}
+
+.mill-theme-portal .sidebar .nav-item i {
+    color: #FFD6A4;
+    font-size: 1.05rem;
+}
+
+.mill-theme-portal .sidebar .nav-item:hover {
+    background: rgba(255, 247, 237, 0.18) !important;
+    color: #FFFFFF !important;
+}
+
+.mill-theme-portal .sidebar .nav-item:hover i {
+    color: #FF8A00;
+}
+
+.mill-theme-portal .sidebar .nav-item.active {
+    background: #5E3B1C !important;
+    color: #FFFFFF !important;
+    font-weight: 800;
+    box-shadow: 0 4px 14px rgba(46, 26, 15, 0.25);
+    border-left: 4px solid #FF8A00;
+}
+
+.mill-theme-portal .sidebar .nav-item.active i {
+    color: #FF8A00 !important;
+}
+
+.mill-theme-portal .sidebar-bottom {
+    border-top: 1px solid rgba(255, 247, 237, 0.15) !important;
+}
+
+.mill-theme-portal .sidebar-bottom .facility-badge {
+    background: rgba(255, 247, 237, 0.1) !important;
+    border: 1px solid rgba(255, 247, 237, 0.18) !important;
+}
+
+.mill-theme-portal .sidebar-bottom .nav-item.logout {
+    color: #FFC0B0 !important;
+    font-weight: 700;
+}
+
+.mill-theme-portal .sidebar-bottom .nav-item.logout:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #FFF !important;
+}
+
+/* Header */
+.mill-theme-portal .top-header {
+    background-color: #FFF7ED !important;
+    border-bottom: 1px solid #EAD2B2 !important;
+    box-shadow: 0 2px 12px rgba(139, 94, 52, 0.08) !important;
+}
+
+.mill-theme-portal .top-header h1,
+.mill-theme-portal .top-header h2,
+.mill-theme-portal .top-header h3,
+.mill-theme-portal .top-header span {
+    color: #1C0F05;
+}
+
+.mill-theme-portal .back-btn,
+.mill-theme-portal .menu-toggle {
+    background-color: #F9E5C7 !important;
+    color: #1C0F05 !important;
+    border: 1px solid #EAD2B2 !important;
+}
+
+.mill-theme-portal .back-btn:hover,
+.mill-theme-portal .menu-toggle:hover {
+    background-color: #EAD2B2 !important;
+    color: #1C0F05 !important;
+}
+
+.mill-theme-portal .search-bar {
+    background-color: #F9E5C7 !important;
+    border: 1px solid #DEC098 !important;
+    color: #1C0F05 !important;
+}
+
+.mill-theme-portal .search-bar i {
+    color: #8B5E34 !important;
+}
+
+.mill-theme-portal .search-bar input {
+    color: #1C0F05 !important;
+    font-weight: 600;
+}
+
+.mill-theme-portal .search-bar input::placeholder {
+    color: #8B5E34 !important;
+    opacity: 0.85;
+}
+
+.mill-theme-portal .header-datetime {
+    color: #5C371B !important;
+    font-weight: 600;
+}
+
+.mill-theme-portal .user-profile {
+    background: #F9E5C7 !important;
+    border: 1px solid #EAD2B2 !important;
+}
+
+.mill-theme-portal .user-profile .profile-img {
+    background: #8B5E34 !important;
+    color: #FFF7ED !important;
+}
+
+.mill-theme-portal .user-profile .user-info h4 {
+    color: #1C0F05 !important;
+    font-weight: 800;
+}
+
+.mill-theme-portal .user-profile .user-info p {
+    color: #5C371B !important;
+    font-weight: 600;
+}
+
+/* Main Content & Cards */
+.mill-theme-portal .main-content {
+    background-color: #F9E5C7 !important;
+}
+
+.mill-theme-portal .dashboard-content {
+    background-color: #F9E5C7 !important;
+}
+
+.mill-theme-portal .bento-card,
+.mill-theme-portal .card,
+.mill-theme-portal .card-section,
+.mill-theme-portal .stat-card {
+    background: #FFF7ED !important;
+    border: 1px solid #EAD2B2 !important;
+    border-radius: 1.25rem !important;
+    box-shadow: 0 4px 20px rgba(139, 94, 52, 0.08) !important;
+    color: #1C0F05 !important;
+}
+
+.mill-theme-portal .bento-card h1,
+.mill-theme-portal .bento-card h2,
+.mill-theme-portal .bento-card h3,
+.mill-theme-portal .bento-card h4 {
+    color: #1C0F05 !important;
+}
+
+.mill-theme-portal .bento-card p,
+.mill-theme-portal .bento-card span {
+    color: #5C371B;
+}
+
+.mill-theme-portal .stat-card .stat-icon {
+    background: rgba(255, 138, 0, 0.12) !important;
+    color: #FF8A00 !important;
+    border: 1px solid rgba(255, 138, 0, 0.25) !important;
+}
+
+.mill-theme-portal .stat-card .stat-details h3 {
+    color: #5C371B !important;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.mill-theme-portal .stat-card .stat-details h2 {
+    color: #1C0F05 !important;
+    font-weight: 800;
+}
+
+/* Buttons */
+.mill-theme-portal .primary-btn {
+    background: #FF8A00 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 0.75rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.2px;
+    box-shadow: 0 4px 14px rgba(255, 138, 0, 0.35) !important;
+    transition: all 0.2s ease !important;
+}
+
+.mill-theme-portal .primary-btn:hover {
+    background: #E57A00 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 18px rgba(255, 138, 0, 0.45) !important;
+}
+
+.mill-theme-portal .action-btn,
+.mill-theme-portal .secondary-btn {
+    background: #F3DFCA !important;
+    color: #2E1A0F !important;
+    border: 1px solid #D9BA9B !important;
+    border-radius: 0.75rem !important;
+    font-weight: 700 !important;
+}
+
+.mill-theme-portal .action-btn:hover,
+.mill-theme-portal .secondary-btn:hover {
+    background: #EAD2B2 !important;
+    color: #2E1A0F !important;
+}
+
+.mill-theme-portal .text-btn {
+    color: #D97706 !important;
+    font-weight: 700 !important;
+}
+
+.mill-theme-portal .text-btn:hover {
+    color: #FF8A00 !important;
+}
+
+/* Tables */
+.mill-theme-portal .orders-table,
+.mill-theme-portal table {
+    background: #FFF7ED !important;
+    color: #2E1A0F !important;
+    border-collapse: separate !important;
+}
+
+.mill-theme-portal .orders-table th,
+.mill-theme-portal table th {
+    background: #F3E2CE !important;
+    color: #7C5335 !important;
+    font-weight: 800 !important;
+    font-size: 0.76rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border-bottom: 2px solid #EAD2B2 !important;
+    padding: 0.85rem 1rem !important;
+}
+
+.mill-theme-portal .orders-table td,
+.mill-theme-portal table td {
+    color: #2E1A0F !important;
+    border-bottom: 1px solid #EAD2B2 !important;
+    padding: 0.95rem 1rem !important;
+    background: #FFF7ED !important;
+}
+
+.mill-theme-portal .orders-table tr:hover td,
+.mill-theme-portal table tr:hover td {
+    background: #FDF1E2 !important;
+}
+
+/* Status Badges */
+.mill-theme-portal .status-badge {
+    font-weight: 800 !important;
+    border-radius: 0.5rem !important;
+}
+
+.mill-theme-portal .status-badge.accepted,
+.mill-theme-portal .status-badge[data-status="ACCEPTED"] {
+    background: #D1FAE5 !important;
+    color: #065F46 !important;
+    border: 1px solid #A7F3D0 !important;
+}
+
+.mill-theme-portal .status-badge.pending,
+.mill-theme-portal .status-badge[data-status="PENDING"] {
+    background: #FED7AA !important;
+    color: #9A3412 !important;
+    border: 1px solid #FDBA74 !important;
+}
+
+.mill-theme-portal .status-badge.review,
+.mill-theme-portal .status-badge.in_progress,
+.mill-theme-portal .status-badge[data-status="IN_PROGRESS"],
+.mill-theme-portal .status-badge[data-status="UNDER_REVIEW"],
+.mill-theme-portal .status-badge[data-status="LOAD_RECEIVED"] {
+    background: #DBEAFE !important;
+    color: #1E40AF !important;
+    border: 1px solid #BFDBFE !important;
+}
+
+.mill-theme-portal .status-badge.rejected,
+.mill-theme-portal .status-badge[data-status="REJECTED"],
+.mill-theme-portal .status-badge[data-status="FAILED"] {
+    background: #FEE2E2 !important;
+    color: #991B1B !important;
+    border: 1px solid #FECACA !important;
+}
+
+/* Inputs & Form Controls */
+.mill-theme-portal .input-group,
+.mill-theme-portal input[type="text"],
+.mill-theme-portal input[type="number"],
+.mill-theme-portal input[type="tel"],
+.mill-theme-portal input[type="email"],
+.mill-theme-portal select,
+.mill-theme-portal textarea {
+    background: #FFF7ED !important;
+    color: #2E1A0F !important;
+    border: 1px solid #DEC098 !important;
+    border-radius: 0.65rem !important;
+}
+
+.mill-theme-portal .input-group i {
+    color: #8B5E34 !important;
+}
+
+.mill-theme-portal input:focus,
+.mill-theme-portal select:focus,
+.mill-theme-portal textarea:focus {
+    border-color: #FF8A00 !important;
+    box-shadow: 0 0 0 3px rgba(255, 138, 0, 0.2) !important;
+    outline: none !important;
+}
+
+/* Hero Panoramic Banner */
+.mill-theme-portal .mill-hero-card {
+    position: relative;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    border: 1px solid #DEC098;
+    box-shadow: 0 10px 30px rgba(139, 94, 52, 0.12);
+    margin-bottom: 2rem;
+}
+
+.mill-theme-portal .mill-hero-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center right;
+    z-index: 1;
+}
+
+.mill-theme-portal .mill-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(255, 247, 237, 0.96) 0%, rgba(255, 247, 237, 0.88) 55%, rgba(255, 247, 237, 0.35) 100%);
+    z-index: 2;
+}
+
+.mill-theme-portal .mill-hero-content {
+    position: relative;
+    z-index: 3;
+    padding: 1.75rem 2rem;
+    max-width: 620px;
+}
+
+/* Quick Action Tiles */
+.mill-theme-portal .mill-quick-action-tile {
+    background: #FFF7ED;
+    border: 1px solid #EAD2B2;
+    border-radius: 1rem;
+    padding: 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(139, 94, 52, 0.06);
+}
+
+.mill-theme-portal .mill-quick-action-tile:hover {
+    transform: translateY(-4px);
+    border-color: #FF8A00;
+    box-shadow: 0 8px 24px rgba(255, 138, 0, 0.2);
+    background: #FFFDF9;
+}
+
+.mill-theme-portal .mill-quick-action-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: rgba(255, 138, 0, 0.12);
+    color: #FF8A00;
+    border: 1px solid rgba(255, 138, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    margin-bottom: 0.65rem;
+    transition: all 0.25s ease;
+}
+
+.mill-theme-portal .mill-quick-action-tile:hover .mill-quick-action-icon {
+    background: #FF8A00;
+    color: #FFFFFF;
+    box-shadow: 0 4px 14px rgba(255, 138, 0, 0.35);
+}
+
+.mill-theme-portal .mill-quick-action-label {
+    font-weight: 800;
+    font-size: 0.88rem;
+    color: #2E1A0F;
+}
+
+/* Contact Cards & Call Farmer Buttons in Mill Portal */
+.mill-theme-portal .mill-farmer-contact-card {
+    background: #FFF7ED !important;
+    border: 1px solid #EAD2B2 !important;
+    border-radius: 0.75rem !important;
+    padding: 0.75rem 0.9rem !important;
+    margin-top: 0.4rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.75rem !important;
+    flex-wrap: wrap !important;
+    box-shadow: 0 2px 10px rgba(139, 94, 52, 0.08) !important;
+}
+
+.mill-theme-portal .mill-call-farmer-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.45rem !important;
+    background-color: #FF8A00 !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    font-size: 0.84rem !important;
+    padding: 0.55rem 0.95rem !important;
+    border-radius: 0.5rem !important;
+    text-decoration: none !important;
+    border: 1px solid rgba(255, 138, 0, 0.3) !important;
+    box-shadow: 0 2px 8px rgba(255, 138, 0, 0.3) !important;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease !important;
+    cursor: pointer !important;
+    min-height: 38px !important;
+    touch-action: manipulation !important;
+}
+
+.mill-theme-portal .mill-call-farmer-btn:hover {
+    background-color: #E57A00 !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 14px rgba(255, 138, 0, 0.45) !important;
+}
+
+.mill-theme-portal .mill-call-farmer-btn-sm {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    background-color: #FF8A00 !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    padding: 0.3rem 0.65rem !important;
+    border-radius: 0.375rem !important;
+    text-decoration: none !important;
+    border: 1px solid rgba(255, 138, 0, 0.3) !important;
+    box-shadow: 0 2px 6px rgba(255, 138, 0, 0.25) !important;
+    transition: all 0.15s ease !important;
+    cursor: pointer !important;
+    min-height: 28px !important;
+}
+
+.mill-theme-portal .mill-call-farmer-btn-sm:hover {
+    background-color: #E57A00 !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Modals inside Mill Portal */
+.mill-theme-portal .modal-overlay,
+.mill-theme-portal .auth-modal {
+    background: rgba(46, 26, 15, 0.6) !important;
+    backdrop-filter: blur(6px) !important;
+}
+
+.mill-theme-portal .modal-content,
+.mill-theme-portal .auth-content {
+    background: #FFF7ED !important;
+    border: 1px solid #DEC098 !important;
+    border-radius: 1.25rem !important;
+    box-shadow: 0 20px 50px rgba(46, 26, 15, 0.25) !important;
+    color: #2E1A0F !important;
+}
+
+.mill-theme-portal .modal-content h1,
+.mill-theme-portal .modal-content h2,
+.mill-theme-portal .modal-content h3,
+.mill-theme-portal .auth-content h1,
+.mill-theme-portal .auth-content h2,
+.mill-theme-portal .auth-content h3 {
+    color: #2E1A0F !important;
+}
+
+/* History & Ledger in Mill Portal */
+.mill-theme-portal .history-stat-card {
+    background: #FFF7ED !important;
+    border: 1px solid #EAD2B2 !important;
+    border-radius: 1rem !important;
+    padding: 1rem 1.25rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    box-shadow: 0 4px 14px rgba(139, 94, 52, 0.06) !important;
+}
+
+.mill-theme-portal .history-stat-card div:last-child div:first-child {
+    color: #7C5335 !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+}
+
+.mill-theme-portal .history-filters {
+    display: flex !important;
+    gap: 0.5rem !important;
+    margin-bottom: 1.25rem !important;
+    flex-wrap: wrap !important;
+}
+
+.mill-theme-portal .history-filter-btn {
+    background: #FFF7ED !important;
+    color: #7C5335 !important;
+    border: 1px solid #EAD2B2 !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 0.5rem !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.mill-theme-portal .history-filter-btn:hover {
+    background: #F3DFCA !important;
+    color: #2E1A0F !important;
+}
+
+.mill-theme-portal .history-filter-btn.active {
+    background: #FF8A00 !important;
+    color: #FFFFFF !important;
+    border-color: #FF8A00 !important;
+    box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3) !important;
+}
+
+.mill-theme-portal .badge-green {
+    background: #D1FAE5 !important;
+    color: #065F46 !important;
+    border: 1px solid #A7F3D0 !important;
+    padding: 0.25rem 0.6rem !important;
+    border-radius: 0.4rem !important;
+    font-weight: 700 !important;
+    font-size: 0.76rem !important;
+}
+
+.mill-theme-portal .badge-gold {
+    background: #FED7AA !important;
+    color: #9A3412 !important;
+    border: 1px solid #FDBA74 !important;
+    padding: 0.25rem 0.6rem !important;
+    border-radius: 0.4rem !important;
+    font-weight: 700 !important;
+    font-size: 0.76rem !important;
+}
+
+/* Mobile Nav in Mill Portal */
+.mill-theme-portal .mobile-nav-bar {
+    background: #8B5E34 !important;
+    border-top: 1px solid #734923 !important;
+    box-shadow: 0 -4px 20px rgba(46, 26, 15, 0.2) !important;
+}
+
+.mill-theme-portal .mobile-nav-btn {
+    color: #FFD6A4 !important;
+}
+
+.mill-theme-portal .mobile-nav-btn:hover,
+.mill-theme-portal .mobile-nav-btn.active {
+    color: #FFFFFF !important;
+}
+
+.mill-theme-portal .mobile-nav-btn.active i {
+    color: #FF8A00 !important;
+}
+
+/* ======================================================== */
+/* 🚚 TRANSPORT PORTAL: AERODYNAMIC LOGISTICS & FLEET THEME */
+/* ======================================================== */
+.transport-theme-portal {
+    --primary: #0284C7;
+    --primary-hover: #0369A1;
+    --primary-glow: rgba(2, 132, 199, 0.35);
+
+    --bg-main: #EBF2F7;
+    --bg-surface: #FFFFFF;
+    --bg-surface-secondary: #F0F6FA;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F8FAFD;
+
+    --text-main: #0B1B2D;
+    --text-muted: #475569;
+    --border-color: #CBD5E1;
+    --border-highlight: #0284C7;
+
+    --accent-gold: #D97706;
+    --accent-orange: #EA580C;
+    --accent-teal: #0D9488;
+    --accent-cyan: #0284C7;
+    --accent-blue: #2563EB;
+
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    background-color: #EBF2F7 !important;
+    background: #EBF2F7 radial-gradient(at 100% 0%, #DCE9F2 0px, transparent 50%), radial-gradient(at 0% 100%, #E2EDF5 0px, transparent 50%) !important;
+    color: #0B1B2D !important;
+    min-height: 100vh;
+}
+
+.transport-theme-portal h1,
+.transport-theme-portal h2,
+.transport-theme-portal h3,
+.transport-theme-portal h4,
+.transport-theme-portal h5,
+.transport-theme-portal h6 {
+    color: #0B1B2D !important;
+    font-weight: 800;
+}
+
+.transport-theme-portal strong,
+.transport-theme-portal b {
+    color: #0B1B2D !important;
+}
+
+.transport-theme-portal p {
+    color: #475569;
+}
+
+/* Transport Sidebar (Deep Command Navy) */
+.transport-theme-portal .sidebar {
+    background: linear-gradient(180deg, #0B1B2D 0%, #0F2744 100%) !important;
+    border-right: 1px solid #163860 !important;
+    box-shadow: 4px 0 25px rgba(11, 27, 45, 0.25) !important;
+}
+
+.transport-theme-portal .sidebar .logo {
+    color: #FFFFFF !important;
+}
+
+.transport-theme-portal .sidebar .logo-kisan,
+.transport-theme-portal .kisan-logo-text .logo-kisan {
+    color: #0284C7 !important;
+}
+
+.transport-theme-portal .sidebar .logo-connect,
+.transport-theme-portal .kisan-logo-text .logo-connect {
+    color: #38BDF8 !important;
+}
+
+.transport-theme-portal .sidebar .nav-item {
+    color: #CBD5E1 !important;
+    border-radius: 0.65rem;
+    font-weight: 600;
+    font-size: 0.92rem;
+    transition: all 0.2s ease;
+}
+
+.transport-theme-portal .sidebar .nav-item i {
+    color: #7DD3FC;
+    font-size: 1.05rem;
+}
+
+.transport-theme-portal .sidebar .nav-item:hover {
+    background: rgba(2, 132, 199, 0.18) !important;
+    color: #FFFFFF !important;
+}
+
+.transport-theme-portal .sidebar .nav-item:hover i {
+    color: #38BDF8;
+}
+
+.transport-theme-portal .sidebar .nav-item.active {
+    background: #1B3654 !important;
+    color: #FFFFFF !important;
+    font-weight: 800;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+    border-left: 4px solid #0284C7;
+}
+
+.transport-theme-portal .sidebar .nav-item.active i {
+    color: #38BDF8 !important;
+}
+
+.transport-theme-portal .sidebar-bottom {
+    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.transport-theme-portal .sidebar-bottom .nav-item.logout {
+    color: #FDA4AF !important;
+    font-weight: 700;
+}
+
+.transport-theme-portal .sidebar-bottom .nav-item.logout:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #FFF !important;
+}
+
+/* Transport Top Header */
+.transport-theme-portal .top-header {
+    background-color: #FFFFFF !important;
+    border-bottom: 1px solid #D1DFEC !important;
+    box-shadow: 0 2px 12px rgba(11, 27, 45, 0.05) !important;
+}
+
+.transport-theme-portal .top-header h1,
+.transport-theme-portal .top-header h2,
+.transport-theme-portal .top-header h3,
+.transport-theme-portal .top-header span {
+    color: #0B1B2D;
+}
+
+.transport-theme-portal .back-btn,
+.transport-theme-portal .menu-toggle {
+    background-color: #F1F6FA !important;
+    color: #0B1B2D !important;
+    border: 1px solid #D1DFEC !important;
+}
+
+.transport-theme-portal .back-btn:hover,
+.transport-theme-portal .menu-toggle:hover {
+    background-color: #E2EDF5 !important;
+    color: #0284C7 !important;
+}
+
+/* Main Content & Bento Cards */
+.transport-theme-portal .main-content,
+.transport-theme-portal .dashboard-content {
+    background-color: #EBF2F7 !important;
+}
+
+.transport-theme-portal .bento-card,
+.transport-theme-portal .card,
+.transport-theme-portal .card-section,
+.transport-theme-portal .stat-card {
+    background: #FFFFFF !important;
+    border: 1px solid #D1DFEC !important;
+    border-radius: 1.25rem !important;
+    box-shadow: 0 4px 20px rgba(11, 27, 45, 0.06) !important;
+    color: #0B1B2D !important;
+}
+
+.transport-theme-portal .bento-card h1,
+.transport-theme-portal .bento-card h2,
+.transport-theme-portal .bento-card h3,
+.transport-theme-portal .bento-card h4 {
+    color: #0B1B2D !important;
+}
+
+.transport-theme-portal .bento-card p,
+.transport-theme-portal .bento-card span {
+    color: #475569;
+}
+
+.transport-theme-portal .stat-card .stat-icon {
+    background: rgba(2, 132, 199, 0.12) !important;
+    color: #0284C7 !important;
+    border: 1px solid rgba(2, 132, 199, 0.25) !important;
+}
+
+.transport-theme-portal .stat-card .stat-details h3 {
+    color: #475569 !important;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.transport-theme-portal .stat-card .stat-details h2 {
+    color: #0B1B2D !important;
+    font-weight: 800;
+}
+
+/* Buttons */
+.transport-theme-portal .primary-btn {
+    background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 0.75rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.2px;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+    transition: all 0.2s ease !important;
+}
+
+.transport-theme-portal .primary-btn:hover {
+    background: linear-gradient(135deg, #0369A1 0%, #075985 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 18px rgba(2, 132, 199, 0.45) !important;
+}
+
+.transport-theme-portal .action-btn,
+.transport-theme-portal .secondary-btn {
+    background: #F1F6FA !important;
+    color: #0B1B2D !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 0.75rem !important;
+    font-weight: 700 !important;
+}
+
+.transport-theme-portal .action-btn:hover,
+.transport-theme-portal .secondary-btn:hover {
+    background: #E2EDF5 !important;
+    color: #0B1B2D !important;
+}
+
+.transport-theme-portal .text-btn {
+    color: #0284C7 !important;
+    font-weight: 700 !important;
+}
+
+.transport-theme-portal .text-btn:hover {
+    color: #0369A1 !important;
+}
+
+/* Tables & Ledger */
+.transport-theme-portal .orders-table,
+.transport-theme-portal table {
+    background: #FFFFFF !important;
+    color: #0B1B2D !important;
+    border-collapse: separate !important;
+}
+
+.transport-theme-portal .orders-table th,
+.transport-theme-portal table th {
+    background: #F1F6FA !important;
+    color: #334E68 !important;
+    font-weight: 800 !important;
+    font-size: 0.76rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border-bottom: 2px solid #CBD5E1 !important;
+    padding: 0.85rem 1rem !important;
+}
+
+.transport-theme-portal .orders-table td,
+.transport-theme-portal table td {
+    color: #0B1B2D !important;
+    border-bottom: 1px solid #E2EDF5 !important;
+    padding: 0.95rem 1rem !important;
+    background: #FFFFFF !important;
+}
+
+.transport-theme-portal .orders-table tr:hover td,
+.transport-theme-portal table tr:hover td {
+    background: #F8FAFD !important;
+}
+
+/* Status Badges */
+.transport-theme-portal .status-badge {
+    font-weight: 800 !important;
+    border-radius: 0.5rem !important;
+}
+
+.transport-theme-portal .status-badge.accepted,
+.transport-theme-portal .status-badge[data-status="ACCEPTED"],
+.transport-theme-portal .status-badge[data-status="DELIVERED"],
+.transport-theme-portal .status-badge[data-status="COMPLETED"] {
+    background: #DCFCE7 !important;
+    color: #166534 !important;
+    border: 1px solid #BBF7D0 !important;
+}
+
+.transport-theme-portal .status-badge.pending,
+.transport-theme-portal .status-badge[data-status="PENDING"],
+.transport-theme-portal .status-badge[data-status="ASSIGNED"] {
+    background: #FEF3C7 !important;
+    color: #92400E !important;
+    border: 1px solid #FDE68A !important;
+}
+
+.transport-theme-portal .status-badge.in_transit,
+.transport-theme-portal .status-badge[data-status="IN_TRANSIT"],
+.transport-theme-portal .status-badge[data-status="PICKUP_STARTED"],
+.transport-theme-portal .status-badge[data-status="CROP_PICKED_UP"],
+.transport-theme-portal .status-badge[data-status="ARRIVED_AT_MILL"] {
+    background: #E0F2FE !important;
+    color: #0369A1 !important;
+    border: 1px solid #BAE6FD !important;
+}
+
+.transport-theme-portal .status-badge.rejected,
+.transport-theme-portal .status-badge[data-status="REJECTED"],
+.transport-theme-portal .status-badge[data-status="CANCELLED"],
+.transport-theme-portal .status-badge[data-status="FAILED"] {
+    background: #FEE2E2 !important;
+    color: #991B1B !important;
+    border: 1px solid #FECACA !important;
+}
+
+/* Inputs & Form Controls */
+.transport-theme-portal .input-group,
+.transport-theme-portal input[type="text"],
+.transport-theme-portal input[type="number"],
+.transport-theme-portal input[type="tel"],
+.transport-theme-portal input[type="email"],
+.transport-theme-portal select,
+.transport-theme-portal textarea {
+    background: #FFFFFF !important;
+    color: #0B1B2D !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 0.65rem !important;
+}
+
+.transport-theme-portal .input-group i {
+    color: #0284C7 !important;
+}
+
+.transport-theme-portal input:focus,
+.transport-theme-portal select:focus,
+.transport-theme-portal textarea:focus {
+    border-color: #0284C7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2) !important;
+    outline: none !important;
+}
+
+/* Transport Hero Banner */
+.transport-theme-portal .transport-hero-card {
+    position: relative;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    border: 1px solid #CBD5E1;
+    box-shadow: 0 10px 30px rgba(11, 27, 45, 0.1);
+    margin-bottom: 2rem;
+}
+
+.transport-theme-portal .transport-hero-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center right;
+    z-index: 1;
+}
+
+.transport-theme-portal .transport-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(235, 242, 247, 0.96) 0%, rgba(235, 242, 247, 0.88) 55%, rgba(235, 242, 247, 0.35) 100%);
+    z-index: 2;
+}
+
+.transport-theme-portal .transport-hero-content {
+    position: relative;
+    z-index: 3;
+    padding: 1.75rem 2rem;
+    max-width: 620px;
+}
+
+/* History & Ledger in Transport Portal */
+.transport-theme-portal .history-stat-card {
+    background: #FFFFFF !important;
+    border: 1px solid #D1DFEC !important;
+    border-radius: 1rem !important;
+    padding: 1rem 1.25rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    box-shadow: 0 4px 14px rgba(11, 27, 45, 0.05) !important;
+}
+
+.transport-theme-portal .history-stat-card div:last-child div:first-child {
+    color: #475569 !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+}
+
+.transport-theme-portal .history-filters {
+    display: flex !important;
+    gap: 0.5rem !important;
+    margin-bottom: 1.25rem !important;
+    flex-wrap: wrap !important;
+}
+
+.transport-theme-portal .history-filter-btn {
+    background: #FFFFFF !important;
+    color: #475569 !important;
+    border: 1px solid #CBD5E1 !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 0.5rem !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.transport-theme-portal .history-filter-btn:hover {
+    background: #E2EDF5 !important;
+    color: #0B1B2D !important;
+}
+
+.transport-theme-portal .history-filter-btn.active {
+    background: #0284C7 !important;
+    color: #FFFFFF !important;
+    border-color: #0284C7 !important;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
+}
+
+/* History Cards in Transport Portal */
+.transport-theme-portal .history-card {
+    background: #FFFFFF !important;
+    border: 1px solid #D1DFEC !important;
+    border-radius: 0.85rem !important;
+    padding: 1rem 1.25rem !important;
+    margin-bottom: 0.75rem !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 1rem !important;
+    box-shadow: 0 2px 10px rgba(11, 27, 45, 0.04) !important;
+}
+
+.transport-theme-portal .history-card:hover {
+    box-shadow: 0 6px 18px rgba(11, 27, 45, 0.08) !important;
+    border-color: #0284C7 !important;
+}
+
+.transport-theme-portal .badge-green {
+    background: #DCFCE7 !important;
+    color: #166534 !important;
+    border: 1px solid #BBF7D0 !important;
+    padding: 0.25rem 0.65rem !important;
+    border-radius: 1rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
+}
+
+.transport-theme-portal .badge-gold {
+    background: #FEF3C7 !important;
+    color: #92400E !important;
+    border: 1px solid #FDE68A !important;
+    padding: 0.25rem 0.65rem !important;
+    border-radius: 1rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
+}
+
+/* Modals inside Transport Portal */
+.transport-theme-portal .modal-overlay {
+    background: rgba(11, 27, 45, 0.65) !important;
+    backdrop-filter: blur(6px) !important;
+}
+
+.transport-theme-portal .modal-content {
+    background: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 1.25rem !important;
+    box-shadow: 0 20px 50px rgba(11, 27, 45, 0.25) !important;
+    color: #0B1B2D !important;
+}
+
+/* Mobile Nav in Transport Portal */
+.transport-theme-portal .mobile-nav-bar {
+    background: #0B1B2D !important;
+    border-top: 1px solid #163860 !important;
+    box-shadow: 0 -4px 20px rgba(11, 27, 45, 0.2) !important;
+}
+
+.transport-theme-portal .mobile-nav-btn {
+    color: #94A3B8 !important;
+}
+
+.transport-theme-portal .mobile-nav-btn:hover,
+.transport-theme-portal .mobile-nav-btn.active {
+    color: #FFFFFF !important;
+}
+
+.transport-theme-portal .mobile-nav-btn.active i {
+    color: #38BDF8 !important;
+}
+
+/* ======================================================== */
+/* HIGH-QUALITY PURE WHITE PRINT STYLES FOR PAYMENT RECEIPT */
+/* ======================================================== */
+@media print {
+    html, body {
+        background: #FFFFFF !important;
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .top-header,
+    .sidebar,
+    .mobile-nav-bar,
+    .no-print,
+    .mill-hero-card,
+    .stats-grid,
+    .bento-card,
+    .orders-table-wrapper {
+        display: none !important;
+    }
+
+    .modal-overlay {
+        position: static !important;
+        background: transparent !important;
+        padding: 0 !important;
+        display: block !important;
+    }
+
+    .modal-content {
+        max-width: 100% !important;
+        width: 100% !important;
+        background: #FFFFFF !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+
+    #payment-receipt-print-area,
+    #farmer-payment-receipt-print-area {
+        max-width: 650px !important;
+        margin: 0 auto !important;
+        border: 2px solid #CBD5E1 !important;
+        border-radius: 12px !important;
+        padding: 24px !important;
+        background: #FFFFFF !important;
+        color: #0F172A !important;
+        page-break-inside: avoid !important;
+    }
+
+    #payment-receipt-print-area .status-badge,
+    #farmer-payment-receipt-print-area .status-badge {
+        border: 1px solid #059669 !important;
+        color: #065F46 !important;
+        background: #D1FAE5 !important;
+    }
 }

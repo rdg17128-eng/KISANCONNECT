@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getCurrentCoordinates, getRoadDrivingRoute, formatDistance } from '../services/locationService';
+import QrCodeModal from './QrCodeModal';
 
 // Fix default Leaflet icon paths
 import iconUrl from 'leaflet/dist/images/marker-icon.png';
@@ -210,6 +211,7 @@ export default function ActiveDeliveryNavigationMap({
         loading: true
     });
     const [showTurnByTurn, setShowTurnByTurn] = useState(false);
+    const [showGateQrPass, setShowGateQrPass] = useState(false);
     const [activeNavigationLeg, setActiveNavigationLeg] = useState(() => {
         const isPre = trip.status === 'ASSIGNED' || trip.status === 'PICKUP_STARTED';
         return isPre ? 'TO_FIELD' : 'TO_MILL';
@@ -323,19 +325,19 @@ export default function ActiveDeliveryNavigationMap({
 
     return (
         <div style={{
-            background: 'rgba(15, 23, 42, 0.85)',
-            border: '1px solid rgba(16, 185, 129, 0.35)',
+            background: '#FFFFFF',
+            border: '1px solid #CBD5E1',
             borderRadius: '0.85rem',
             overflow: 'hidden',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            boxShadow: '0 4px 20px rgba(11, 27, 45, 0.06)',
             width: '100%',
             boxSizing: 'border-box'
         }}>
             {/* Navigation Mode Options: 2 Prominent Interactive Cards */}
             <div style={{
                 padding: '0.85rem clamp(0.75rem, 2vw, 1.25rem)',
-                background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(15, 23, 42, 0.95) 100%)',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                background: '#F8FAFD',
+                borderBottom: '1px solid #D1DFEC'
             }}>
                 <div style={{
                     display: 'flex',
@@ -350,15 +352,15 @@ export default function ActiveDeliveryNavigationMap({
                             width: '10px',
                             height: '10px',
                             borderRadius: '50%',
-                            background: driverLocation.isLive ? '#10b981' : '#f59e0b',
-                            boxShadow: driverLocation.isLive ? '0 0 10px #10b981' : 'none'
+                            background: driverLocation.isLive ? '#059669' : '#D97706',
+                            boxShadow: driverLocation.isLive ? '0 0 8px rgba(5, 150, 105, 0.5)' : 'none'
                         }}></div>
-                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0B1B2D' }}>
                             Select Navigation Route Option:
                         </span>
                     </div>
 
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 600 }}>
                         {driverLocation.isLive ? `🟢 GPS Live (±${driverLocation.accuracy}m)` : `🟡 ${gpsError || 'Logistics Hub GPS'}`}
                     </div>
                 </div>
@@ -377,18 +379,18 @@ export default function ActiveDeliveryNavigationMap({
                         }}
                         style={{
                             background: activeNavigationLeg === 'TO_FIELD'
-                                ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(16, 185, 129, 0.12) 100%)'
-                                : 'rgba(0, 0, 0, 0.35)',
+                                ? '#FFFBEB'
+                                : '#FFFFFF',
                             border: activeNavigationLeg === 'TO_FIELD'
-                                ? '2px solid #fbbf24'
-                                : '1px solid rgba(255, 255, 255, 0.1)',
+                                ? '2px solid #D97706'
+                                : '1px solid #CBD5E1',
                             borderRadius: '0.75rem',
                             padding: '0.75rem 1rem',
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
                             position: 'relative',
                             boxShadow: activeNavigationLeg === 'TO_FIELD'
-                                ? '0 0 20px rgba(245, 158, 11, 0.25)'
+                                ? '0 2px 10px rgba(217, 119, 6, 0.15)'
                                 : 'none'
                         }}
                     >
@@ -396,27 +398,27 @@ export default function ActiveDeliveryNavigationMap({
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <span style={{ fontSize: '1.3rem' }}>🚜</span>
                                 <div>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: activeNavigationLeg === 'TO_FIELD' ? '#fbbf24' : 'var(--text-main)' }}>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: activeNavigationLeg === 'TO_FIELD' ? '#B45309' : '#0B1B2D' }}>
                                         My Location ➔ Farmer's Field
                                     </div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                        Pickup: <strong>{trip.farmer_name}</strong> ({trip.crop_name}, {trip.quantity}T)
+                                    <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '2px' }}>
+                                        Pickup: <strong style={{ color: '#0B1B2D' }}>{trip.farmer_name}</strong> ({trip.crop_name}, {trip.quantity}T)
                                     </div>
                                 </div>
                             </div>
                             <span style={{
                                 fontSize: '0.7rem',
-                                padding: '0.2rem 0.5rem',
+                                padding: '0.2rem 0.55rem',
                                 borderRadius: '1rem',
                                 fontWeight: 800,
-                                background: activeNavigationLeg === 'TO_FIELD' ? '#fbbf24' : 'rgba(255,255,255,0.08)',
-                                color: activeNavigationLeg === 'TO_FIELD' ? '#000' : 'var(--text-muted)',
+                                background: activeNavigationLeg === 'TO_FIELD' ? '#D97706' : '#F1F6FA',
+                                color: activeNavigationLeg === 'TO_FIELD' ? '#FFFFFF' : '#475569',
                                 flexShrink: 0
                             }}>
                                 {activeNavigationLeg === 'TO_FIELD' ? '✓ ACTIVE' : 'SELECT'}
                             </span>
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.35rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.4rem', borderTop: '1px solid #E2EDF5', paddingTop: '0.35rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             📍 {trip.pickup_address}
                         </div>
                     </div>
@@ -429,18 +431,18 @@ export default function ActiveDeliveryNavigationMap({
                         }}
                         style={{
                             background: activeNavigationLeg === 'TO_MILL'
-                                ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(16, 185, 129, 0.12) 100%)'
-                                : 'rgba(0, 0, 0, 0.35)',
+                                ? '#F0F9FF'
+                                : '#FFFFFF',
                             border: activeNavigationLeg === 'TO_MILL'
-                                ? '2px solid #60a5fa'
-                                : '1px solid rgba(255, 255, 255, 0.1)',
+                                ? '2px solid #0284C7'
+                                : '1px solid #CBD5E1',
                             borderRadius: '0.75rem',
                             padding: '0.75rem 1rem',
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
                             position: 'relative',
                             boxShadow: activeNavigationLeg === 'TO_MILL'
-                                ? '0 0 20px rgba(59, 130, 246, 0.25)'
+                                ? '0 2px 10px rgba(2, 132, 199, 0.15)'
                                 : 'none'
                         }}
                     >
@@ -448,27 +450,27 @@ export default function ActiveDeliveryNavigationMap({
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <span style={{ fontSize: '1.3rem' }}>🏭</span>
                                 <div>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: activeNavigationLeg === 'TO_MILL' ? '#60a5fa' : 'var(--text-main)' }}>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: activeNavigationLeg === 'TO_MILL' ? '#0369A1' : '#0B1B2D' }}>
                                         My Location ➔ Processing Mill Gate
                                     </div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                        Delivery: <strong>{trip.mill_name || 'Mill Gate'}</strong>
+                                    <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '2px' }}>
+                                        Delivery: <strong style={{ color: '#0B1B2D' }}>{trip.mill_name || 'Mill Gate'}</strong>
                                     </div>
                                 </div>
                             </div>
                             <span style={{
                                 fontSize: '0.7rem',
-                                padding: '0.2rem 0.5rem',
+                                padding: '0.2rem 0.55rem',
                                 borderRadius: '1rem',
                                 fontWeight: 800,
-                                background: activeNavigationLeg === 'TO_MILL' ? '#60a5fa' : 'rgba(255,255,255,0.08)',
-                                color: activeNavigationLeg === 'TO_MILL' ? '#000' : 'var(--text-muted)',
+                                background: activeNavigationLeg === 'TO_MILL' ? '#0284C7' : '#F1F6FA',
+                                color: activeNavigationLeg === 'TO_MILL' ? '#FFFFFF' : '#475569',
                                 flexShrink: 0
                             }}>
                                 {activeNavigationLeg === 'TO_MILL' ? '✓ ACTIVE' : 'SELECT'}
                             </span>
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.35rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.4rem', borderTop: '1px solid #E2EDF5', paddingTop: '0.35rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             🏢 {trip.delivery_address || 'Mill Gate'}
                         </div>
                     </div>
@@ -479,32 +481,32 @@ export default function ActiveDeliveryNavigationMap({
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
-                background: 'rgba(0,0,0,0.3)',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                background: '#F1F6FA',
+                borderBottom: '1px solid #D1DFEC',
                 padding: '0.6rem clamp(0.6rem, 2vw, 1.25rem)',
                 gap: '0.75rem'
             }}>
                 <div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>⏱️ Est. Drive Time</div>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-gold)' }}>
+                    <div style={{ fontSize: '0.68rem', color: '#475569', textTransform: 'uppercase', fontWeight: 700 }}>⏱️ Est. Drive Time</div>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#D97706' }}>
                         {routeData.loading ? '...' : `~${routeData.durationMinutes}m`}
                     </div>
                 </div>
                 <div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>🛣️ Road Distance</div>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--primary)' }}>
+                    <div style={{ fontSize: '0.68rem', color: '#475569', textTransform: 'uppercase', fontWeight: 700 }}>🛣️ Road Distance</div>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0284C7' }}>
                         {routeData.loading ? '...' : formatDistance(routeData.distanceKm)}
                     </div>
                 </div>
                 <div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>🎯 Active Target</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '0.68rem', color: '#475569', textTransform: 'uppercase', fontWeight: 700 }}>🎯 Active Target</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0B1B2D', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {activeNavigationLeg === 'TO_FIELD' ? `🌾 ${trip.pickup_address}` : `🏭 ${trip.mill_name || trip.delivery_address}`}
                     </div>
                 </div>
                 <div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>🚛 My Vehicle</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#34d399', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '0.68rem', color: '#475569', textTransform: 'uppercase', fontWeight: 700 }}>🚛 My Vehicle</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#059669', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {providerInfo.vehicle_number}
                     </div>
                 </div>
@@ -615,18 +617,18 @@ export default function ActiveDeliveryNavigationMap({
                         onClick={() => setMapTileLayer(mapTileLayer === 'streets' ? 'satellite' : 'streets')}
                         title="Toggle Satellite / Street Map"
                         style={{
-                            background: 'rgba(15, 23, 42, 0.9)',
-                            color: '#fff',
-                            border: '1px solid rgba(255,255,255,0.2)',
+                            background: '#FFFFFF',
+                            color: '#0B1B2D',
+                            border: '1px solid #CBD5E1',
                             borderRadius: '0.4rem',
                             padding: '0.35rem 0.55rem',
-                            fontSize: '0.7rem',
+                            fontSize: '0.72rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.3rem',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
+                            boxShadow: '0 2px 8px rgba(11,27,45,0.15)'
                         }}
                     >
                         {mapTileLayer === 'streets' ? '🛰️ Satellite' : '🗺️ Streets'}
@@ -638,18 +640,18 @@ export default function ActiveDeliveryNavigationMap({
                         disabled={isLocating}
                         title="Recalculate Live GPS Location"
                         style={{
-                            background: 'rgba(15, 23, 42, 0.9)',
-                            color: '#34d399',
-                            border: '1px solid rgba(52, 211, 153, 0.3)',
+                            background: '#FFFFFF',
+                            color: '#059669',
+                            border: '1px solid #A7F3D0',
                             borderRadius: '0.4rem',
                             padding: '0.35rem 0.55rem',
-                            fontSize: '0.7rem',
+                            fontSize: '0.72rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.3rem',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
+                            boxShadow: '0 2px 8px rgba(11,27,45,0.15)'
                         }}
                     >
                         {isLocating ? '📡 Locating' : '📍 My GPS'}
@@ -660,18 +662,18 @@ export default function ActiveDeliveryNavigationMap({
                         onClick={() => setFocusTarget({ lat: fieldLat, lng: fieldLng })}
                         title="Center on Farm Field"
                         style={{
-                            background: 'rgba(15, 23, 42, 0.9)',
-                            color: '#fbbf24',
-                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                            background: '#FFFFFF',
+                            color: '#D97706',
+                            border: '1px solid #FDE68A',
                             borderRadius: '0.4rem',
                             padding: '0.35rem 0.55rem',
-                            fontSize: '0.7rem',
+                            fontSize: '0.72rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.3rem',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
+                            boxShadow: '0 2px 8px rgba(11,27,45,0.15)'
                         }}
                     >
                         🌾 Farm
@@ -682,18 +684,18 @@ export default function ActiveDeliveryNavigationMap({
                         onClick={() => setFocusTarget(null)}
                         title="Fit Full Route on Screen"
                         style={{
-                            background: 'rgba(15, 23, 42, 0.9)',
-                            color: 'var(--text-main)',
-                            border: '1px solid rgba(255,255,255,0.2)',
+                            background: '#FFFFFF',
+                            color: '#0284C7',
+                            border: '1px solid #BAE6FD',
                             borderRadius: '0.4rem',
                             padding: '0.35rem 0.55rem',
-                            fontSize: '0.7rem',
+                            fontSize: '0.72rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.3rem',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
+                            boxShadow: '0 2px 8px rgba(11,27,45,0.15)'
                         }}
                     >
                         🔍 Fit
@@ -707,26 +709,26 @@ export default function ActiveDeliveryNavigationMap({
                     left: '8px',
                     right: '8px',
                     zIndex: 1000,
-                    background: 'rgba(15, 23, 42, 0.94)',
-                    backdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
                     borderRadius: '0.5rem',
-                    padding: '0.45rem 0.75rem',
+                    padding: '0.5rem 0.75rem',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     flexWrap: 'wrap',
-                    gap: '0.4rem'
+                    gap: '0.4rem',
+                    boxShadow: '0 4px 14px rgba(11, 27, 45, 0.1)'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, flex: '1 1 auto' }}>
                         <span style={{ fontSize: '1rem', flexShrink: 0 }}>
                             {activeNavigationLeg === 'TO_FIELD' ? '🚜' : '🏭'}
                         </span>
                         <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0B1B2D', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {activeNavigationLeg === 'TO_FIELD' ? 'Navigating to Field' : 'Navigating to Mill'}
                             </div>
-                            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {targetCoords.label}
                             </div>
                         </div>
@@ -736,12 +738,12 @@ export default function ActiveDeliveryNavigationMap({
                         type="button"
                         onClick={() => setShowTurnByTurn(!showTurnByTurn)}
                         style={{
-                            background: 'rgba(255,255,255,0.1)',
-                            color: 'var(--text-main)',
-                            border: '1px solid rgba(255,255,255,0.15)',
+                            background: '#F1F6FA',
+                            color: '#0B1B2D',
+                            border: '1px solid #D1DFEC',
                             borderRadius: '0.35rem',
-                            padding: '0.25rem 0.5rem',
-                            fontSize: '0.7rem',
+                            padding: '0.3rem 0.6rem',
+                            fontSize: '0.72rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
@@ -759,15 +761,15 @@ export default function ActiveDeliveryNavigationMap({
             {/* Turn-by-Turn Maneuvers Drawer */}
             {showTurnByTurn && (
                 <div style={{
-                    background: 'rgba(10, 15, 29, 0.95)',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: '#F8FAFD',
+                    borderBottom: '1px solid #D1DFEC',
                     padding: '0.75rem clamp(0.75rem, 2vw, 1.25rem)',
                     maxHeight: '180px',
                     overflowY: 'auto'
                 }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-gold)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#D97706', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                         <span>🧭 Driving Steps</span>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>({routeData.isRoadNetwork ? 'Road Route' : 'Corridor'})</span>
+                        <span style={{ fontSize: '0.7rem', color: '#475569' }}>({routeData.isRoadNetwork ? 'Road Route' : 'Corridor'})</span>
                     </div>
 
                     {routeData.steps && routeData.steps.length > 0 ? (
@@ -777,28 +779,28 @@ export default function ActiveDeliveryNavigationMap({
                                     display: 'flex',
                                     alignItems: 'flex-start',
                                     gap: '0.5rem',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    padding: '0.35rem 0.6rem',
+                                    background: '#FFFFFF',
+                                    padding: '0.4rem 0.65rem',
                                     borderRadius: '0.35rem',
-                                    border: '1px solid rgba(255,255,255,0.05)'
+                                    border: '1px solid #E2EDF5'
                                 }}>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--primary)', marginTop: '1px' }}>
+                                    <span style={{ fontSize: '0.8rem', color: '#0284C7', marginTop: '1px' }}>
                                         {st.modifier?.includes('left') ? '⬅️' : st.modifier?.includes('right') ? '➡️' : st.type === 'arrive' ? '🏁' : '⬆️'}
                                     </span>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-main)', fontWeight: 600 }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#0B1B2D', fontWeight: 600 }}>
                                             {st.instruction}
                                         </div>
-                                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                                        <div style={{ fontSize: '0.68rem', color: '#64748B' }}>
                                             {st.distanceKm ? `${st.distanceKm} km` : ''} {st.durationMins ? `• ~${st.durationMins}m` : ''}
                                         </div>
                                     </div>
-                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>#{i + 1}</span>
+                                    <span style={{ fontSize: '0.68rem', color: '#94A3B8', fontFamily: 'monospace', fontWeight: 700 }}>#{i + 1}</span>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.75rem' }}>
                             Follow highlighted route to {targetCoords.label}.
                         </div>
                     )}
@@ -806,7 +808,7 @@ export default function ActiveDeliveryNavigationMap({
             )}
 
             {/* Direct Navigation & Communication Action Suite */}
-            <div style={{ padding: 'clamp(0.75rem, 2vw, 1.25rem)' }}>
+            <div style={{ padding: 'clamp(0.75rem, 2vw, 1.25rem)', background: '#FFFFFF' }}>
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -821,9 +823,9 @@ export default function ActiveDeliveryNavigationMap({
                         className="primary-btn"
                         style={{
                             background: activeNavigationLeg === 'TO_FIELD'
-                                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                                : 'linear-gradient(135deg, #4285F4 0%, #1a73e8 100%)',
-                            color: '#fff',
+                                ? 'linear-gradient(135deg, #D97706 0%, #B45309 100%)'
+                                : 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                            color: '#FFFFFF',
                             padding: '0.8rem 1rem',
                             justifyContent: 'center',
                             fontSize: '0.88rem',
@@ -833,15 +835,13 @@ export default function ActiveDeliveryNavigationMap({
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.5rem',
-                            boxShadow: activeNavigationLeg === 'TO_FIELD'
-                                ? '0 4px 14px rgba(16, 185, 129, 0.4)'
-                                : '0 4px 14px rgba(66, 133, 244, 0.4)',
+                            boxShadow: '0 4px 14px rgba(2, 132, 199, 0.25)',
                             width: '100%',
                             boxSizing: 'border-box'
                         }}
                     >
                         <i className="fa-solid fa-location-arrow"></i>
-                        <span>Start Turn-by-Turn GPS to {activeNavigationLeg === 'TO_FIELD' ? "Farmer's Field" : "Mill Gate"} (Google Maps)</span>
+                        <span>Start Turn-by-Turn GPS to {activeNavigationLeg === 'TO_FIELD' ? "Farmer's Field" : "Mill Gate"}</span>
                     </a>
 
                     {/* WhatsApp Live ETA */}
@@ -852,9 +852,9 @@ export default function ActiveDeliveryNavigationMap({
                             rel="noreferrer"
                             className="secondary-btn"
                             style={{
-                                background: 'rgba(37, 211, 102, 0.15)',
-                                color: '#25D366',
-                                border: '1px solid rgba(37, 211, 102, 0.35)',
+                                background: '#ECFDF5',
+                                color: '#047857',
+                                border: '1px solid #A7F3D0',
                                 padding: '0.8rem 1rem',
                                 justifyContent: 'center',
                                 fontSize: '0.88rem',
@@ -881,31 +881,32 @@ export default function ActiveDeliveryNavigationMap({
                     justifyContent: 'space-between',
                     flexWrap: 'wrap',
                     gap: '0.75rem',
-                    background: 'rgba(0,0,0,0.25)',
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: '0.5rem',
-                    border: '1px solid rgba(255,255,255,0.06)'
+                    background: '#F8FAFD',
+                    padding: '0.75rem 0.95rem',
+                    borderRadius: '0.65rem',
+                    border: '1px solid #D1DFEC'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: '1 1 auto' }}>
                         <div style={{
-                            width: '34px',
-                            height: '34px',
+                            width: '36px',
+                            height: '36px',
                             borderRadius: '50%',
-                            background: 'rgba(245, 158, 11, 0.15)',
+                            background: '#FEF3C7',
+                            border: '1px solid #FDE68A',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '1rem',
-                            color: '#fbbf24',
+                            fontSize: '1.1rem',
+                            color: '#B45309',
                             flexShrink: 0
                         }}>
                             👨‍🌾
                         </div>
                         <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {trip.farmer_name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({trip.pickup_address})</span>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0B1B2D', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {trip.farmer_name} <span style={{ color: '#64748B', fontWeight: 500 }}>({trip.pickup_address})</span>
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35rem' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35rem' }}>
                                 <span>📞 {trip.farmer_phone}</span>
                                 <span>•</span>
                                 <span>🌾 {trip.crop_name} ({trip.quantity}T)</span>
@@ -913,22 +914,22 @@ export default function ActiveDeliveryNavigationMap({
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', width: 'auto' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', width: 'auto' }}>
                         <a
                             href={`tel:${trip.farmer_phone}`}
-                            className="primary-btn"
-                            style={{ padding: '0.45rem 0.75rem', fontSize: '0.78rem', textDecoration: 'none', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}
+                            className="action-btn"
+                            style={{ padding: '0.5rem 0.85rem', fontSize: '0.8rem', textDecoration: 'none', background: '#FFFFFF', color: '#0B1B2D', border: '1px solid #CBD5E1', borderRadius: '0.5rem', fontWeight: 700 }}
                         >
-                            <i className="fa-solid fa-phone"></i> Call
+                            <i className="fa-solid fa-phone" style={{ color: '#0284C7', marginRight: '0.3rem' }}></i> Call Farmer
                         </a>
 
                         {trip.status === 'ASSIGNED' && (
                             <button
                                 className="primary-btn"
                                 onClick={() => onUpdateStatus(trip.transport_code, 'PICKUP_STARTED')}
-                                style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 800 }}
+                                style={{ padding: '0.55rem 1.1rem', fontSize: '0.84rem', fontWeight: 800, background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)' }}
                             >
-                                <i className="fa-solid fa-truck-fast"></i> 1. Start Journey
+                                <i className="fa-solid fa-truck-fast"></i> 1. Start Journey to Farm
                             </button>
                         )}
                         {trip.status === 'PICKUP_STARTED' && (
@@ -938,9 +939,9 @@ export default function ActiveDeliveryNavigationMap({
                                     onUpdateStatus(trip.transport_code, 'CROP_PICKED_UP');
                                     setActiveNavigationLeg('TO_MILL');
                                 }}
-                                style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                                style={{ padding: '0.55rem 1.1rem', fontSize: '0.84rem', fontWeight: 800, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}
                             >
-                                <i className="fa-solid fa-box-open"></i> 2. Loaded Crop
+                                <i className="fa-solid fa-box-open"></i> 2. Confirm Load Picked Up
                             </button>
                         )}
                         {trip.status === 'CROP_PICKED_UP' && (
@@ -950,32 +951,72 @@ export default function ActiveDeliveryNavigationMap({
                                     onUpdateStatus(trip.transport_code, 'IN_TRANSIT');
                                     setActiveNavigationLeg('TO_MILL');
                                 }}
-                                style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 800 }}
+                                style={{ padding: '0.55rem 1.1rem', fontSize: '0.84rem', fontWeight: 800, background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)' }}
                             >
-                                <i className="fa-solid fa-road"></i> 3. Start Transit
+                                <i className="fa-solid fa-road"></i> 3. Start Journey to Mill
                             </button>
                         )}
                         {trip.status === 'IN_TRANSIT' && (
                             <button
                                 className="primary-btn"
                                 onClick={() => onUpdateStatus(trip.transport_code, 'ARRIVED_AT_MILL')}
-                                style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 800 }}
+                                style={{ padding: '0.55rem 1.1rem', fontSize: '0.84rem', fontWeight: 800, background: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)' }}
                             >
-                                <i className="fa-solid fa-warehouse"></i> 4. At Mill Gate
+                                <i className="fa-solid fa-warehouse"></i> 4. Reached Mill Gate
                             </button>
                         )}
                         {trip.status === 'ARRIVED_AT_MILL' && (
-                            <button
-                                className="primary-btn"
-                                onClick={() => onUpdateStatus(trip.transport_code, 'DELIVERED')}
-                                style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 800, background: 'var(--accent-gold)', color: '#000' }}
-                            >
-                                <i className="fa-solid fa-circle-check"></i> 5. Complete Delivery
-                            </button>
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowGateQrPass(true)}
+                                    style={{
+                                        padding: '0.55rem 0.95rem',
+                                        fontSize: '0.84rem',
+                                        fontWeight: 800,
+                                        background: '#F0FDF4',
+                                        color: '#166534',
+                                        border: '1.5px solid #86EFAC',
+                                        borderRadius: '0.5rem',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.4rem'
+                                    }}
+                                >
+                                    <i className="fa-solid fa-qrcode fa-lg"></i> Show Gate QR Pass
+                                </button>
+                                <button
+                                    className="primary-btn"
+                                    onClick={() => onUpdateStatus(trip.transport_code, 'DELIVERED')}
+                                    style={{ padding: '0.55rem 1.1rem', fontSize: '0.84rem', fontWeight: 800, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: '#FFFFFF' }}
+                                >
+                                    <i className="fa-solid fa-circle-check"></i> 5. Load Dropped & Gate QR Completed
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* DRIVER GATE QR PASS MODAL */}
+            {showGateQrPass && (
+                <QrCodeModal
+                    enquiry={{
+                        ...trip,
+                        enquiry_code: trip.enquiry_code || trip.enquiry_id || trip.transport_code,
+                        crop_name: trip.crop_name,
+                        quantity: trip.quantity,
+                        acres: trip.acres,
+                        farmer_name: trip.farmer_name,
+                        farmer_phone: trip.farmer_phone,
+                        mill_name: trip.mill_name,
+                        vehicle_number: providerInfo.vehicle_number,
+                        driver_name: providerInfo.driver_name || providerInfo.name
+                    }}
+                    onClose={() => setShowGateQrPass(false)}
+                />
+            )}
         </div>
     );
 }

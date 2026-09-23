@@ -2327,11 +2327,17 @@ class KisanService {
         // Lifecycle: REQUESTED -> SEARCHING -> QUOTED -> ASSIGNED -> VEHICLE_ASSIGNED -> PICKUP_STARTED -> CROP_PICKED_UP -> IN_TRANSIT -> ARRIVED_AT_MILL -> DELIVERED
         const requests = getLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, []);
         let updatedReq = null;
+        const nowIso = new Date().toISOString();
 
         const updated = requests.map(r => {
             if (r.transport_code === transportCode) {
                 r.status = newStatus;
-                r.updated_at = new Date().toISOString();
+                r.updated_at = nowIso;
+                if (newStatus === 'ARRIVED_AT_MILL') {
+                    r.arrived_at = nowIso;
+                } else if (newStatus === 'DELIVERED') {
+                    r.delivered_at = nowIso;
+                }
                 updatedReq = r;
             }
             return r;
@@ -2339,47 +2345,78 @@ class KisanService {
         setLocal(STORAGE_KEYS.TRANSPORT_REQUESTS, updated);
 
         if (updatedReq) {
-            // Notify farmer and mill of transport status update
+            // Friendly status titles
             const statusTitles = {
-                'PICKUP_STARTED': 'Vehicle Dispatched for Pickup',
-                'CROP_PICKED_UP': 'Crop Picked Up from Farm',
-                'IN_TRANSIT': 'Crop In-Transit to Mill',
-                'ARRIVED_AT_MILL': 'Transport Arrived at Mill Gate',
-                'DELIVERED': 'Crop Transport Delivered Successfully'
+                'PICKUP_STARTED': '🚀 Transport Dispatched to Farm',
+                'CROP_PICKED_UP': '📦 Harvest Loaded & Picked Up',
+                'IN_TRANSIT': '🛣️ Crop In-Transit to Processing Mill',
+                'ARRIVED_AT_MILL': '🏭 Transport Arrived at Mill Gate',
+                'DELIVERED': '🎉 Produce Load Dropped & Gate QR Verified'
             };
 
-            const title = statusTitles[newStatus] || `Transport Status: ${newStatus}`;
-            this.addNotification(
-                updatedReq.farmer_phone,
-                'farmers',
-                title,
-                `Vehicle ${updatedReq.vehicle_number || ''} status for enquiry ${updatedReq.enquiry_code} updated to ${newStatus}.`,
-                'info'
-            );
+            const title = statusTitles[newStatus] || `Transport Status: ${newStatus.replace(/_/g, ' ')}`;
+            
+            // 1. Notify Farmer
+            if (updatedReq.farmer_phone) {
+                this.addNotification(
+                    updatedReq.farmer_phone,
+                    'farmers',
+                    title,
+                    `Vehicle ${updatedReq.vehicle_number || 'Truck'} for enquiry ${updatedReq.enquiry_code} is now: ${newStatus.replace(/_/g, ' ')}.`,
+                    newStatus === 'DELIVERED' ? 'success' : 'info',
+                    { transportCode: updatedReq.transport_code, enquiryCode: updatedReq.enquiry_code }
+                );
+            }
 
-            // Also synchronize enquiry state!
+            // 2. Also synchronize enquiry state across all portals!
             const allEnquiries = getLocal(STORAGE_KEYS.ENQUIRIES, []);
             let enqChanged = false;
+            let targetEnq = null;
+
             const updatedEnqs = allEnquiries.map(eq => {
                 if (eq.id === updatedReq.enquiry_id || (updatedReq.enquiry_code && eq.enquiry_code === updatedReq.enquiry_code)) {
                     eq.transit_status = newStatus;
-                    if (newStatus === 'DELIVERED') {
+                    if (newStatus === 'ARRIVED_AT_MILL') {
+                        eq.arrived_at_mill = true;
+                        eq.arrived_at = nowIso;
+                    } else if (newStatus === 'DELIVERED') {
                         eq.status = 'LOAD_RECEIVED';
                         eq.load_status = 'LOAD_RECEIVED';
                         eq.qr_scanned = true;
+                        eq.received_at = nowIso;
+                        eq.arrived_at_mill = true;
                     }
+                    targetEnq = eq;
                     enqChanged = true;
                 }
                 return eq;
             });
+
             if (enqChanged) {
                 setLocal(STORAGE_KEYS.ENQUIRIES, updatedEnqs);
                 this.notify('enquiries_changed', updatedEnqs);
+                if (targetEnq) this.notify('enquiry_updated', targetEnq);
+            }
+
+            // 3. If DELIVERED (Load Dropped & Gate QR Verified), trigger complete load intake recording!
+            if (newStatus === 'DELIVERED') {
+                try {
+                    this.acceptLoad(
+                        updatedReq.enquiry_code || updatedReq.enquiry_id,
+                        {
+                            millName: updatedReq.mill_name,
+                            id: updatedReq.mill_id || ''
+                        },
+                        updatedReq.quantity || 10
+                    );
+                } catch (e) {
+                    console.warn("Auto-accept load intake notice:", e);
+                }
             }
         }
 
         this.notify('transport_status_updated', updatedReq);
-        this.notify('transport_requests_changed', requests);
+        this.notify('transport_requests_changed', updated);
         return updatedReq;
     }
 

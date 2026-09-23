@@ -65,7 +65,9 @@ export default function LandingPage() {
             title: t('farmerPortalTitle', 'Farmer Portal'),
             subtitle: 'Empower Your Yield',
             desc: t('farmerPortalDesc', 'Real-time weather, market rates, direct mill enquiries, and crop verification QR.'),
-            route: '/farmer/dashboard'
+            route: '/farmer/dashboard',
+            bgImage: '/farmer-portal-bg.jpg',
+            badgeColor: '#10b981'
         },
         {
             id: 'buyers',
@@ -73,7 +75,9 @@ export default function LandingPage() {
             title: t('millPortalTitle', 'Mills'),
             subtitle: 'Grain Procurement',
             desc: t('millPortalDesc', 'Review farmer loads, scan gate QR codes, verify intake batches, and set mill prices.'),
-            route: '/buyer/dashboard'
+            route: '/buyer/dashboard',
+            bgImage: '/mill-portal-bg.jpg',
+            badgeColor: '#f59e0b'
         },
         {
             id: 'transporters',
@@ -81,7 +85,9 @@ export default function LandingPage() {
             title: t('transportPortalTitle', 'Transport Provider'),
             subtitle: 'Smart Agro-Logistics',
             desc: t('transportPortalDesc', 'Smart truck capacity matching, haulage bids, trip progress, and freight payouts.'),
-            route: '/transport/dashboard'
+            route: '/transport/dashboard',
+            bgImage: '/transport-portal-bg.jpg',
+            badgeColor: '#3b82f6'
         },
     ];
 
@@ -208,25 +214,36 @@ export default function LandingPage() {
                                 onClick={() => handleRoleClick(roleItem)}
                                 style={{ animationDelay: `${idx * 0.1}s` }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                                    <div className="compact-role-icon">
-                                        <i className={`fa-solid ${roleItem.icon}`}></i>
+                                {/* Crystal Clear Top Image Banner */}
+                                <div className="role-card-banner">
+                                    <img
+                                        src={roleItem.bgImage}
+                                        alt={roleItem.title}
+                                        className="role-card-banner-img"
+                                    />
+                                    <div className="role-card-banner-badges">
+                                        <div className="compact-role-icon" style={{ borderColor: roleItem.badgeColor, color: roleItem.badgeColor }}>
+                                            <i className={`fa-solid ${roleItem.icon}`}></i>
+                                        </div>
+                                        <span className="role-card-subtitle-badge" style={{ color: roleItem.badgeColor, borderColor: `${roleItem.badgeColor}55` }}>
+                                            {roleItem.subtitle}
+                                        </span>
                                     </div>
-                                    <span style={{ fontSize: '0.68rem', color: 'var(--accent-gold)', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                                        {roleItem.subtitle}
-                                    </span>
                                 </div>
 
-                                <h2 style={{ fontSize: '1.12rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
-                                    {roleItem.title}
-                                </h2>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.45, marginBottom: '1rem', flex: 1 }}>
-                                    {roleItem.desc}
-                                </p>
+                                {/* Clean High-Contrast Details Body */}
+                                <div className="role-card-body">
+                                    <h2 style={{ fontSize: '1.18rem', fontWeight: 800, marginBottom: '0.4rem', color: '#ffffff' }}>
+                                        {roleItem.title}
+                                    </h2>
+                                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.48, marginBottom: '1.1rem', flex: 1 }}>
+                                        {roleItem.desc}
+                                    </p>
 
-                                <div className="card-enter-btn">
-                                    <span>{t('enterPortal', 'Enter Portal')}</span>
-                                    <i className="fa-solid fa-arrow-right" style={{ fontSize: '0.75rem', transition: 'transform 0.2s' }}></i>
+                                    <div className="card-enter-btn" style={{ color: roleItem.badgeColor }}>
+                                        <span>{t('enterPortal', 'Enter Portal')}</span>
+                                        <i className="fa-solid fa-arrow-right" style={{ fontSize: '0.75rem', transition: 'transform 0.2s' }}></i>
+                                    </div>
                                 </div>
                             </div>
                         ))}

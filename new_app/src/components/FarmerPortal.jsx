@@ -837,8 +837,11 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
 
             {/* Sidebar */}
             <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-                <div className="logo" style={{ marginBottom: '2rem' }}>
-                    <KisanLogo size="md" />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: '1.5rem', paddingLeft: '0.15rem' }}>
+                    <KisanLogo size="sidebar" />
+                    <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.35rem', letterSpacing: '0.2px', fontWeight: 600 }}>
+                        {t('tagline', 'Stronger Farms. Brighter Futures.')}
+                    </div>
                 </div>
 
                 <nav className="nav-menu">
@@ -1237,9 +1240,9 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                                             </div>
                                                                         </div>
 
-                                                                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.65rem', flex: '1 1 auto', marginLeft: 'auto' }}>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.65rem', flexWrap: 'wrap', flex: '1 1 auto', minWidth: '140px' }}>
                                                                             <div style={{ textAlign: 'left', minWidth: '55px' }}>
-                                                                                <div style={{ fontWeight: 800, fontSize: '1rem', color: isTop ? 'var(--primary)' : 'var(--accent-gold)', whiteSpace: 'nowrap' }}>
+                                                                                <div style={{ fontWeight: 800, fontSize: '0.98rem', color: isTop ? 'var(--primary)' : 'var(--accent-gold)', whiteSpace: 'nowrap' }}>
                                                                                     ₹{offer.price.toLocaleString('en-IN')}
                                                                                 </div>
                                                                                 <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>per quintal</div>
@@ -1252,7 +1255,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                                                                                     setSelectedCropForSearch(offer.farmerCrop);
                                                                                 }}
                                                                                 style={{ 
-                                                                                    padding: '0.45rem 0.85rem', 
+                                                                                    padding: '0.42rem 0.8rem', 
                                                                                     fontSize: '0.75rem', 
                                                                                     fontWeight: 700,
                                                                                     background: isTop ? 'var(--primary)' : 'rgba(255,255,255,0.08)',
@@ -3705,78 +3708,263 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
             {/* ======================================================== */}
             {selectedPaymentForReceipt && (
                 <div className="modal-overlay" style={{ zIndex: 9999 }}>
-                    <div className="modal-content" style={{ maxWidth: '520px', width: '92%', background: '#0d1712', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '1.25rem', padding: '1.75rem', color: '#f0fdf4' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem' }}>
+                    <div className="modal-content" style={{ maxWidth: '540px', width: '92%', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '1.25rem', padding: '1.5rem', color: '#0F172A', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+                        <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #F1F5F9', paddingBottom: '0.65rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                <i className="fa-solid fa-receipt" style={{ color: 'var(--primary)', fontSize: '1.3rem' }}></i>
-                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Produce Payment Receipt</h3>
+                                <i className="fa-solid fa-receipt" style={{ color: '#059669', fontSize: '1.25rem' }}></i>
+                                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>Produce Payment Receipt</h3>
                             </div>
-                            <button className="action-btn text-btn" onClick={() => setSelectedPaymentForReceipt(null)} style={{ color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                            <button className="action-btn text-btn" onClick={() => setSelectedPaymentForReceipt(null)} style={{ color: '#64748B', background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.25rem' }}>
                                 <i className="fa-solid fa-xmark" style={{ fontSize: '1.25rem' }}></i>
                             </button>
                         </div>
 
-                        <div style={{ background: 'rgba(0,0,0,0.4)', borderRadius: '0.75rem', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem' }}>
-                            <div style={{ textAlign: 'center', borderBottom: '1px dashed rgba(255,255,255,0.15)', paddingBottom: '0.75rem', marginBottom: '0.5rem' }}>
+                        {/* PURE WHITE PRINTABLE VOUCHER */}
+                        <div 
+                            id="farmer-payment-receipt-print-area" 
+                            className="printable-payment-receipt"
+                            style={{ 
+                                background: '#FFFFFF', 
+                                borderRadius: '1rem', 
+                                border: '2px solid #E2E8F0', 
+                                padding: '1.5rem', 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                gap: '0.75rem', 
+                                fontSize: '0.88rem',
+                                color: '#0F172A',
+                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)'
+                            }}
+                        >
+                            {/* Official KisanConnect Branded Header */}
+                            <div style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center', 
+                                borderBottom: '2px solid #E2E8F0', 
+                                paddingBottom: '0.85rem',
+                                marginBottom: '0.25rem'
+                            }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                    <KisanLogo size="md" />
+                                    <div style={{ fontSize: '0.72rem', color: '#059669', marginTop: '0.3rem', fontWeight: 700, letterSpacing: '0.25px' }}>
+                                        Stronger Farms. Brighter Futures.
+                                    </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <span style={{ display: 'inline-block', fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#ECFDF5', padding: '0.2rem 0.55rem', borderRadius: '0.35rem', border: '1px solid #A7F3D0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                        Settlement Voucher
+                                    </span>
+                                    <div style={{ fontSize: '0.68rem', color: '#64748B', marginTop: '0.25rem', fontFamily: 'monospace' }}>
+                                        DOC: KC-PAY-{selectedPaymentForReceipt.enquiry_code || '2026-01'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Settlement Banner */}
+                            <div style={{ textAlign: 'center', background: '#F8FAFC', borderRadius: '0.75rem', border: '1px solid #E2E8F0', padding: '0.9rem', margin: '0.25rem 0' }}>
                                 <span className="status-badge" style={{
-                                    background: (selectedPaymentForReceipt.payment_status || 'PENDING').toUpperCase() === 'COMPLETED' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(234, 179, 8, 0.15)',
-                                    color: (selectedPaymentForReceipt.payment_status || 'PENDING').toUpperCase() === 'COMPLETED' ? 'var(--primary)' : '#fbbf24',
+                                    background: (selectedPaymentForReceipt.payment_status || 'PENDING').toUpperCase() === 'COMPLETED' ? '#D1FAE5' : '#FEF3C7',
+                                    color: (selectedPaymentForReceipt.payment_status || 'PENDING').toUpperCase() === 'COMPLETED' ? '#065F46' : '#92400E',
+                                    border: (selectedPaymentForReceipt.payment_status || 'PENDING').toUpperCase() === 'COMPLETED' ? '1px solid #A7F3D0' : '1px solid #FDE68A',
                                     fontWeight: 800,
-                                    padding: '0.35rem 0.8rem',
+                                    padding: '0.3rem 0.85rem',
                                     borderRadius: '1rem',
-                                    fontSize: '0.8rem'
+                                    fontSize: '0.78rem',
+                                    display: 'inline-block'
                                 }}>
                                     {(selectedPaymentForReceipt.payment_status || 'PENDING').toUpperCase() === 'COMPLETED' ? '✓ SETTLEMENT COMPLETED' : '⏳ PAYMENT PENDING AT MILL'}
                                 </span>
-                                <h3 style={{ margin: '0.6rem 0 0.2rem 0', color: 'var(--accent-gold)', fontSize: '1.6rem' }}>
+                                <div style={{ margin: '0.45rem 0 0.15rem 0', color: '#0F172A', fontSize: '1.75rem', fontWeight: 900 }}>
                                     ₹{selectedPaymentForReceipt.total_amount?.toLocaleString('en-IN')}
-                                </h3>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
                                     {selectedPaymentForReceipt.paid_at
                                         ? `Paid on ${new Date(selectedPaymentForReceipt.paid_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}`
                                         : `Weighed on ${new Date(selectedPaymentForReceipt.received_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}`}
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Enquiry Code:</span>
-                                <strong style={{ fontFamily: 'monospace' }}>{selectedPaymentForReceipt.enquiry_code}</strong>
+                            {/* Meta Key-Value Details */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px dashed #E2E8F0' }}>
+                                <span style={{ color: '#64748B' }}>Enquiry Code:</span>
+                                <strong style={{ fontFamily: 'monospace', color: '#0F172A' }}>{selectedPaymentForReceipt.enquiry_code}</strong>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Purchaser Mill:</span>
-                                <strong>{selectedPaymentForReceipt.mill_name}</strong>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px dashed #E2E8F0' }}>
+                                <span style={{ color: '#64748B' }}>Purchaser Mill:</span>
+                                <strong style={{ color: '#0F172A' }}>{selectedPaymentForReceipt.mill_name}</strong>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Crop Delivered:</span>
-                                <strong style={{ color: 'var(--primary)' }}>{selectedPaymentForReceipt.crop_name}</strong>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px dashed #E2E8F0' }}>
+                                <span style={{ color: '#64748B' }}>Crop Delivered:</span>
+                                <strong style={{ color: '#059669' }}>{selectedPaymentForReceipt.crop_name}</strong>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Received Weight:</span>
-                                <strong>{selectedPaymentForReceipt.quantity_tonnes} Tonnes ({selectedPaymentForReceipt.quantity_quintals} Quintals)</strong>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px dashed #E2E8F0' }}>
+                                <span style={{ color: '#64748B' }}>Received Weight:</span>
+                                <strong style={{ color: '#0F172A' }}>{selectedPaymentForReceipt.quantity_tonnes} Tonnes ({selectedPaymentForReceipt.quantity_quintals} Quintals)</strong>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Agreed Rate:</span>
-                                <strong>₹{selectedPaymentForReceipt.price_per_quintal} / Quintal</strong>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px dashed #E2E8F0' }}>
+                                <span style={{ color: '#64748B' }}>Agreed Rate:</span>
+                                <strong style={{ color: '#0F172A' }}>₹{selectedPaymentForReceipt.price_per_quintal} / Quintal</strong>
                             </div>
                             {selectedPaymentForReceipt.payment_method && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>Payment Method:</span>
-                                    <strong>{selectedPaymentForReceipt.payment_method}</strong>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px dashed #E2E8F0' }}>
+                                    <span style={{ color: '#64748B' }}>Payment Method:</span>
+                                    <strong style={{ color: '#0F172A' }}>{selectedPaymentForReceipt.payment_method}</strong>
                                 </div>
                             )}
                             {selectedPaymentForReceipt.transaction_reference && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>UTR Reference:</span>
-                                    <strong style={{ fontFamily: 'monospace', color: 'var(--accent-gold)' }}>{selectedPaymentForReceipt.transaction_reference}</strong>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0' }}>
+                                    <span style={{ color: '#64748B' }}>UTR Reference:</span>
+                                    <strong style={{ fontFamily: 'monospace', color: '#059669' }}>{selectedPaymentForReceipt.transaction_reference}</strong>
                                 </div>
                             )}
+
+                            {/* Security Seal */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', background: '#F0FDF4', borderRadius: '0.5rem', border: '1px solid #BBF7D0', marginTop: '0.25rem' }}>
+                                <span style={{ color: '#166534', fontSize: '0.78rem', fontWeight: 600 }}>Security Verification:</span>
+                                <span style={{ color: '#15803D', fontWeight: 800, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                    <i className="fa-solid fa-circle-check"></i> Verified Digital Payment Record
+                                </span>
+                            </div>
+
+                            {/* Official Footer Note */}
+                            <div style={{ textAlign: 'center', fontSize: '0.7rem', color: '#94A3B8', borderTop: '1px solid #E2E8F0', paddingTop: '0.65rem', marginTop: '0.35rem' }}>
+                                🌾 KisanConnect Unified Agricultural Ecosystem • Authorized Digital Settlement Receipt
+                            </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
-                            <button className="action-btn" onClick={() => window.print()} style={{ flex: 1, justifyContent: 'center' }}>
-                                <i className="fa-solid fa-print"></i> Print
+                        {/* Action Buttons (Hidden on Print) */}
+                        <div className="no-print" style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
+                            <button 
+                                className="primary-btn" 
+                                onClick={() => {
+                                    const printWindow = window.open('', '_blank', 'width=850,height=950');
+                                    if (!printWindow) {
+                                        window.print();
+                                        return;
+                                    }
+                                    const logoSvg = `<div style="display:inline-flex;align-items:center;gap:10px;"><img src="/kisanconnect-logo.svg" alt="KisanConnect" style="width:38px;height:38px;object-fit:contain;"/><span style="font-size:24px;font-weight:800;letter-spacing:-0.5px;font-family:'Poppins',sans-serif;"><span style="color:#10B981;">Kisan</span><span style="color:#0F172A;margin-left:2px;">Connect</span></span></div>`;
+                                    
+                                    printWindow.document.write(`
+                                        <!DOCTYPE html>
+                                        <html>
+                                        <head>
+                                            <meta charset="utf-8">
+                                            <title>KisanConnect Bill - ${selectedPaymentForReceipt.enquiry_code || 'Receipt'}</title>
+                                            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+                                            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                                            <style>
+                                                @page { size: A4 portrait; margin: 15mm 20mm; }
+                                                * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', -apple-system, sans-serif; }
+                                                body { background: #ffffff !important; color: #0f172a; padding: 30px 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                                .print-card { max-width: 650px; margin: 0 auto; border: 2px solid #e2e8f0; border-radius: 16px; padding: 28px 32px; background: #ffffff; }
+                                                .header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 18px; }
+                                                .badge-settled { display: inline-block; background: #d1fae5 !important; color: #065f46 !important; font-weight: 800; font-size: 13px; padding: 4px 14px; border-radius: 20px; border: 1px solid #a7f3d0; }
+                                                .badge-pending { display: inline-block; background: #fef3c7 !important; color: #92400e !important; font-weight: 800; font-size: 13px; padding: 4px 14px; border-radius: 20px; border: 1px solid #fde68a; }
+                                                .amount-container { text-align: center; background: #f8fafc !important; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 18px; }
+                                                .amount-val { font-size: 32px; font-weight: 900; color: #0f172a; margin: 6px 0 2px 0; }
+                                                .info-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #e2e8f0; font-size: 14px; }
+                                                .info-label { color: #64748b; font-weight: 500; }
+                                                .info-value { color: #0f172a; font-weight: 700; }
+                                                .sec-banner { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #f0fdf4 !important; border: 1px solid #bbf7d0; border-radius: 8px; margin-top: 14px; font-size: 13px; }
+                                                .footer-banner { text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 18px; }
+                                            </style>
+                                        </head>
+                                        <body>
+                                            <div class="print-card">
+                                                <div class="header-row">
+                                                    <div>
+                                                        ${logoSvg}
+                                                        <div style="font-size: 12px; color: #059669; font-weight: 700; margin-top: 4px; letter-spacing: 0.3px;">
+                                                            Stronger Farms. Brighter Futures.
+                                                        </div>
+                                                    </div>
+                                                    <div style="text-align: right;">
+                                                        <span style="display: inline-block; font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; padding: 3px 10px; border-radius: 6px; border: 1px solid #a7f3d0; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                            Official Payment Bill
+                                                        </span>
+                                                        <div style="font-size: 11px; color: #64748b; margin-top: 4px; font-family: monospace;">
+                                                            DOC: KC-PAY-${selectedPaymentForReceipt.enquiry_code || '2026-01'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="amount-container">
+                                                    <span class="${(selectedPaymentForReceipt.payment_status || 'PENDING').toUpperCase() === 'COMPLETED' ? 'badge-settled' : 'badge-pending'}">
+                                                        ${(selectedPaymentForReceipt.payment_status || 'PENDING').toUpperCase() === 'COMPLETED' ? '✓ SETTLEMENT COMPLETED' : '⏳ PAYMENT PENDING AT MILL'}
+                                                    </span>
+                                                    <div class="amount-val">₹${Number(selectedPaymentForReceipt.total_amount || 0).toLocaleString('en-IN')}</div>
+                                                    <div style="font-size: 12px; color: #64748b;">
+                                                        ${selectedPaymentForReceipt.paid_at
+                                                            ? `Paid on ${new Date(selectedPaymentForReceipt.paid_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}`
+                                                            : `Weighed on ${new Date(selectedPaymentForReceipt.received_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}`}
+                                                    </div>
+                                                </div>
+
+                                                <div class="info-row">
+                                                    <span class="info-label">Enquiry Code:</span>
+                                                    <span class="info-value" style="font-family: monospace;">${selectedPaymentForReceipt.enquiry_code}</span>
+                                                </div>
+
+                                                <div class="info-row">
+                                                    <span class="info-label">Purchaser Processing Mill:</span>
+                                                    <span class="info-value">${selectedPaymentForReceipt.mill_name}</span>
+                                                </div>
+
+                                                <div class="info-row">
+                                                    <span class="info-label">Crop Delivered:</span>
+                                                    <span class="info-value" style="color: #059669;">${selectedPaymentForReceipt.crop_name}</span>
+                                                </div>
+
+                                                <div class="info-row">
+                                                    <span class="info-label">Received Weight:</span>
+                                                    <span class="info-value">${selectedPaymentForReceipt.quantity_tonnes} Tonnes (${selectedPaymentForReceipt.quantity_quintals} Quintals)</span>
+                                                </div>
+
+                                                <div class="info-row">
+                                                    <span class="info-label">Agreed Rate:</span>
+                                                    <span class="info-value">₹${selectedPaymentForReceipt.price_per_quintal} / Quintal</span>
+                                                </div>
+
+                                                ${selectedPaymentForReceipt.payment_method ? `
+                                                <div class="info-row">
+                                                    <span class="info-label">Payment Mode:</span>
+                                                    <span class="info-value">${selectedPaymentForReceipt.payment_method}</span>
+                                                </div>
+                                                ` : ''}
+
+                                                ${selectedPaymentForReceipt.transaction_reference ? `
+                                                <div class="info-row">
+                                                    <span class="info-label">Transaction / UTR Reference:</span>
+                                                    <span class="info-value" style="font-family: monospace; color: #059669;">${selectedPaymentForReceipt.transaction_reference}</span>
+                                                </div>
+                                                ` : ''}
+
+                                                <div class="sec-banner">
+                                                    <span style="color: #166534; font-weight: 600;">Security Verification:</span>
+                                                    <span style="color: #15803D; font-weight: 800; display: flex; align-items: center; gap: 4px;">
+                                                        <i class="fa-solid fa-circle-check"></i> Verified Digital Payment Record
+                                                    </span>
+                                                </div>
+
+                                                <div class="footer-banner">
+                                                    🌾 KisanConnect Unified Agricultural Ecosystem • Official Digital Settlement Voucher
+                                                </div>
+                                            </div>
+                                        </body>
+                                        </html>
+                                    `);
+                                    printWindow.document.close();
+                                    setTimeout(() => {
+                                        printWindow.focus();
+                                        printWindow.print();
+                                    }, 250);
+                                }} 
+                                style={{ flex: 1, justifyContent: 'center', background: '#059669', color: '#FFF' }}
+                            >
+                                <i className="fa-solid fa-print"></i> Print Receipt
                             </button>
-                            <button className="primary-btn" onClick={() => setSelectedPaymentForReceipt(null)} style={{ flex: 1, justifyContent: 'center' }}>
+                            <button className="action-btn" onClick={() => setSelectedPaymentForReceipt(null)} style={{ flex: 1, justifyContent: 'center', background: '#F1F5F9', color: '#334155' }}>
                                 Close
                             </button>
                         </div>

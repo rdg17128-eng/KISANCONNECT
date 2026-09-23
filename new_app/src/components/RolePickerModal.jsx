@@ -18,7 +18,9 @@ export default function RolePickerModal() {
             icon: 'fa-tractor',
             title: 'Farmer',
             subtitle: 'Empower Your Yield',
-            desc: 'List crops, request mill purchase, generate verification QR, and arrange transport.'
+            desc: 'List crops, request mill purchase, generate verification QR, and arrange transport.',
+            bgImage: '/farmer-portal-bg.jpg',
+            badgeColor: '#10b981'
         },
         {
             id: 'buyers',
@@ -26,7 +28,9 @@ export default function RolePickerModal() {
             icon: 'fa-industry',
             title: 'Mill',
             subtitle: 'Direct Grain Intake',
-            desc: 'Review farmer enquiries, scan gate QR codes, verify crop loads, and set mill prices.'
+            desc: 'Review farmer enquiries, scan gate QR codes, verify crop loads, and set mill prices.',
+            bgImage: '/mill-portal-bg.jpg',
+            badgeColor: '#f59e0b'
         },
         {
             id: 'transporters',
@@ -34,7 +38,9 @@ export default function RolePickerModal() {
             icon: 'fa-truck-moving',
             title: 'Transport Provider',
             subtitle: 'Smart Agro-Logistics',
-            desc: 'Match vehicle capacity with farmer haulage requests, quote bids, and haul produce.'
+            desc: 'Match vehicle capacity with farmer haulage requests, quote bids, and haul produce.',
+            bgImage: '/transport-portal-bg.jpg',
+            badgeColor: '#3b82f6'
         }
     ];
 
@@ -109,8 +115,8 @@ export default function RolePickerModal() {
 
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                    gap: '0.75rem',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: '0.85rem',
                     marginBottom: '1.25rem'
                 }}>
                     {roles.map(r => {
@@ -120,35 +126,60 @@ export default function RolePickerModal() {
                                 key={r.id}
                                 onClick={() => setSelectedRole(r)}
                                 style={{
-                                    border: isSelected ? '2px solid var(--accent-gold)' : '1px solid rgba(255, 255, 255, 0.08)',
-                                    background: isSelected ? 'rgba(245, 158, 11, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+                                    position: 'relative',
+                                    border: isSelected ? `2px solid ${r.badgeColor}` : '1px solid rgba(255, 255, 255, 0.12)',
                                     borderRadius: '0.85rem',
                                     padding: '1rem 0.75rem',
                                     textAlign: 'center',
                                     cursor: 'pointer',
-                                    transition: 'var(--transition)',
-                                    transform: isSelected ? 'translateY(-2px)' : 'none'
+                                    transition: 'all 0.25s ease',
+                                    transform: isSelected ? 'translateY(-3px)' : 'none',
+                                    overflow: 'hidden',
+                                    boxShadow: isSelected ? `0 8px 24px rgba(0,0,0,0.6), 0 0 15px ${r.badgeColor}40` : '0 4px 12px rgba(0,0,0,0.4)'
                                 }}
                             >
+                                {/* Background Image */}
                                 <div style={{
-                                    width: '38px',
-                                    height: '38px',
-                                    borderRadius: '10px',
-                                    background: isSelected ? 'var(--accent-gold)' : 'rgba(16, 185, 129, 0.15)',
-                                    color: isSelected ? '#000' : 'var(--primary)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '1.1rem',
-                                    margin: '0 auto 0.6rem auto'
-                                }}>
-                                    <i className={`fa-solid ${r.icon}`}></i>
-                                </div>
-                                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-main)', marginBottom: '0.2rem' }}>
-                                    {r.title}
-                                </div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
-                                    {r.subtitle}
+                                    position: 'absolute',
+                                    inset: 0,
+                                    backgroundImage: `url(${r.bgImage})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    filter: 'brightness(0.7) contrast(1.05)',
+                                    zIndex: 1
+                                }} />
+                                <div style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    background: isSelected
+                                        ? 'linear-gradient(180deg, rgba(3, 10, 6, 0.6) 0%, rgba(3, 10, 6, 0.88) 100%)'
+                                        : 'linear-gradient(180deg, rgba(3, 10, 6, 0.75) 0%, rgba(3, 10, 6, 0.92) 100%)',
+                                    zIndex: 2
+                                }} />
+
+                                <div style={{ position: 'relative', zIndex: 3 }}>
+                                    <div style={{
+                                        width: '38px',
+                                        height: '38px',
+                                        borderRadius: '10px',
+                                        background: isSelected ? r.badgeColor : 'rgba(0, 0, 0, 0.65)',
+                                        border: `1px solid ${r.badgeColor}`,
+                                        color: isSelected ? '#000' : r.badgeColor,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '1.1rem',
+                                        margin: '0 auto 0.6rem auto',
+                                        backdropFilter: 'blur(6px)'
+                                    }}>
+                                        <i className={`fa-solid ${r.icon}`}></i>
+                                    </div>
+                                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fff', marginBottom: '0.2rem', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                                        {r.title}
+                                    </div>
+                                    <div style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.8)', lineHeight: 1.3 }}>
+                                        {r.subtitle}
+                                    </div>
                                 </div>
                             </div>
                         );

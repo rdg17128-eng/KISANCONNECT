@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import kisanService from '../services/kisanService';
+import KisanLogo from './KisanLogo';
 
 export default function SandboxPayoutModal({
     isOpen,
@@ -278,6 +279,13 @@ export default function SandboxPayoutModal({
                 ) : (
                     /* Receipt View */
                     <div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                            <KisanLogo size="md" />
+                            <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginTop: '0.3rem', fontWeight: 700, letterSpacing: '0.25px' }}>
+                                Stronger Farms. Brighter Futures.
+                            </div>
+                        </div>
+
                         <div style={{
                             background: 'linear-gradient(145deg, rgba(16, 185, 129, 0.15), rgba(0, 0, 0, 0.35))',
                             border: '1px solid rgba(16, 185, 129, 0.4)',
