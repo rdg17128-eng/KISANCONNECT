@@ -6,8 +6,21 @@ const ROLE_CONFIG = {
     farmers: {
         bg: '/farmer-portal-bg.jpg',
         badgeColor: '#10b981',
-        badgeBg: 'rgba(16, 185, 129, 0.2)',
+        badgeBg: 'rgba(16, 185, 129, 0.18)',
         badgeBorder: 'rgba(16, 185, 129, 0.45)',
+        cardBg: '#08140e',
+        cardBorder: 'rgba(16, 185, 129, 0.32)',
+        cardGlow: '0 30px 80px rgba(0, 0, 0, 0.95), 0 0 35px rgba(16, 185, 129, 0.18)',
+        bottomFade: 'rgba(8, 20, 14, 0.98)',
+        inputBg: 'rgba(255, 255, 255, 0.03)',
+        inputBorder: 'rgba(16, 185, 129, 0.22)',
+        inputFocusBorder: '#10b981',
+        inputFocusGlow: '0 0 0 2px rgba(16, 185, 129, 0.25)',
+        iconColor: '#10b981',
+        btnBg: 'linear-gradient(135deg, #10b981, #059669)',
+        btnColor: '#022013',
+        btnGlow: '0 8px 24px rgba(16, 185, 129, 0.35)',
+        demoColor: '#34d399',
         icon: 'fa-tractor',
         badgeText: 'FARMER PORTAL',
         subtitle: 'Direct Mandi Access & Crop Verification'
@@ -15,8 +28,21 @@ const ROLE_CONFIG = {
     buyers: {
         bg: '/mill-portal-bg.jpg',
         badgeColor: '#f59e0b',
-        badgeBg: 'rgba(245, 158, 11, 0.2)',
+        badgeBg: 'rgba(245, 158, 11, 0.18)',
         badgeBorder: 'rgba(245, 158, 11, 0.45)',
+        cardBg: '#130f08',
+        cardBorder: 'rgba(245, 158, 11, 0.32)',
+        cardGlow: '0 30px 80px rgba(0, 0, 0, 0.95), 0 0 35px rgba(245, 158, 11, 0.18)',
+        bottomFade: 'rgba(19, 15, 8, 0.98)',
+        inputBg: 'rgba(255, 255, 255, 0.03)',
+        inputBorder: 'rgba(245, 158, 11, 0.22)',
+        inputFocusBorder: '#f59e0b',
+        inputFocusGlow: '0 0 0 2px rgba(245, 158, 11, 0.25)',
+        iconColor: '#f59e0b',
+        btnBg: 'linear-gradient(135deg, #f59e0b, #d97706)',
+        btnColor: '#180e02',
+        btnGlow: '0 8px 24px rgba(245, 158, 11, 0.35)',
+        demoColor: '#fbbf24',
         icon: 'fa-industry',
         badgeText: 'MILL PORTAL',
         subtitle: 'Grain Intake & Procurement Management'
@@ -24,8 +50,21 @@ const ROLE_CONFIG = {
     transporters: {
         bg: '/transport-portal-bg.jpg',
         badgeColor: '#3b82f6',
-        badgeBg: 'rgba(59, 130, 246, 0.2)',
+        badgeBg: 'rgba(59, 130, 246, 0.18)',
         badgeBorder: 'rgba(59, 130, 246, 0.45)',
+        cardBg: '#09101b',
+        cardBorder: 'rgba(59, 130, 246, 0.32)',
+        cardGlow: '0 30px 80px rgba(0, 0, 0, 0.95), 0 0 35px rgba(59, 130, 246, 0.18)',
+        bottomFade: 'rgba(9, 16, 27, 0.98)',
+        inputBg: 'rgba(255, 255, 255, 0.03)',
+        inputBorder: 'rgba(59, 130, 246, 0.22)',
+        inputFocusBorder: '#3b82f6',
+        inputFocusGlow: '0 0 0 2px rgba(59, 130, 246, 0.25)',
+        iconColor: '#3b82f6',
+        btnBg: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+        btnColor: '#ffffff',
+        btnGlow: '0 8px 24px rgba(59, 130, 246, 0.35)',
+        demoColor: '#60a5fa',
         icon: 'fa-truck-moving',
         badgeText: 'TRANSPORT PORTAL',
         subtitle: 'Fleet Logistics & Freight Haulage'
@@ -60,14 +99,45 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
 
-    const roleConfig = ROLE_CONFIG[role.id] || {
-        bg: '/farmer-portal-bg.jpg',
-        badgeColor: '#10b981',
-        badgeBg: 'rgba(16, 185, 129, 0.2)',
-        badgeBorder: 'rgba(16, 185, 129, 0.45)',
-        icon: 'fa-tractor',
-        badgeText: role.title || 'PORTAL',
-        subtitle: 'Secure access to your agricultural ecosystem portal'
+    const roleConfig = ROLE_CONFIG[role.id] || ROLE_CONFIG.farmers;
+
+    // Helper to render styled theme-consistent input group
+    const renderInputGroup = (iconClass, inputProps, trailingElement = null) => {
+        return (
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                background: roleConfig.inputBg,
+                border: `1px solid ${roleConfig.inputBorder}`,
+                borderRadius: '0.75rem',
+                padding: '0.7rem 1rem',
+                transition: 'all 0.2s',
+                position: 'relative'
+            }}>
+                <i className={iconClass} style={{
+                    color: roleConfig.iconColor,
+                    marginRight: '0.85rem',
+                    fontSize: '1rem',
+                    width: '18px',
+                    textAlign: 'center',
+                    flexShrink: 0
+                }}></i>
+                <input
+                    {...inputProps}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        color: '#ffffff',
+                        width: '100%',
+                        fontSize: '0.92rem',
+                        fontFamily: 'inherit',
+                        ...(inputProps.style || {})
+                    }}
+                />
+                {trailingElement}
+            </div>
+        );
     };
 
     // 1. Handle Google Login for Returning Users
@@ -228,15 +298,15 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
     };
 
     return (
-        <div className="auth-modal" style={{ display: 'flex', zIndex: 9999 }}>
+        <div className="auth-modal" style={{ display: 'flex', zIndex: 9999, background: 'rgba(2, 6, 4, 0.88)' }}>
             <div className="auth-portal-card" style={{
                 maxWidth: '460px',
                 width: '100%',
-                background: '#0a1610',
+                background: roleConfig.cardBg,
                 borderRadius: '1.5rem',
-                border: '1px solid rgba(16, 185, 129, 0.28)',
+                border: `1px solid ${roleConfig.cardBorder}`,
                 overflow: 'hidden',
-                boxShadow: '0 30px 80px rgba(0, 0, 0, 0.95), 0 0 40px rgba(0, 0, 0, 0.6)',
+                boxShadow: roleConfig.cardGlow,
                 position: 'relative',
                 animation: 'growIn 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
             }}>
@@ -267,7 +337,7 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
                     <div style={{
                         position: 'absolute',
                         inset: 0,
-                        background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, transparent 45%, rgba(10, 22, 16, 0.98) 100%)'
+                        background: `linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, transparent 45%, ${roleConfig.bottomFade} 100%)`
                     }} />
 
                     {/* Close Button */}
@@ -358,7 +428,7 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
                             borderRadius: '0.75rem',
                             padding: '0.25rem',
                             marginBottom: '1.25rem',
-                            border: '1px solid rgba(255, 255, 255, 0.08)'
+                            border: `1px solid ${roleConfig.inputBorder}`
                         }}>
                             <button
                                 type="button"
@@ -369,7 +439,7 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
                                     borderRadius: '0.55rem',
                                     border: 'none',
                                     background: mode === 'signin' ? roleConfig.badgeColor : 'transparent',
-                                    color: mode === 'signin' ? '#000000' : 'var(--text-muted)',
+                                    color: mode === 'signin' ? (role.id === 'transporters' ? '#ffffff' : '#000000') : 'var(--text-muted)',
                                     fontWeight: 700,
                                     fontSize: '0.85rem',
                                     cursor: 'pointer',
@@ -392,7 +462,7 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
                                     borderRadius: '0.55rem',
                                     border: 'none',
                                     background: mode === 'signup' ? roleConfig.badgeColor : 'transparent',
-                                    color: mode === 'signup' ? '#000000' : 'var(--text-muted)',
+                                    color: mode === 'signup' ? (role.id === 'transporters' ? '#ffffff' : '#000000') : 'var(--text-muted)',
                                     fontWeight: 700,
                                     fontSize: '0.85rem',
                                     cursor: 'pointer',
@@ -414,7 +484,7 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
                                 onClick={() => { setMode('signin'); setError(''); setSuccessMessage(''); }}
                                 style={{
                                     background: 'rgba(255, 255, 255, 0.08)',
-                                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                                    border: `1px solid ${roleConfig.inputBorder}`,
                                     color: '#fff',
                                     borderRadius: '0.4rem',
                                     padding: '0.35rem 0.65rem',
@@ -454,9 +524,9 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
 
                     {successMessage && (
                         <div style={{
-                            background: 'rgba(16, 185, 129, 0.15)',
-                            border: '1px solid rgba(16, 185, 129, 0.35)',
-                            color: '#34d399',
+                            background: `${roleConfig.badgeBg}`,
+                            border: `1px solid ${roleConfig.badgeBorder}`,
+                            color: roleConfig.badgeColor,
                             padding: '0.65rem 0.85rem',
                             borderRadius: '0.6rem',
                             fontSize: '0.82rem',
@@ -526,46 +596,38 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
 
                             {/* Option B: Mobile Number & Password Form */}
                             <form onSubmit={handlePhoneSignIn} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <div className="input-group">
-                                    <i className="fa-solid fa-phone"></i>
-                                    <input
-                                        type="tel"
-                                        placeholder="10-digit Mobile Number"
-                                        maxLength="10"
-                                        value={phone}
-                                        onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                        required
-                                    />
-                                </div>
+                                {renderInputGroup('fa-solid fa-phone', {
+                                    type: 'tel',
+                                    placeholder: '10-digit Mobile Number',
+                                    maxLength: 10,
+                                    value: phone,
+                                    onChange: e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)),
+                                    required: true
+                                })}
 
-                                <div className="input-group" style={{ position: 'relative' }}>
-                                    <i className="fa-solid fa-lock"></i>
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        placeholder="Enter Password (e.g. 1234)"
-                                        value={password}
-                                        onChange={e => setPassword(e.target.value)}
-                                        style={{ paddingRight: '2.5rem' }}
-                                        required
-                                    />
+                                {renderInputGroup('fa-solid fa-lock', {
+                                    type: showPassword ? 'text' : 'password',
+                                    placeholder: 'Enter Password (e.g. 1234)',
+                                    value: password,
+                                    onChange: e => setPassword(e.target.value),
+                                    required: true,
+                                    style: { paddingRight: '2rem' }
+                                }, (
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
                                         style={{
-                                            position: 'absolute',
-                                            right: '0.75rem',
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
                                             background: 'none',
                                             border: 'none',
-                                            color: 'var(--text-muted)',
+                                            color: roleConfig.iconColor,
                                             cursor: 'pointer',
-                                            fontSize: '0.85rem'
+                                            fontSize: '0.9rem',
+                                            padding: '0.2rem'
                                         }}
                                     >
                                         <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                     </button>
-                                </div>
+                                ))}
 
                                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                     <button
@@ -587,15 +649,22 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
 
                                 <button
                                     type="submit"
-                                    className="primary-btn"
                                     style={{
                                         width: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
                                         justifyContent: 'center',
                                         padding: '0.75rem',
                                         marginTop: '0.35rem',
-                                        background: roleConfig.badgeColor,
-                                        color: '#000',
-                                        fontWeight: 700
+                                        background: roleConfig.btnBg,
+                                        color: roleConfig.btnColor,
+                                        fontWeight: 700,
+                                        fontSize: '0.92rem',
+                                        borderRadius: '0.75rem',
+                                        border: 'none',
+                                        boxShadow: roleConfig.btnGlow,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
                                     }}
                                     disabled={loading || googleLoading}
                                 >
@@ -616,7 +685,7 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
                                     type="button"
                                     className="text-btn"
                                     onClick={handleDemoLogin}
-                                    style={{ fontSize: '0.78rem', color: 'var(--accent-gold)' }}
+                                    style={{ fontSize: '0.78rem', color: roleConfig.demoColor, background: 'none', border: 'none', cursor: 'pointer' }}
                                 >
                                     <i className="fa-solid fa-bolt" style={{ marginRight: '0.35rem' }}></i> 1-Click Quick Demo Login
                                 </button>
@@ -630,8 +699,8 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
                     {mode === 'signup' && (
                         <div>
                             <div style={{
-                                background: 'rgba(255, 255, 255, 0.04)',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                background: roleConfig.inputBg,
+                                border: `1px solid ${roleConfig.inputBorder}`,
                                 borderRadius: '0.6rem',
                                 padding: '0.65rem 0.85rem',
                                 marginBottom: '0.9rem',
@@ -647,109 +716,87 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
                             </div>
 
                             <form onSubmit={handleRegisterAndLinkGoogle} style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-                                <div className="input-group">
-                                    <i className="fa-solid fa-user"></i>
-                                    <input
-                                        type="text"
-                                        placeholder="Full Name / Enterprise Name"
-                                        value={name}
-                                        onChange={e => setName(e.target.value)}
-                                        required
-                                    />
-                                </div>
+                                {renderInputGroup('fa-solid fa-user', {
+                                    type: 'text',
+                                    placeholder: 'Full Name / Enterprise Name',
+                                    value: name,
+                                    onChange: e => setName(e.target.value),
+                                    required: true
+                                })}
 
-                                <div className="input-group">
-                                    <i className="fa-solid fa-phone"></i>
-                                    <input
-                                        type="tel"
-                                        placeholder="10-digit Mobile Number (e.g. 9876543210)"
-                                        maxLength="10"
-                                        value={phone}
-                                        onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                        required
-                                    />
-                                </div>
+                                {renderInputGroup('fa-solid fa-phone', {
+                                    type: 'tel',
+                                    placeholder: '10-digit Mobile Number (e.g. 9876543210)',
+                                    maxLength: 10,
+                                    value: phone,
+                                    onChange: e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)),
+                                    required: true
+                                })}
 
-                                <div className="input-group" style={{ position: 'relative' }}>
-                                    <i className="fa-solid fa-lock"></i>
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        placeholder="Create Password (min. 6 chars)"
-                                        value={password}
-                                        onChange={e => setPassword(e.target.value)}
-                                        style={{ paddingRight: '2.5rem' }}
-                                        required
-                                    />
+                                {renderInputGroup('fa-solid fa-lock', {
+                                    type: showPassword ? 'text' : 'password',
+                                    placeholder: 'Create Password (min. 6 chars)',
+                                    value: password,
+                                    onChange: e => setPassword(e.target.value),
+                                    required: true,
+                                    style: { paddingRight: '2rem' }
+                                }, (
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
                                         style={{
-                                            position: 'absolute',
-                                            right: '0.75rem',
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
                                             background: 'none',
                                             border: 'none',
-                                            color: 'var(--text-muted)',
+                                            color: roleConfig.iconColor,
                                             cursor: 'pointer',
-                                            fontSize: '0.85rem'
+                                            fontSize: '0.9rem',
+                                            padding: '0.2rem'
                                         }}
                                     >
                                         <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                     </button>
-                                </div>
+                                ))}
 
-                                <div className="input-group" style={{ position: 'relative' }}>
-                                    <i className="fa-solid fa-lock-open"></i>
-                                    <input
-                                        type={showConfirmPassword ? "text" : "password"}
-                                        placeholder="Confirm Password"
-                                        value={confirmPassword}
-                                        onChange={e => setConfirmPassword(e.target.value)}
-                                        style={{ paddingRight: '2.5rem' }}
-                                        required
-                                    />
+                                {renderInputGroup('fa-solid fa-lock-open', {
+                                    type: showConfirmPassword ? 'text' : 'password',
+                                    placeholder: 'Confirm Password',
+                                    value: confirmPassword,
+                                    onChange: e => setConfirmPassword(e.target.value),
+                                    required: true,
+                                    style: { paddingRight: '2rem' }
+                                }, (
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                         style={{
-                                            position: 'absolute',
-                                            right: '0.75rem',
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
                                             background: 'none',
                                             border: 'none',
-                                            color: 'var(--text-muted)',
+                                            color: roleConfig.iconColor,
                                             cursor: 'pointer',
-                                            fontSize: '0.85rem'
+                                            fontSize: '0.9rem',
+                                            padding: '0.2rem'
                                         }}
                                     >
                                         <i className={`fa-solid ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                     </button>
-                                </div>
+                                ))}
 
                                 {role.id === 'transporters' && (
                                     <>
-                                        <div className="input-group">
-                                            <i className="fa-solid fa-truck"></i>
-                                            <input
-                                                type="text"
-                                                placeholder="Vehicle Registration (e.g. TS 09 EA 4421)"
-                                                value={vehicleNumber}
-                                                onChange={e => setVehicleNumber(e.target.value)}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="input-group">
-                                            <i className="fa-solid fa-weight-hanging"></i>
-                                            <input
-                                                type="number"
-                                                placeholder="Truck Capacity in Tons (e.g. 15)"
-                                                value={capacity}
-                                                onChange={e => setCapacity(e.target.value)}
-                                                required
-                                            />
-                                        </div>
+                                        {renderInputGroup('fa-solid fa-truck', {
+                                            type: 'text',
+                                            placeholder: 'Vehicle Registration (e.g. TS 09 EA 4421)',
+                                            value: vehicleNumber,
+                                            onChange: e => setVehicleNumber(e.target.value),
+                                            required: true
+                                        })}
+                                        {renderInputGroup('fa-solid fa-weight-hanging', {
+                                            type: 'number',
+                                            placeholder: 'Truck Capacity in Tons (e.g. 15)',
+                                            value: capacity,
+                                            onChange: e => setCapacity(e.target.value),
+                                            required: true
+                                        })}
                                     </>
                                 )}
 
@@ -802,87 +849,81 @@ export default function AuthModal({ role, onClose, onLoginSuccess }) {
                             </p>
 
                             <form onSubmit={handlePasswordRecovery} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <div className="input-group">
-                                    <i className="fa-solid fa-phone"></i>
-                                    <input
-                                        type="tel"
-                                        placeholder="Registered 10-digit Mobile Number"
-                                        maxLength="10"
-                                        value={phone}
-                                        onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                        required
-                                    />
-                                </div>
+                                {renderInputGroup('fa-solid fa-phone', {
+                                    type: 'tel',
+                                    placeholder: 'Registered 10-digit Mobile Number',
+                                    maxLength: 10,
+                                    value: phone,
+                                    onChange: e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)),
+                                    required: true
+                                })}
 
-                                <div className="input-group" style={{ position: 'relative' }}>
-                                    <i className="fa-solid fa-key"></i>
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        placeholder="New Password (min. 6 chars)"
-                                        value={password}
-                                        onChange={e => setPassword(e.target.value)}
-                                        style={{ paddingRight: '2.5rem' }}
-                                        required
-                                    />
+                                {renderInputGroup('fa-solid fa-key', {
+                                    type: showPassword ? 'text' : 'password',
+                                    placeholder: 'New Password (min. 6 chars)',
+                                    value: password,
+                                    onChange: e => setPassword(e.target.value),
+                                    required: true,
+                                    style: { paddingRight: '2rem' }
+                                }, (
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
                                         style={{
-                                            position: 'absolute',
-                                            right: '0.75rem',
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
                                             background: 'none',
                                             border: 'none',
-                                            color: 'var(--text-muted)',
+                                            color: roleConfig.iconColor,
                                             cursor: 'pointer',
-                                            fontSize: '0.85rem'
+                                            fontSize: '0.9rem',
+                                            padding: '0.2rem'
                                         }}
                                     >
                                         <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                     </button>
-                                </div>
+                                ))}
 
-                                <div className="input-group" style={{ position: 'relative' }}>
-                                    <i className="fa-solid fa-lock"></i>
-                                    <input
-                                        type={showConfirmPassword ? "text" : "password"}
-                                        placeholder="Confirm New Password"
-                                        value={confirmPassword}
-                                        onChange={e => setConfirmPassword(e.target.value)}
-                                        style={{ paddingRight: '2.5rem' }}
-                                        required
-                                    />
+                                {renderInputGroup('fa-solid fa-lock', {
+                                    type: showConfirmPassword ? 'text' : 'password',
+                                    placeholder: 'Confirm New Password',
+                                    value: confirmPassword,
+                                    onChange: e => setConfirmPassword(e.target.value),
+                                    required: true,
+                                    style: { paddingRight: '2rem' }
+                                }, (
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                         style={{
-                                            position: 'absolute',
-                                            right: '0.75rem',
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
                                             background: 'none',
                                             border: 'none',
-                                            color: 'var(--text-muted)',
+                                            color: roleConfig.iconColor,
                                             cursor: 'pointer',
-                                            fontSize: '0.85rem'
+                                            fontSize: '0.9rem',
+                                            padding: '0.2rem'
                                         }}
                                     >
                                         <i className={`fa-solid ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                     </button>
-                                </div>
+                                ))}
 
                                 <button
                                     type="submit"
-                                    className="primary-btn"
                                     style={{
                                         width: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
                                         justifyContent: 'center',
                                         padding: '0.75rem',
                                         marginTop: '0.5rem',
-                                        background: roleConfig.badgeColor,
-                                        color: '#000',
-                                        fontWeight: 700
+                                        background: roleConfig.btnBg,
+                                        color: roleConfig.btnColor,
+                                        fontWeight: 700,
+                                        fontSize: '0.92rem',
+                                        borderRadius: '0.75rem',
+                                        border: 'none',
+                                        boxShadow: roleConfig.btnGlow,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
                                     }}
                                     disabled={loading}
                                 >

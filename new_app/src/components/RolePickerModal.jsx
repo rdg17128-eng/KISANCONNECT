@@ -49,6 +49,8 @@ export default function RolePickerModal() {
         }
     ];
 
+    const activeColor = selectedRole?.badgeColor || '#10b981';
+
     const handleConfirm = async () => {
         if (!selectedRole) {
             setError('Please select an account type.');
@@ -94,20 +96,20 @@ export default function RolePickerModal() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(3, 10, 6, 0.88)',
+            background: 'rgba(2, 6, 8, 0.9)',
             backdropFilter: 'blur(8px)',
             padding: '1rem'
         }}>
             <div className="auth-modal-card" style={{
-                background: 'rgba(8, 22, 14, 0.96)',
-                border: '1px solid var(--border-highlight)',
+                background: '#0d131a',
+                border: `1px solid ${selectedRole ? selectedRole.badgeColor + '55' : 'rgba(255, 255, 255, 0.15)'}`,
                 borderRadius: '1.25rem',
                 maxWidth: '640px',
                 width: '100%',
                 maxHeight: '90vh',
                 overflowY: 'auto',
                 padding: '1.75rem',
-                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.15)',
+                boxShadow: `0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px ${selectedRole ? selectedRole.badgeColor + '25' : 'rgba(0,0,0,0.5)'}`,
                 animation: 'growIn 0.3s ease-out'
             }}>
                 <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
@@ -187,7 +189,7 @@ export default function RolePickerModal() {
                                         borderRadius: '10px',
                                         background: isSelected ? r.badgeColor : 'rgba(0, 0, 0, 0.65)',
                                         border: `1px solid ${r.badgeColor}`,
-                                        color: isSelected ? '#000' : r.badgeColor,
+                                        color: isSelected ? (r.id === 'transporters' ? '#ffffff' : '#000000') : r.badgeColor,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -222,8 +224,8 @@ export default function RolePickerModal() {
                             style={{
                                 width: '100%',
                                 padding: '0.65rem 0.85rem',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                border: '1px solid var(--border-color)',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: `1px solid ${selectedRole ? selectedRole.badgeColor + '40' : 'rgba(255, 255, 255, 0.12)'}`,
                                 borderRadius: '0.5rem',
                                 color: '#fff',
                                 fontSize: '0.88rem'
@@ -243,8 +245,8 @@ export default function RolePickerModal() {
                             style={{
                                 width: '100%',
                                 padding: '0.65rem 0.85rem',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                border: '1px solid var(--border-color)',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: `1px solid ${selectedRole ? selectedRole.badgeColor + '40' : 'rgba(255, 255, 255, 0.12)'}`,
                                 borderRadius: '0.5rem',
                                 color: '#fff',
                                 fontSize: '0.88rem'
@@ -264,8 +266,8 @@ export default function RolePickerModal() {
                             style={{
                                 width: '100%',
                                 padding: '0.65rem 2.5rem 0.65rem 0.85rem',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                border: '1px solid var(--border-color)',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: `1px solid ${selectedRole ? selectedRole.badgeColor + '40' : 'rgba(255, 255, 255, 0.12)'}`,
                                 borderRadius: '0.5rem',
                                 color: '#fff',
                                 fontSize: '0.88rem'
@@ -280,7 +282,7 @@ export default function RolePickerModal() {
                                 top: '2.1rem',
                                 background: 'none',
                                 border: 'none',
-                                color: 'var(--text-muted)',
+                                color: activeColor,
                                 cursor: 'pointer',
                                 fontSize: '0.85rem'
                             }}
@@ -303,8 +305,8 @@ export default function RolePickerModal() {
                                     style={{
                                         width: '100%',
                                         padding: '0.65rem 0.85rem',
-                                        background: 'rgba(255, 255, 255, 0.05)',
-                                        border: '1px solid var(--border-color)',
+                                        background: 'rgba(255, 255, 255, 0.04)',
+                                        border: `1px solid ${selectedRole.badgeColor}40`,
                                         borderRadius: '0.5rem',
                                         color: '#fff',
                                         fontSize: '0.88rem'
@@ -323,8 +325,8 @@ export default function RolePickerModal() {
                                     style={{
                                         width: '100%',
                                         padding: '0.65rem 0.85rem',
-                                        background: 'rgba(255, 255, 255, 0.05)',
-                                        border: '1px solid var(--border-color)',
+                                        background: 'rgba(255, 255, 255, 0.04)',
+                                        border: `1px solid ${selectedRole.badgeColor}40`,
                                         borderRadius: '0.5rem',
                                         color: '#fff',
                                         fontSize: '0.88rem'
@@ -345,10 +347,20 @@ export default function RolePickerModal() {
                         Sign Out
                     </button>
                     <button
-                        className="primary-btn"
+                        type="button"
                         onClick={handleConfirm}
                         disabled={submitting || !selectedRole}
-                        style={{ padding: '0.65rem 1.4rem', fontSize: '0.88rem' }}
+                        style={{
+                            padding: '0.65rem 1.4rem',
+                            fontSize: '0.88rem',
+                            background: selectedRole ? selectedRole.badgeColor : '#334155',
+                            color: selectedRole?.id === 'transporters' ? '#ffffff' : '#000000',
+                            border: 'none',
+                            borderRadius: '0.65rem',
+                            fontWeight: 700,
+                            cursor: selectedRole ? 'pointer' : 'not-allowed',
+                            boxShadow: selectedRole ? `0 4px 14px ${selectedRole.badgeColor}40` : 'none'
+                        }}
                     >
                         {submitting ? 'Setting up...' : 'Confirm & Open Portal →'}
                     </button>
