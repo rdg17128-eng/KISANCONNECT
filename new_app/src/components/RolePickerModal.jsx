@@ -7,6 +7,11 @@ export default function RolePickerModal() {
     const { googleUser, assignRoleToGoogleUser, logout } = useAuth();
     const [selectedRole, setSelectedRole] = useState(null);
     const [phone, setPhone] = useState('');
+    const [password, setPassword] = useState('');
+    const [name, setName] = useState(googleUser?.user_metadata?.full_name || '');
+    const [vehicleNumber, setVehicleNumber] = useState('');
+    const [capacity, setCapacity] = useState('15');
+    const [showPassword, setShowPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -50,11 +55,27 @@ export default function RolePickerModal() {
             return;
         }
 
+        const cleanPhone = phone.replace(/\D/g, '').trim();
+        if (cleanPhone && cleanPhone.length !== 10) {
+            setError('Please enter a valid 10-digit mobile number.');
+            return;
+        }
+
+        if (password && password.length < 6) {
+            setError('Password must be at least 6 characters long.');
+            return;
+        }
+
         setError('');
         setSubmitting(true);
         try {
             await assignRoleToGoogleUser(selectedRole.id, {
-                phone: phone || undefined
+                phone: cleanPhone || undefined,
+                password: password || '1234',
+                pin: password || '1234',
+                name: name || googleUser?.user_metadata?.full_name || googleUser?.email?.split('@')[0] || 'Kisan Member',
+                vehicle_number: selectedRole.id === 'transporters' ? vehicleNumber || 'TS 09 EA 4421' : undefined,
+                capacity: selectedRole.id === 'transporters' ? Number(capacity) || 15 : undefined
             });
             navigate(selectedRole.route);
         } catch (err) {
@@ -73,16 +94,18 @@ export default function RolePickerModal() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(3, 10, 6, 0.85)',
+            background: 'rgba(3, 10, 6, 0.88)',
             backdropFilter: 'blur(8px)',
             padding: '1rem'
         }}>
             <div className="auth-modal-card" style={{
-                background: 'rgba(8, 22, 14, 0.95)',
+                background: 'rgba(8, 22, 14, 0.96)',
                 border: '1px solid var(--border-highlight)',
                 borderRadius: '1.25rem',
                 maxWidth: '640px',
                 width: '100%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
                 padding: '1.75rem',
                 boxShadow: '0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.15)',
                 animation: 'growIn 0.3s ease-out'
@@ -95,7 +118,7 @@ export default function RolePickerModal() {
                         Welcome to <span className="notranslate" translate="no">KisanConnect</span>!
                     </h2>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', margin: 0 }}>
-                        {googleUser?.email ? `Signed in as ${googleUser.email}. ` : ''}Please select your primary role to configure your portal workspace:
+                        {googleUser?.email ? `Signed in as ${googleUser.email}. ` : ''}Select your primary role and set your mobile credentials to finalize your profile:
                     </p>
                 </div>
 
@@ -186,25 +209,130 @@ export default function RolePickerModal() {
                     })}
                 </div>
 
-                <div style={{ marginBottom: '1.25rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-                        Mobile Phone Number (Optional for SMS / Gate QR verification)
-                    </label>
-                    <input
-                        type="tel"
-                        placeholder="10-digit mobile number"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        style={{
-                            width: '100%',
-                            padding: '0.65rem 0.85rem',
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '0.5rem',
-                            color: '#fff',
-                            fontSize: '0.88rem'
-                        }}
-                    />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.25rem' }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                            Full Name / Enterprise Name
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Your Name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '0.65rem 0.85rem',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '0.5rem',
+                                color: '#fff',
+                                fontSize: '0.88rem'
+                            }}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                            Mobile Phone Number (Enables Phone + Password Sign-In & SMS Notifications)
+                        </label>
+                        <input
+                            type="tel"
+                            placeholder="10-digit mobile number (e.g. 9876543210)"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                            style={{
+                                width: '100%',
+                                padding: '0.65rem 0.85rem',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '0.5rem',
+                                color: '#fff',
+                                fontSize: '0.88rem'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ position: 'relative' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                            Create Password (min. 6 characters)
+                        </label>
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Set Password for Mobile Sign-In"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '0.65rem 2.5rem 0.65rem 0.85rem',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '0.5rem',
+                                color: '#fff',
+                                fontSize: '0.88rem'
+                            }}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            style={{
+                                position: 'absolute',
+                                right: '0.75rem',
+                                top: '2.1rem',
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem'
+                            }}
+                        >
+                            <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                        </button>
+                    </div>
+
+                    {selectedRole?.id === 'transporters' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                                    Vehicle Number
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="TS 09 EA 4421"
+                                    value={vehicleNumber}
+                                    onChange={(e) => setVehicleNumber(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.65rem 0.85rem',
+                                        background: 'rgba(255, 255, 255, 0.05)',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: '0.5rem',
+                                        color: '#fff',
+                                        fontSize: '0.88rem'
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                                    Capacity (Tons)
+                                </label>
+                                <input
+                                    type="number"
+                                    placeholder="15"
+                                    value={capacity}
+                                    onChange={(e) => setCapacity(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.65rem 0.85rem',
+                                        background: 'rgba(255, 255, 255, 0.05)',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: '0.5rem',
+                                        color: '#fff',
+                                        fontSize: '0.88rem'
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>

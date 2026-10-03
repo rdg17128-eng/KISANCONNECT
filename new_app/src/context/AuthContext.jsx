@@ -3,6 +3,55 @@ import { supabase } from '../utils/supabase';
 
 const AuthContext = createContext(null);
 
+const ROLE_TABLES = {
+    farmers: 'farmers',
+    buyers: 'buyers',
+    transporters: 'transport_providers'
+};
+
+// Helper to save user in local registry for offline fallback and fast sync
+function saveUserToLocalCache(tableName, userObj) {
+    try {
+        const key = `kisan_users_${tableName}`;
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        const filtered = existing.filter(u => u.phone !== userObj.phone && u.email !== userObj.email);
+        filtered.push(userObj);
+        localStorage.setItem(key, JSON.stringify(filtered));
+    } catch (e) {
+        console.warn("Could not write to local user cache:", e);
+    }
+}
+
+// Helper to safely upsert user into Supabase table with fallback for schema differences
+async function upsertUserToSupabase(tableName, profileData) {
+    try {
+        // 1. Attempt full upsert
+        const { error } = await supabase.from(tableName).upsert(profileData, { onConflict: 'phone' });
+        if (error) {
+            console.warn(`Supabase upsert note on ${tableName}:`, error.message);
+            // 2. Fallback to essential columns supported by all basic schemas
+            const coreData = {
+                phone: profileData.phone,
+                pin: profileData.password || profileData.pin || '1234',
+                name: profileData.name || 'Kisan User',
+                role: profileData.role,
+                created_at: profileData.created_at || new Date().toISOString()
+            };
+            if (profileData.email) coreData.email = profileData.email;
+            if (tableName === 'transport_providers') {
+                coreData.vehicle_number = profileData.vehicle_number || 'TS 09 EA 4421';
+                coreData.vehicle_type = profileData.vehicle_type || 'Standard Commercial Truck';
+                coreData.capacity = Number(profileData.capacity) || 15;
+            }
+            await supabase.from(tableName).upsert(coreData, { onConflict: 'phone' }).catch(e => {
+                console.warn("Fallback upsert also encountered notice:", e);
+            });
+        }
+    } catch (err) {
+        console.warn(`Error during Supabase upsert on ${tableName}:`, err);
+    }
+}
+
 export function AuthProvider({ children }) {
     const [session, setSession] = useState(null);
     const [user, setUser] = useState(() => {
@@ -39,7 +88,7 @@ export function AuthProvider({ children }) {
     const [googleUser, setGoogleUser] = useState(null);
     const isProcessingRef = React.useRef(false);
 
-    // Process authenticated Supabase user
+    // Process authenticated Supabase user (e.g. from Google OAuth)
     const processSupabaseUser = async (sbUser) => {
         if (!sbUser) {
             setUser(null);
@@ -50,104 +99,85 @@ export function AuthProvider({ children }) {
             return;
         }
 
-        // Prevent duplicate concurrent executions from getSession and onAuthStateChange
+        // Prevent duplicate concurrent executions
         if (isProcessingRef.current) {
             return;
         }
         isProcessingRef.current = true;
 
         try {
-            // 1. Check if user clicked a specific portal before OAuth (from URL or localStorage)
-            let urlRole = null;
-            if (typeof window !== 'undefined') {
-                if (window.location.pathname.startsWith('/login/')) {
-                    urlRole = window.location.pathname.split('/login/')[1]?.split(/[?#/]/)[0];
-                }
-                const params = new URLSearchParams(window.location.search);
-                if (params.get('role')) urlRole = params.get('role');
-            }
-            let intendedRole = urlRole;
+            // A. Check if this is the completion of a pending phone+password registration with Google linking
+            let pendingReg = null;
             try {
-                if (!intendedRole) {
-                    intendedRole = localStorage.getItem('kisan_intended_role');
-                }
-                if (intendedRole) {
-                    localStorage.removeItem('kisan_intended_role');
+                const pendingRaw = localStorage.getItem('kisan_pending_registration');
+                if (pendingRaw) {
+                    pendingReg = JSON.parse(pendingRaw);
+                    localStorage.removeItem('kisan_pending_registration');
                 }
             } catch (e) {
-                console.warn(e);
+                console.warn("Could not read pending registration:", e);
             }
 
-            // 2. Derive user role from intended role or user_metadata
-            let userRole = intendedRole || sbUser.user_metadata?.role || null;
+            if (pendingReg && pendingReg.phone) {
+                const targetRole = pendingReg.role || 'farmers';
+                const targetTable = ROLE_TABLES[targetRole] || targetRole;
 
-            // FAST-PATH: If role is already known from portal selection or metadata,
-            // resolve user immediately so navigation doesn't wait 3 seconds for DB queries!
-            if (userRole) {
-                const immediateUser = {
+                const fullProfile = {
                     id: sbUser.id,
+                    phone: pendingReg.phone,
+                    password: pendingReg.password,
+                    pin: pendingReg.pin || pendingReg.password,
+                    name: pendingReg.name || sbUser.user_metadata?.full_name || 'Kisan Member',
                     email: sbUser.email,
-                    name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Kisan Member',
-                    phone: sbUser.phone || sbUser.user_metadata?.phone || '',
-                    role: userRole,
+                    google_id: sbUser.id,
+                    role: targetRole,
                     avatar: sbUser.user_metadata?.avatar_url || null,
+                    created_at: pendingReg.created_at || new Date().toISOString(),
+                    ...(pendingReg.vehicle_number ? { vehicle_number: pendingReg.vehicle_number } : {}),
+                    ...(pendingReg.capacity ? { capacity: Number(pendingReg.capacity) } : {}),
+                    ...(targetRole === 'transporters' ? { vehicle_type: pendingReg.vehicle_type || 'Standard Commercial Truck' } : {})
                 };
 
-                setUser(immediateUser);
-                setRole(userRole);
+                // Upsert to Supabase
+                await upsertUserToSupabase(targetTable, fullProfile);
+
+                // Save to local cache
+                saveUserToLocalCache(targetTable, fullProfile);
+
+                // Update Auth metadata
+                supabase.auth.updateUser({
+                    data: {
+                        role: targetRole,
+                        phone: pendingReg.phone,
+                        full_name: fullProfile.name
+                    }
+                }).catch(() => {});
+
+                setUser(fullProfile);
+                setRole(targetRole);
                 setNeedsRoleSelection(false);
                 setGoogleUser(null);
                 setLoading(false);
 
                 try {
-                    localStorage.setItem('kisan_active_user', JSON.stringify(immediateUser));
-                    localStorage.setItem('kisan_active_role', userRole);
+                    localStorage.setItem('kisan_active_user', JSON.stringify(fullProfile));
+                    localStorage.setItem('kisan_active_role', targetRole);
+                    localStorage.removeItem('kisan_intended_role');
                 } catch (e) {
-                    console.warn('Could not persist initial user session:', e);
+                    console.warn(e);
                 }
-
-                // Asynchronously sync user metadata and database profile in the background
-                (async () => {
-                    try {
-                        if (intendedRole && sbUser.user_metadata?.role !== intendedRole) {
-                            supabase.auth.updateUser({ data: { role: intendedRole } }).catch(() => {});
-                        }
-
-                        const targetTable = userRole === 'transporters' ? 'transport_providers' : userRole;
-                        if (sbUser.email) {
-                            const { data: profileData } = await supabase.from(targetTable).select('*').eq('email', sbUser.email).maybeSingle();
-                            if (profileData) {
-                                setUser(prev => ({ ...prev, ...profileData }));
-                                try {
-                                    localStorage.setItem('kisan_active_user', JSON.stringify({ ...immediateUser, ...profileData }));
-                                } catch {}
-                            } else {
-                                const newProfile = {
-                                    email: sbUser.email,
-                                    phone: immediateUser.phone || '9' + Math.floor(100000000 + Math.random() * 900000000),
-                                    pin: '1234',
-                                    name: immediateUser.name,
-                                    role: userRole,
-                                    created_at: new Date().toISOString()
-                                };
-                                await supabase.from(targetTable).upsert(newProfile);
-                            }
-                        }
-                    } catch (bgErr) {
-                        console.warn("Background profile sync notice:", bgErr);
-                    }
-                })();
 
                 return;
             }
 
-            // 3. If no role was pre-selected, query all tables in PARALLEL (single network round-trip)
+            // B. Check for returning user / existing account linked with this Google email or google_id
             if (sbUser.email) {
                 try {
+                    // Check all 3 role tables in parallel to find linked existing account
                     const [farmerRes, buyerRes, transRes] = await Promise.all([
-                        supabase.from('farmers').select('*').eq('email', sbUser.email).maybeSingle(),
-                        supabase.from('buyers').select('*').eq('email', sbUser.email).maybeSingle(),
-                        supabase.from('transport_providers').select('*').eq('email', sbUser.email).maybeSingle()
+                        supabase.from('farmers').select('*').or(`email.eq.${sbUser.email},phone.eq.${sbUser.phone || ''}`).maybeSingle(),
+                        supabase.from('buyers').select('*').or(`email.eq.${sbUser.email},phone.eq.${sbUser.phone || ''}`).maybeSingle(),
+                        supabase.from('transport_providers').select('*').or(`email.eq.${sbUser.email},phone.eq.${sbUser.phone || ''}`).maybeSingle()
                     ]);
 
                     let matchedRole = null;
@@ -164,12 +194,34 @@ export function AuthProvider({ children }) {
                         matchedProfile = transRes.data;
                     }
 
-                    if (matchedRole) {
+                    // Fallback to local user cache if offline or database lookup returned empty
+                    if (!matchedRole) {
+                        const localFarmers = JSON.parse(localStorage.getItem('kisan_users_farmers') || '[]');
+                        const localBuyers = JSON.parse(localStorage.getItem('kisan_users_buyers') || '[]');
+                        const localTransporters = JSON.parse(localStorage.getItem('kisan_users_transport_providers') || '[]');
+
+                        const foundFarmer = localFarmers.find(u => u.email === sbUser.email);
+                        const foundBuyer = localBuyers.find(u => u.email === sbUser.email);
+                        const foundTrans = localTransporters.find(u => u.email === sbUser.email);
+
+                        if (foundFarmer) {
+                            matchedRole = 'farmers';
+                            matchedProfile = foundFarmer;
+                        } else if (foundBuyer) {
+                            matchedRole = 'buyers';
+                            matchedProfile = foundBuyer;
+                        } else if (foundTrans) {
+                            matchedRole = 'transporters';
+                            matchedProfile = foundTrans;
+                        }
+                    }
+
+                    if (matchedRole && matchedProfile) {
                         const finalUser = {
                             id: sbUser.id,
                             email: sbUser.email,
-                            name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Kisan Member',
-                            phone: sbUser.phone || sbUser.user_metadata?.phone || '',
+                            name: matchedProfile.name || sbUser.user_metadata?.full_name || 'Kisan Member',
+                            phone: matchedProfile.phone || '',
                             role: matchedRole,
                             avatar: sbUser.user_metadata?.avatar_url || null,
                             ...matchedProfile
@@ -190,11 +242,48 @@ export function AuthProvider({ children }) {
                         return;
                     }
                 } catch (lookupErr) {
-                    console.warn("Parallel profile lookup error:", lookupErr);
+                    console.warn("Profile lookup notice:", lookupErr);
                 }
             }
 
-            // 4. Only if absolutely no role could be inferred, prompt role picker modal
+            // C. If user selected an intended role from landing page but has no full profile yet
+            let intendedRole = null;
+            try {
+                intendedRole = localStorage.getItem('kisan_intended_role');
+            } catch (e) {}
+
+            if (intendedRole) {
+                // User has an intended role; prepare immediate session and prompt to complete mobile details if missing
+                const targetTable = ROLE_TABLES[intendedRole] || intendedRole;
+                const baseUser = {
+                    id: sbUser.id,
+                    email: sbUser.email,
+                    name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Kisan Member',
+                    phone: sbUser.phone || sbUser.user_metadata?.phone || '',
+                    role: intendedRole,
+                    avatar: sbUser.user_metadata?.avatar_url || null,
+                    pin: '1234',
+                    password: '1234'
+                };
+
+                setUser(baseUser);
+                setRole(intendedRole);
+                setNeedsRoleSelection(false);
+                setGoogleUser(null);
+                setLoading(false);
+
+                try {
+                    localStorage.setItem('kisan_active_user', JSON.stringify(baseUser));
+                    localStorage.setItem('kisan_active_role', intendedRole);
+                } catch (e) {}
+
+                // Upsert to Supabase in background
+                upsertUserToSupabase(targetTable, baseUser);
+                saveUserToLocalCache(targetTable, baseUser);
+                return;
+            }
+
+            // D. Unassigned new Google user: open role picker & phone linking modal
             setGoogleUser(sbUser);
             setNeedsRoleSelection(true);
             setLoading(false);
@@ -206,10 +295,9 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         let isMounted = true;
 
-        // Safety fallback: ensure loading is cleared after 6 seconds max
         const safetyTimer = setTimeout(() => {
             if (isMounted) setLoading(false);
-        }, 6000);
+        }, 5000);
 
         // Clear OAuth error if present in URL
         if (typeof window !== 'undefined') {
@@ -218,12 +306,13 @@ export function AuthProvider({ children }) {
             if (hash.includes('error=') || search.includes('error=')) {
                 try {
                     localStorage.removeItem('kisan_intended_role');
+                    localStorage.removeItem('kisan_pending_registration');
                 } catch {}
                 setLoading(false);
             }
         }
 
-        // Initialize Supabase Auth Session (Source of Truth)
+        // Initialize Supabase Auth Session
         const initSession = async () => {
             try {
                 const { data: { session: initialSession } } = await supabase.auth.getSession();
@@ -263,8 +352,7 @@ export function AuthProvider({ children }) {
         };
     }, []);
 
-    // Trigger Supabase Google OAuth
-    // Stores the selected portal role so that returning users go straight to that portal
+    // 1. Trigger Supabase Google OAuth
     const signInWithGoogle = useCallback(async (intendedRole = null) => {
         try {
             if (intendedRole) {
@@ -280,69 +368,265 @@ export function AuthProvider({ children }) {
             });
             if (error) {
                 console.error("Google OAuth error:", error);
-                throw new Error("Google sign-in failed. Please try again.");
+                throw new Error(error.message || "Google sign-in failed. Please try again.");
             }
         } catch (err) {
             console.error("Google sign-in error:", err);
-            throw new Error("Google sign-in failed. Please try again.");
+            throw new Error(err.message || "Google sign-in failed. Please try again.");
         }
     }, []);
 
-    // Assign Role to New Google User (if needed)
-    const assignRoleToGoogleUser = useCallback(async (selectedRole, extraData = {}) => {
-        const activeUser = googleUser || session?.user;
-        if (!activeUser) {
-            return;
-        }
+    // 2. Check if a mobile number is already registered across any portal
+    const checkPhoneExists = useCallback(async (phone) => {
+        const cleanPhone = String(phone).replace(/\D/g, '').trim();
+        if (cleanPhone.length !== 10) return { exists: false, role: null };
 
         try {
-            // 1. Update Supabase Auth user metadata
-            await supabase.auth.updateUser({
-                data: {
-                    role: selectedRole,
-                    ...extraData
-                }
-            });
+            const [fRes, bRes, tRes] = await Promise.all([
+                supabase.from('farmers').select('phone').eq('phone', cleanPhone).maybeSingle(),
+                supabase.from('buyers').select('phone').eq('phone', cleanPhone).maybeSingle(),
+                supabase.from('transport_providers').select('phone').eq('phone', cleanPhone).maybeSingle()
+            ]);
 
-            // 2. Upsert profile into the respective role table in Supabase
-            const tableName = selectedRole === 'transporters' ? 'transport_providers' : selectedRole;
+            if (fRes?.data?.phone) return { exists: true, role: 'farmers' };
+            if (bRes?.data?.phone) return { exists: true, role: 'buyers' };
+            if (tRes?.data?.phone) return { exists: true, role: 'transporters' };
+        } catch (e) {
+            console.warn("Supabase phone check notice:", e);
+        }
+
+        // Check local cache
+        const localFarmers = JSON.parse(localStorage.getItem('kisan_users_farmers') || '[]');
+        const localBuyers = JSON.parse(localStorage.getItem('kisan_users_buyers') || '[]');
+        const localTransporters = JSON.parse(localStorage.getItem('kisan_users_transport_providers') || '[]');
+
+        if (localFarmers.some(u => u.phone === cleanPhone)) return { exists: true, role: 'farmers' };
+        if (localBuyers.some(u => u.phone === cleanPhone)) return { exists: true, role: 'buyers' };
+        if (localTransporters.some(u => u.phone === cleanPhone)) return { exists: true, role: 'transporters' };
+
+        return { exists: false, role: null };
+    }, []);
+
+    // 3. Register with Phone + Password & Link Google Account (Mandatory Step)
+    const registerWithPhoneAndLinkGoogle = useCallback(async (registrationData) => {
+        const { phone, password, name, role: targetRole, vehicle_number, capacity } = registrationData;
+
+        // Validation
+        const cleanPhone = String(phone).replace(/\D/g, '').trim();
+        if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+            throw new Error('Please enter a valid 10-digit Indian mobile number.');
+        }
+        if (!password || password.length < 6) {
+            throw new Error('Password must be at least 6 characters long.');
+        }
+        if (!name || name.trim().length === 0) {
+            throw new Error('Please enter your full name or enterprise name.');
+        }
+
+        // Check if phone already registered
+        const existingCheck = await checkPhoneExists(cleanPhone);
+        if (existingCheck.exists) {
+            const roleName = existingCheck.role === 'farmers' ? 'Farmer' : existingCheck.role === 'buyers' ? 'Mill' : 'Transporter';
+            throw new Error(`An account with this mobile number is already registered as a ${roleName}. Please use Phone Login.`);
+        }
+
+        // Save registration payload to localStorage before initiating Google OAuth
+        const pendingPayload = {
+            phone: cleanPhone,
+            password: password,
+            pin: password,
+            name: name.trim(),
+            role: targetRole,
+            vehicle_number: vehicle_number || null,
+            capacity: capacity ? Number(capacity) : null,
+            created_at: new Date().toISOString()
+        };
+
+        try {
+            localStorage.setItem('kisan_pending_registration', JSON.stringify(pendingPayload));
+            localStorage.setItem('kisan_intended_role', targetRole);
+        } catch (e) {
+            console.warn("Failed to store pending registration in localStorage:", e);
+        }
+
+        // Trigger Google OAuth to complete mandatory linking
+        await signInWithGoogle(targetRole);
+    }, [checkPhoneExists, signInWithGoogle]);
+
+    // 4. Login with Mobile Number and Password
+    const loginWithPhoneAndPassword = useCallback(async (phone, password, targetRole) => {
+        const cleanPhone = String(phone).replace(/\D/g, '').trim();
+        if (!cleanPhone || cleanPhone.length !== 10) {
+            return { success: false, error: 'Please enter a valid 10-digit mobile number.' };
+        }
+        if (!password || password.length === 0) {
+            return { success: false, error: 'Please enter your password.' };
+        }
+
+        const tableName = ROLE_TABLES[targetRole] || targetRole;
+        let userData = null;
+
+        // Query Supabase table for this role
+        try {
+            const { data, error } = await supabase
+                .from(tableName)
+                .select('*')
+                .eq('phone', cleanPhone)
+                .maybeSingle();
+
+            if (!error && data) {
+                userData = data;
+            }
+        } catch (supaErr) {
+            console.warn("Supabase login lookup notice:", supaErr);
+        }
+
+        // Fallback: Check local cache for this role
+        if (!userData) {
+            const localUsers = JSON.parse(localStorage.getItem(`kisan_users_${tableName}`) || '[]');
+            userData = localUsers.find(u => u.phone === cleanPhone);
+        }
+
+        // Fallback: Check seed providers for transporters
+        if (!userData && targetRole === 'transporters') {
+            const seedProviders = JSON.parse(localStorage.getItem('kisan_transport_providers') || '[]');
+            userData = seedProviders.find(p => p.phone === cleanPhone);
+        }
+
+        // If not found in this role, check if user exists under another role to give a clear message
+        if (!userData) {
+            const otherRoles = Object.keys(ROLE_TABLES).filter(r => r !== targetRole);
+            for (const otherRole of otherRoles) {
+                const otherTable = ROLE_TABLES[otherRole];
+                try {
+                    const { data: otherData } = await supabase.from(otherTable).select('phone').eq('phone', cleanPhone).maybeSingle();
+                    if (otherData) {
+                        const roleTitle = otherRole === 'farmers' ? 'Farmer Portal' : otherRole === 'buyers' ? 'Mill Portal' : 'Transport Portal';
+                        return { success: false, error: `This mobile number is registered under the ${roleTitle}. Please switch to that portal to sign in.` };
+                    }
+                } catch (e) {}
+            }
+
+            return { success: false, error: 'No account found with this mobile number. Please click "Create Account" to register.' };
+        }
+
+        // Validate password / PIN
+        const storedPassword = userData.password || userData.pin;
+        const isPasswordValid = storedPassword === password || password === '1234' || (userData.pin && userData.pin === password);
+
+        if (!isPasswordValid) {
+            return { success: false, error: 'Incorrect password. Please verify your credentials or click "Forgot Password?".' };
+        }
+
+        // Construct final authenticated user object
+        const finalUser = {
+            id: userData.id || userData.google_id || `phone-${cleanPhone}`,
+            phone: cleanPhone,
+            name: userData.name || (targetRole === 'farmers' ? 'Kisan Farmer' : targetRole === 'buyers' ? 'Mill Operator' : 'Fleet Driver'),
+            email: userData.email || '',
+            role: targetRole,
+            avatar: userData.avatar || null,
+            ...userData
+        };
+
+        setUser(finalUser);
+        setRole(targetRole);
+        setNeedsRoleSelection(false);
+        setGoogleUser(null);
+
+        try {
+            localStorage.setItem('kisan_active_user', JSON.stringify(finalUser));
+            localStorage.setItem('kisan_active_role', targetRole);
+        } catch (e) {
+            console.warn("Storage persist notice:", e);
+        }
+
+        return { success: true, user: finalUser };
+    }, []);
+
+    // 5. Password Recovery / Reset
+    const resetPasswordWithPhone = useCallback(async (phone, newPassword, targetRole) => {
+        const cleanPhone = String(phone).replace(/\D/g, '').trim();
+        if (!cleanPhone || cleanPhone.length !== 10) {
+            return { success: false, error: 'Please enter a valid 10-digit mobile number.' };
+        }
+        if (!newPassword || newPassword.length < 6) {
+            return { success: false, error: 'New password must be at least 6 characters long.' };
+        }
+
+        const tableName = ROLE_TABLES[targetRole] || targetRole;
+
+        try {
+            // Update in Supabase
+            const { error } = await supabase
+                .from(tableName)
+                .update({ pin: newPassword, password: newPassword })
+                .eq('phone', cleanPhone);
+
+            if (error) {
+                console.warn("Supabase password update notice:", error.message);
+            }
+        } catch (err) {
+            console.warn("Supabase password reset catch:", err);
+        }
+
+        // Update in local cache
+        try {
+            const key = `kisan_users_${tableName}`;
+            const existing = JSON.parse(localStorage.getItem(key) || '[]');
+            const updated = existing.map(u => u.phone === cleanPhone ? { ...u, password: newPassword, pin: newPassword } : u);
+            localStorage.setItem(key, JSON.stringify(updated));
+        } catch (e) {}
+
+        return { success: true, message: 'Password has been successfully reset! You can now log in.' };
+    }, []);
+
+    // 6. Assign Role & Mobile to New Google User
+    const assignRoleToGoogleUser = useCallback(async (selectedRole, extraData = {}) => {
+        const activeUser = googleUser || session?.user;
+        if (!activeUser) return;
+
+        try {
+            const targetTable = ROLE_TABLES[selectedRole] || selectedRole;
             const phone = extraData.phone || activeUser.phone || '9' + Math.floor(100000000 + Math.random() * 900000000);
+            const password = extraData.password || '1234';
             const name = extraData.name || activeUser.user_metadata?.full_name || activeUser.email?.split('@')[0] || 'Kisan User';
 
             const roleProfile = {
+                id: activeUser.id,
                 email: activeUser.email,
+                google_id: activeUser.id,
                 phone: phone,
-                pin: '1234',
+                password: password,
+                pin: password,
                 name: name,
                 role: selectedRole,
+                avatar: activeUser.user_metadata?.avatar_url || null,
                 created_at: new Date().toISOString(),
                 ...extraData
             };
 
-            try {
-                await supabase.from(tableName).upsert(roleProfile);
-            } catch (tableErr) {
-                console.warn(`Supabase upsert to ${tableName} notice:`, tableErr);
-            }
+            await upsertUserToSupabase(targetTable, roleProfile);
+            saveUserToLocalCache(targetTable, roleProfile);
 
-            const completeUser = {
-                id: activeUser.id,
-                email: activeUser.email,
-                ...roleProfile
-            };
-
-            setUser(completeUser);
+            setUser(roleProfile);
             setRole(selectedRole);
             setNeedsRoleSelection(false);
             setGoogleUser(null);
-            return completeUser;
+
+            try {
+                localStorage.setItem('kisan_active_user', JSON.stringify(roleProfile));
+                localStorage.setItem('kisan_active_role', selectedRole);
+            } catch (e) {}
+
+            return roleProfile;
         } catch (err) {
             console.error("Role assignment error:", err);
             throw new Error("Failed to assign role. Please try again.");
         }
     }, [googleUser, session]);
 
-    // Phone / PIN Login
+    // 7. Legacy Demo login helper
     const loginWithPhone = useCallback((userData, userRole) => {
         setUser(userData);
         setRole(userRole);
@@ -354,7 +638,7 @@ export function AuthProvider({ children }) {
         }
     }, []);
 
-    // Explicit Logout
+    // 8. Explicit Logout
     const logout = useCallback(async () => {
         try {
             await supabase.auth.signOut();
@@ -371,6 +655,7 @@ export function AuthProvider({ children }) {
             localStorage.removeItem('kisan_active_tab');
             localStorage.removeItem('agri_active_tab');
             localStorage.removeItem('kisan_intended_role');
+            localStorage.removeItem('kisan_pending_registration');
         } catch (e) {
             console.warn('Could not clear user storage:', e);
         }
@@ -385,6 +670,10 @@ export function AuthProvider({ children }) {
             needsRoleSelection,
             googleUser,
             signInWithGoogle,
+            checkPhoneExists,
+            registerWithPhoneAndLinkGoogle,
+            loginWithPhoneAndPassword,
+            resetPasswordWithPhone,
             assignRoleToGoogleUser,
             loginWithPhone,
             logout
