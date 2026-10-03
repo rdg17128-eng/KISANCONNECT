@@ -110,7 +110,7 @@ export function AuthProvider({ children }) {
     }, []);
 
     // Process authenticated Supabase user (e.g. from Google OAuth)
-    const processSupabaseUser = async (sbUser) => {
+    const processSupabaseUser = useCallback(async (sbUser) => {
         if (!sbUser) {
             setUser(null);
             setRole(null);
@@ -347,7 +347,7 @@ export function AuthProvider({ children }) {
         } finally {
             isProcessingRef.current = false;
         }
-    };
+    }, [clearAuthMismatchError]);
 
     useEffect(() => {
         let isMounted = true;
@@ -407,7 +407,7 @@ export function AuthProvider({ children }) {
             clearTimeout(safetyTimer);
             subscription?.unsubscribe();
         };
-    }, []);
+    }, [processSupabaseUser]);
 
     // 1. Trigger Supabase Google OAuth
     const signInWithGoogle = useCallback(async (intendedRole = null) => {

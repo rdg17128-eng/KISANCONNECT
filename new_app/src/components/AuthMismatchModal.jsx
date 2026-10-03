@@ -1,5 +1,4 @@
 import React from 'react';
-import KisanLogo from './KisanLogo';
 
 const ROLE_COLORS = {
     farmers: '#10b981',

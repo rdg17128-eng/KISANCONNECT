@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -41,7 +41,6 @@ export default function MapModal({ onClose, onConfirm, initialCoords = null }) {
     const [position, setPosition] = useState(initialCoords || null);
     const [placeName, setPlaceName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [isLocating, setIsLocating] = useState(false);
     const [isResolvingAddress, setIsResolvingAddress] = useState(false);
@@ -105,7 +104,6 @@ export default function MapModal({ onClose, onConfirm, initialCoords = null }) {
         setIsSearching(true);
         try {
             const results = await searchLocations(searchQuery);
-            setSearchResults(results);
             if (results.length > 0) {
                 const first = results[0];
                 handleLocationSelect(first.lat, first.lng, first.placeName);

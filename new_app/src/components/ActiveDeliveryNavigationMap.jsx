@@ -304,7 +304,7 @@ export default function ActiveDeliveryNavigationMap({
         return () => {
             isCancelled = true;
         };
-    }, [driverLocation.lat, driverLocation.lng, activeNavigationLeg, fieldLat, fieldLng, millLat, millLng]);
+    }, [driverLocation.lat, driverLocation.lng, targetCoords.lat, targetCoords.lng]);
 
     // Google Maps 1-Click Navigation URL
     const googleMapsNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${driverLocation.lat},${driverLocation.lng}&destination=${targetCoords.lat},${targetCoords.lng}&travelmode=driving`;

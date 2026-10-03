@@ -1,5 +1,5 @@
 import { supabase } from '../utils/supabase';
-import { calculateDistance, calculateHaversineDistance, getRoadRouteDistance, formatDistance } from './locationService';
+import { calculateDistance } from './locationService';
 
 // Local storage backup keys
 const STORAGE_KEYS = {

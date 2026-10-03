@@ -9,9 +9,8 @@ import MapModal from './MapModal';
 import QrScannerModal from './QrScannerModal';
 import QrCodeModal from './QrCodeModal';
 import KisanLogo from './KisanLogo';
-import { useLanguage } from '../context/LanguageContext';
 import LanguageSelector from './LanguageSelector';
-import { openRazorpayCheckout, executeAutoSuccessPayment } from '../services/razorpayService';
+import { openRazorpayCheckout } from '../services/razorpayService';
 import RazorpayCheckoutModal from './RazorpayCheckoutModal';
 import { normalizeTelPhone, formatDisplayPhone } from '../utils/phoneUtils';
 

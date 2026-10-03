@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { kisanService } from '../services/kisanService';
 import KisanLogo from './KisanLogo';
@@ -28,7 +28,7 @@ export default function QrScannerModal({ loggedInMill, onClose, onVerificationSu
         }
     };
 
-    const handleQrDetected = async (code) => {
+    const handleQrDetected = useCallback(async (code) => {
         await stopCamera();
         setScanState('verifying');
         setScanError(null);
@@ -49,7 +49,7 @@ export default function QrScannerModal({ loggedInMill, onClose, onVerificationSu
             setScanError("Failed to verify QR with database. Please try again.");
             setScanState('scanning');
         }
-    };
+    }, [loggedInMill]);
 
     useEffect(() => {
         let html5QrCode = null;
@@ -94,7 +94,7 @@ export default function QrScannerModal({ loggedInMill, onClose, onVerificationSu
                 }
             }
         };
-    }, [scanState]);
+    }, [scanState, handleQrDetected]);
 
     const handleManualSubmit = (e) => {
         e.preventDefault();

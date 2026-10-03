@@ -825,7 +825,7 @@ export default function FarmerPortal({ user: propUser, onLogout }) {
                 offers
             };
         }).filter(group => group.offers.length > 0);
-    }, [farmerCropNames, selectedRateCrop, crops, allVerifiedMills]);
+    }, [farmerCropNames, selectedRateCrop, crops, allVerifiedMills, selectedCropForSearch]);
 
     const cropCountText = crops.length > 1 ? `${crops.length} Lots` : crops.length === 1 ? crops[0].cropName : '0 Lots';
     const cropLocationText = crops.length > 1 ? `${crops[crops.length - 1].cropName} & more` : crops.length === 1 ? crops[0].locationName : 'Add crops to track';
