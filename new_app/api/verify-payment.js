@@ -25,7 +25,7 @@ export default async function handler(req, res) {
         if (typeof body === 'string') {
             try {
                 body = JSON.parse(body);
-            } catch (e) {
+            } catch {
                 // Keep as string
             }
         }
