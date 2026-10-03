@@ -4,12 +4,21 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import AuthModal from './AuthModal';
 import RolePickerModal from './RolePickerModal';
+import AuthMismatchModal from './AuthMismatchModal';
 import KisanLogo from './KisanLogo';
 import LanguageSelector from './LanguageSelector';
 
 export default function LandingPage() {
     const [selectedRole, setSelectedRole] = useState(null);
-    const { user, role, loading, needsRoleSelection, assignRoleToGoogleUser } = useAuth();
+    const { 
+        user, 
+        role, 
+        loading, 
+        needsRoleSelection, 
+        assignRoleToGoogleUser, 
+        authMismatchError, 
+        clearAuthMismatchError 
+    } = useAuth();
     const { t } = useLanguage();
     const navigate = useNavigate();
     const { roleId } = useParams();
@@ -34,18 +43,18 @@ export default function LandingPage() {
         return () => clearTimeout(timer);
     }, []);
 
-    const isRedirecting = !forcedTimeout && Boolean((user && role) || (loading && isOAuthInFlight));
+    const isRedirecting = !forcedTimeout && Boolean(!authMismatchError && ((user && role) || (loading && isOAuthInFlight)));
 
     // If user is already authenticated and has a role, redirect to their portal
     React.useEffect(() => {
-        if (user && role) {
+        if (user && role && !authMismatchError) {
             const dest = role === 'farmers'
                 ? '/farmer/dashboard'
                 : role === 'buyers'
                     ? '/buyer/dashboard'
                     : '/transport/dashboard';
             navigate(dest, { replace: true });
-        } else if (user && !role && roleId) {
+        } else if (user && !role && roleId && !authMismatchError) {
             // Auto-assign role from URL parameter
             assignRoleToGoogleUser(roleId).then(() => {
                 const dest = roleId === 'farmers'
@@ -56,7 +65,7 @@ export default function LandingPage() {
                 navigate(dest, { replace: true });
             });
         }
-    }, [user, role, roleId, navigate, assignRoleToGoogleUser]);
+    }, [user, role, roleId, navigate, assignRoleToGoogleUser, authMismatchError]);
 
     const roles = [
         {
@@ -92,11 +101,13 @@ export default function LandingPage() {
     ];
 
     const handleRoleClick = (roleItem) => {
+        clearAuthMismatchError();
         setSelectedRole(roleItem);
     };
 
     const handleLoginSuccess = (authenticatedUser) => {
         setSelectedRole(null);
+        clearAuthMismatchError();
         const dest = authenticatedUser.role === 'farmers'
             ? '/farmer/dashboard'
             : authenticatedUser.role === 'buyers'
@@ -105,7 +116,15 @@ export default function LandingPage() {
         navigate(dest);
     };
 
-    if (needsRoleSelection) {
+    const handleSwitchPortalFromMismatch = (targetRoleId) => {
+        clearAuthMismatchError();
+        const targetRoleObj = roles.find(r => r.id === targetRoleId);
+        if (targetRoleObj) {
+            setSelectedRole(targetRoleObj);
+        }
+    };
+
+    if (needsRoleSelection && !authMismatchError) {
         return <RolePickerModal />;
     }
 
@@ -263,8 +282,12 @@ export default function LandingPage() {
                 />
             )}
 
-            {needsRoleSelection && (
-                <RolePickerModal />
+            {authMismatchError && (
+                <AuthMismatchModal
+                    error={authMismatchError}
+                    onClose={clearAuthMismatchError}
+                    onSwitchPortal={handleSwitchPortalFromMismatch}
+                />
             )}
         </div>
     );

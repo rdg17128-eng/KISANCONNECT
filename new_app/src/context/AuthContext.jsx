@@ -9,6 +9,12 @@ const ROLE_TABLES = {
     transporters: 'transport_providers'
 };
 
+const ROLE_DISPLAY_NAMES = {
+    farmers: 'Farmer Portal',
+    buyers: 'Mill Portal',
+    transporters: 'Transport Portal'
+};
+
 // Helper to save user in local registry for offline fallback and fast sync
 function saveUserToLocalCache(tableName, userObj) {
     try {
@@ -86,7 +92,22 @@ export function AuthProvider({ children }) {
     });
     const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
     const [googleUser, setGoogleUser] = useState(null);
+    const [authMismatchError, setAuthMismatchError] = useState(() => {
+        try {
+            const savedErr = sessionStorage.getItem('kisan_auth_mismatch_error');
+            return savedErr ? JSON.parse(savedErr) : null;
+        } catch {
+            return null;
+        }
+    });
     const isProcessingRef = React.useRef(false);
+
+    const clearAuthMismatchError = useCallback(() => {
+        setAuthMismatchError(null);
+        try {
+            sessionStorage.removeItem('kisan_auth_mismatch_error');
+        } catch {}
+    }, []);
 
     // Process authenticated Supabase user (e.g. from Google OAuth)
     const processSupabaseUser = async (sbUser) => {
@@ -158,6 +179,7 @@ export function AuthProvider({ children }) {
                 setNeedsRoleSelection(false);
                 setGoogleUser(null);
                 setLoading(false);
+                clearAuthMismatchError();
 
                 try {
                     localStorage.setItem('kisan_active_user', JSON.stringify(fullProfile));
@@ -171,6 +193,11 @@ export function AuthProvider({ children }) {
             }
 
             // B. Check for returning user / existing account linked with this Google email or google_id
+            let intendedRole = null;
+            try {
+                intendedRole = localStorage.getItem('kisan_intended_role');
+            } catch (e) {}
+
             if (sbUser.email) {
                 try {
                     // Check all 3 role tables in parallel to find linked existing account
@@ -216,6 +243,42 @@ export function AuthProvider({ children }) {
                         }
                     }
 
+                    // CRITICAL VALIDATION: Cross-portal check
+                    // If user has an account in role A (e.g. 'farmers'), but clicked "Continue with Google" in role B (e.g. 'buyers')
+                    if (matchedRole && intendedRole && matchedRole !== intendedRole) {
+                        console.warn(`Portal mismatch detected: Account is registered as ${matchedRole}, but tried to sign in to ${intendedRole}`);
+
+                        // Sign out from Supabase so unauthorized session is NOT active
+                        await supabase.auth.signOut().catch(() => {});
+
+                        setUser(null);
+                        setRole(null);
+                        setNeedsRoleSelection(false);
+                        setGoogleUser(null);
+                        setLoading(false);
+
+                        try {
+                            localStorage.removeItem('kisan_intended_role');
+                            localStorage.removeItem('kisan_active_user');
+                            localStorage.removeItem('kisan_active_role');
+                        } catch (e) {}
+
+                        const mismatchData = {
+                            email: sbUser.email,
+                            intendedRole: intendedRole,
+                            intendedPortalName: ROLE_DISPLAY_NAMES[intendedRole] || intendedRole,
+                            registeredRole: matchedRole,
+                            registeredPortalName: ROLE_DISPLAY_NAMES[matchedRole] || matchedRole
+                        };
+
+                        setAuthMismatchError(mismatchData);
+                        try {
+                            sessionStorage.setItem('kisan_auth_mismatch_error', JSON.stringify(mismatchData));
+                        } catch (e) {}
+                        return;
+                    }
+
+                    // Matching account found: Log in directly to their registered portal
                     if (matchedRole && matchedProfile) {
                         const finalUser = {
                             id: sbUser.id,
@@ -232,13 +295,44 @@ export function AuthProvider({ children }) {
                         setNeedsRoleSelection(false);
                         setGoogleUser(null);
                         setLoading(false);
+                        clearAuthMismatchError();
 
                         try {
                             localStorage.setItem('kisan_active_user', JSON.stringify(finalUser));
                             localStorage.setItem('kisan_active_role', matchedRole);
+                            localStorage.removeItem('kisan_intended_role');
                         } catch (e) {
                             console.warn(e);
                         }
+                        return;
+                    }
+
+                    // If user clicked "Continue with Google" under Login, but no account exists with this email in ANY portal
+                    if (!matchedRole && intendedRole) {
+                        await supabase.auth.signOut().catch(() => {});
+
+                        setUser(null);
+                        setRole(null);
+                        setNeedsRoleSelection(false);
+                        setGoogleUser(null);
+                        setLoading(false);
+
+                        try {
+                            localStorage.removeItem('kisan_intended_role');
+                        } catch (e) {}
+
+                        const notFoundData = {
+                            email: sbUser.email,
+                            intendedRole: intendedRole,
+                            intendedPortalName: ROLE_DISPLAY_NAMES[intendedRole] || intendedRole,
+                            registeredRole: null,
+                            registeredPortalName: null
+                        };
+
+                        setAuthMismatchError(notFoundData);
+                        try {
+                            sessionStorage.setItem('kisan_auth_mismatch_error', JSON.stringify(notFoundData));
+                        } catch (e) {}
                         return;
                     }
                 } catch (lookupErr) {
@@ -246,44 +340,7 @@ export function AuthProvider({ children }) {
                 }
             }
 
-            // C. If user selected an intended role from landing page but has no full profile yet
-            let intendedRole = null;
-            try {
-                intendedRole = localStorage.getItem('kisan_intended_role');
-            } catch (e) {}
-
-            if (intendedRole) {
-                // User has an intended role; prepare immediate session and prompt to complete mobile details if missing
-                const targetTable = ROLE_TABLES[intendedRole] || intendedRole;
-                const baseUser = {
-                    id: sbUser.id,
-                    email: sbUser.email,
-                    name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Kisan Member',
-                    phone: sbUser.phone || sbUser.user_metadata?.phone || '',
-                    role: intendedRole,
-                    avatar: sbUser.user_metadata?.avatar_url || null,
-                    pin: '1234',
-                    password: '1234'
-                };
-
-                setUser(baseUser);
-                setRole(intendedRole);
-                setNeedsRoleSelection(false);
-                setGoogleUser(null);
-                setLoading(false);
-
-                try {
-                    localStorage.setItem('kisan_active_user', JSON.stringify(baseUser));
-                    localStorage.setItem('kisan_active_role', intendedRole);
-                } catch (e) {}
-
-                // Upsert to Supabase in background
-                upsertUserToSupabase(targetTable, baseUser);
-                saveUserToLocalCache(targetTable, baseUser);
-                return;
-            }
-
-            // D. Unassigned new Google user: open role picker & phone linking modal
+            // Unassigned Google user without pre-selection: open role picker modal
             setGoogleUser(sbUser);
             setNeedsRoleSelection(true);
             setLoading(false);
@@ -355,6 +412,7 @@ export function AuthProvider({ children }) {
     // 1. Trigger Supabase Google OAuth
     const signInWithGoogle = useCallback(async (intendedRole = null) => {
         try {
+            clearAuthMismatchError();
             if (intendedRole) {
                 localStorage.setItem('kisan_intended_role', intendedRole);
             }
@@ -374,7 +432,7 @@ export function AuthProvider({ children }) {
             console.error("Google sign-in error:", err);
             throw new Error(err.message || "Google sign-in failed. Please try again.");
         }
-    }, []);
+    }, [clearAuthMismatchError]);
 
     // 2. Check if a mobile number is already registered across any portal
     const checkPhoneExists = useCallback(async (phone) => {
@@ -533,6 +591,7 @@ export function AuthProvider({ children }) {
         setRole(targetRole);
         setNeedsRoleSelection(false);
         setGoogleUser(null);
+        clearAuthMismatchError();
 
         try {
             localStorage.setItem('kisan_active_user', JSON.stringify(finalUser));
@@ -542,7 +601,7 @@ export function AuthProvider({ children }) {
         }
 
         return { success: true, user: finalUser };
-    }, []);
+    }, [clearAuthMismatchError]);
 
     // 5. Password Recovery / Reset
     const resetPasswordWithPhone = useCallback(async (phone, newPassword, targetRole) => {
@@ -613,6 +672,7 @@ export function AuthProvider({ children }) {
             setRole(selectedRole);
             setNeedsRoleSelection(false);
             setGoogleUser(null);
+            clearAuthMismatchError();
 
             try {
                 localStorage.setItem('kisan_active_user', JSON.stringify(roleProfile));
@@ -624,19 +684,20 @@ export function AuthProvider({ children }) {
             console.error("Role assignment error:", err);
             throw new Error("Failed to assign role. Please try again.");
         }
-    }, [googleUser, session]);
+    }, [googleUser, session, clearAuthMismatchError]);
 
     // 7. Legacy Demo login helper
     const loginWithPhone = useCallback((userData, userRole) => {
         setUser(userData);
         setRole(userRole);
+        clearAuthMismatchError();
         try {
             localStorage.setItem('kisan_active_user', JSON.stringify(userData));
             localStorage.setItem('kisan_active_role', userRole);
         } catch (e) {
             console.warn('Could not persist phone user session:', e);
         }
-    }, []);
+    }, [clearAuthMismatchError]);
 
     // 8. Explicit Logout
     const logout = useCallback(async () => {
@@ -649,6 +710,7 @@ export function AuthProvider({ children }) {
         setRole(null);
         setNeedsRoleSelection(false);
         setGoogleUser(null);
+        clearAuthMismatchError();
         try {
             localStorage.removeItem('kisan_active_user');
             localStorage.removeItem('kisan_active_role');
@@ -656,10 +718,11 @@ export function AuthProvider({ children }) {
             localStorage.removeItem('agri_active_tab');
             localStorage.removeItem('kisan_intended_role');
             localStorage.removeItem('kisan_pending_registration');
+            sessionStorage.removeItem('kisan_auth_mismatch_error');
         } catch (e) {
             console.warn('Could not clear user storage:', e);
         }
-    }, []);
+    }, [clearAuthMismatchError]);
 
     return (
         <AuthContext.Provider value={{
@@ -669,6 +732,8 @@ export function AuthProvider({ children }) {
             loading,
             needsRoleSelection,
             googleUser,
+            authMismatchError,
+            clearAuthMismatchError,
             signInWithGoogle,
             checkPhoneExists,
             registerWithPhoneAndLinkGoogle,
