@@ -275,14 +275,14 @@ export default function TransportPortal({ user: propUser, onLogout }) {
         }
     };
 
-    const refreshData = () => {
+    const refreshData = React.useCallback(() => {
         const allReqs = kisanService.getTransportRequests();
         setTransportRequests(allReqs);
         const quotes = kisanService.getQuotesForRequest('');
         setMyQuotes(quotes.filter(q => q.provider_phone === providerInfo.phone || q.provider_id === providerInfo.phone));
         const hist = kisanService.getTransporterHistory(providerInfo.phone);
         setTripHistory(hist);
-    };
+    }, [providerInfo.phone]);
 
     useEffect(() => {
         refreshData();
@@ -290,7 +290,7 @@ export default function TransportPortal({ user: propUser, onLogout }) {
             refreshData();
         });
         return () => unsub();
-    }, [providerInfo.phone]);
+    }, [refreshData]);
 
     // Smart truck matching & Assigned requests
     const assignedRequests = transportRequests.filter(req => {

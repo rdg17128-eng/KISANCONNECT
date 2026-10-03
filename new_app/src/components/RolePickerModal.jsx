@@ -58,13 +58,17 @@ export default function RolePickerModal() {
         }
 
         const cleanPhone = phone.replace(/\D/g, '').trim();
-        if (cleanPhone && cleanPhone.length !== 10) {
+        if (!cleanPhone || cleanPhone.length !== 10) {
             setError('Please enter a valid 10-digit mobile number.');
             return;
         }
+        if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+            setError('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
+            return;
+        }
 
-        if (password && password.length < 6) {
-            setError('Password must be at least 6 characters long.');
+        if (!password || password.length < 6) {
+            setError('Please create a password with at least 6 characters.');
             return;
         }
 
@@ -72,9 +76,9 @@ export default function RolePickerModal() {
         setSubmitting(true);
         try {
             await assignRoleToGoogleUser(selectedRole.id, {
-                phone: cleanPhone || undefined,
-                password: password || '1234',
-                pin: password || '1234',
+                phone: cleanPhone,
+                password: password,
+                pin: password,
                 name: name || googleUser?.user_metadata?.full_name || googleUser?.email?.split('@')[0] || 'Kisan Member',
                 vehicle_number: selectedRole.id === 'transporters' ? vehicleNumber || 'TS 09 EA 4421' : undefined,
                 capacity: selectedRole.id === 'transporters' ? Number(capacity) || 15 : undefined

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { openRazorpayCheckout, executeAutoSuccessPayment } from '../services/razorpayService';
+import { openRazorpayCheckout } from '../services/razorpayService';
 
 export default function RazorpayCheckoutModal({
     isOpen,

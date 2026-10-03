@@ -14,14 +14,6 @@ export default function QrScannerModal({ loggedInMill, onClose, onVerificationSu
     const [loadReceivedSuccess, setLoadReceivedSuccess] = useState(false);
     const [actualTonnes, setActualTonnes] = useState('');
 
-    useEffect(() => {
-        if (verificationResult?.enquiry?.quantity) {
-            setActualTonnes(String(verificationResult.enquiry.quantity));
-        } else if (verificationResult?.enquiry?.acres) {
-            setActualTonnes(String(Number(verificationResult.enquiry.acres) * 2));
-        }
-    }, [verificationResult]);
-
     const scannerRef = useRef(null);
     const qrRegionId = "kisan-qr-reader-viewport";
 
@@ -44,6 +36,13 @@ export default function QrScannerModal({ loggedInMill, onClose, onVerificationSu
         try {
             const result = await kisanService.verifyScannedQr(code, loggedInMill);
             setVerificationResult(result);
+            if (result?.enquiry?.quantity) {
+                setActualTonnes(String(result.enquiry.quantity));
+            } else if (result?.enquiry?.acres) {
+                setActualTonnes(String(Number(result.enquiry.acres) * 2));
+            } else {
+                setActualTonnes('');
+            }
             setScanState('result');
         } catch (err) {
             console.error("Verification error:", err);

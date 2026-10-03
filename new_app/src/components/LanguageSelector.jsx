@@ -20,9 +20,8 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Calculate smart positioning on open
-    useEffect(() => {
-        if (isOpen && dropdownRef.current) {
+    const toggleDropdown = () => {
+        if (!isOpen && dropdownRef.current) {
             const rect = dropdownRef.current.getBoundingClientRect();
             const viewportWidth = window.innerWidth;
 
@@ -31,7 +30,6 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
             } else if (align === 'right') {
                 setDropdownPlacement({ alignLeft: false });
             } else {
-                // If button is near left edge (< 220px) or in left half of screen, open towards the right
                 if (rect.left < 220 || rect.left < viewportWidth / 2) {
                     setDropdownPlacement({ alignLeft: true });
                 } else {
@@ -39,7 +37,9 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
                 }
             }
         }
-    }, [isOpen, align]);
+        setIsOpen(!isOpen);
+        setSearchTerm('');
+    };
 
     const filteredLanguages = languages.filter(l => {
         if (!searchTerm) return true;
@@ -131,10 +131,7 @@ export default function LanguageSelector({ variant = 'dropdown', align = 'auto',
         <div ref={dropdownRef} className="language-selector-wrapper notranslate" translate="no" style={{ position: 'relative', display: 'inline-block', ...style }}>
             <button
                 type="button"
-                onClick={() => {
-                    setIsOpen(!isOpen);
-                    setSearchTerm('');
-                }}
+                onClick={toggleDropdown}
                 className="action-btn lang-selector-btn notranslate"
                 translate="no"
                 style={{

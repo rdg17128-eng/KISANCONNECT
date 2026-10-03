@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import http from 'http'
+import process from 'node:process'
 import { handleCreateOrderRequest, handleVerifyPaymentRequest, handleAutoSuccessPaymentRequest } from './server/razorpayHandler.js'
 
 // Vite plugin: OAuth Port 3000 Redirect Bridge
@@ -64,7 +65,6 @@ function razorpayApiPlugin() {
         const urlPath = req.url ? req.url.split('?')[0] : '';
 
         if (urlPath === '/api/create-order') {
-          // Set CORS headers
           res.setHeader('Access-Control-Allow-Origin', '*');
           res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
           res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -96,7 +96,6 @@ function razorpayApiPlugin() {
         }
 
         if (urlPath === '/api/verify-payment') {
-          // Set CORS headers
           res.setHeader('Access-Control-Allow-Origin', '*');
           res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
           res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -180,6 +179,30 @@ export default defineConfig(({ mode }) => {
         '/api/ocr': {
           target: 'http://127.0.0.1:8000',
           changeOrigin: true
+        }
+      }
+    },
+    build: {
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('leaflet') || id.includes('react-leaflet')) {
+                return 'vendor-maps';
+              }
+              if (id.includes('@supabase')) {
+                return 'vendor-supabase';
+              }
+              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+                return 'vendor-react';
+              }
+              if (id.includes('html5-qrcode') || id.includes('qrcode')) {
+                return 'vendor-qr';
+              }
+              return 'vendor-misc';
+            }
+          }
         }
       }
     }

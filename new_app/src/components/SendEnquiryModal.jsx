@@ -120,7 +120,7 @@ export default function SendEnquiryModal({ onClose, mill, crop, user, onEnquiryC
             isMounted = false; 
             unsubscribe();
         };
-    }, [quantityTons, vehicleCapacity, crop?.latitude, crop?.longitude]);
+    }, [quantityTons, vehicleCapacity, crop?.latitude, crop?.longitude, selectedTransporter?.phone]);
 
     // Handle Transporter selection
     const handleSelectTransporter = (transporter) => {

@@ -1,3 +1,6 @@
+import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
+
 const DEFAULT_CROP_IMAGES = {
     'paddy': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80',
     'paddy (rice)': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80',
